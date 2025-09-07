@@ -214,6 +214,7 @@ export default function Sidebar({
               </div>
             </div>
 
+
             {/* Clear filters */}
             <div className="flex items-center justify-between pt-2">
               <div className="text-xs text-muted-foreground">

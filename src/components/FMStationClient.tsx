@@ -118,14 +118,18 @@ export default function FMStationClient({
 
     if (filters.city) {
       filtered = filtered.filter(station => station.city === filters.city);
+      console.log('After city filter:', { city: filters.city, remaining: filtered.length });
     }
 
     if (filters.province) {
       filtered = filtered.filter(station => station.state === filters.province);
+      console.log('After province filter:', { province: filters.province, remaining: filtered.length });
     }
 
     if (filters.inspection) {
       filtered = filtered.filter(station => station.inspection68 === filters.inspection);
+      console.log('After inspection filter:', { inspection: filters.inspection, remaining: filtered.length });
+      console.log('Sample station inspection values:', filtered.slice(0, 3).map(s => ({ name: s.name, inspection68: s.inspection68 })));
     }
 
     if (filters.search) {
@@ -137,6 +141,28 @@ export default function FMStationClient({
         station.city.toLowerCase().includes(searchLower) ||
         station.state.toLowerCase().includes(searchLower)
       );
+    }
+
+    // Filter by distance if user location is available - using larger limit for debugging
+    if (userLocation) {
+      const maxDistance = 500; // 500km limit for debugging (was 50km)
+      const beforeDistanceFilter = filtered.length;
+      console.log('User location:', { lat: userLocation.latitude, lng: userLocation.longitude });
+      console.log('Sample station locations:', filtered.slice(0, 3).map(s => ({ 
+        name: s.name, 
+        lat: s.latitude, 
+        lng: s.longitude,
+        distance: calculateDistance(userLocation.latitude, userLocation.longitude, s.latitude, s.longitude).toFixed(1)
+      })));
+      
+      filtered = filtered.filter(station => {
+        const distance = calculateDistance(
+          userLocation.latitude, userLocation.longitude,
+          station.latitude, station.longitude
+        );
+        return distance <= maxDistance;
+      });
+      console.log('After distance filter (500km):', { beforeDistanceFilter, afterDistanceFilter: filtered.length });
     }
 
     // Sort by distance if user location is available
@@ -154,6 +180,7 @@ export default function FMStationClient({
       });
     }
 
+    console.log('Final filtered stations:', filtered.length);
     return filtered;
   }, [stations, filters, userLocation]);
 
@@ -173,6 +200,16 @@ export default function FMStationClient({
     if (typeof window !== 'undefined' && window.innerWidth < 1024) {
       setSidebarOpen(false);
     }
+  };
+
+  const handleUpdateStation = (stationId: string | number, updates: Partial<FMStation>) => {
+    setStations(prevStations => 
+      prevStations.map(station => 
+        station.id === stationId 
+          ? { ...station, ...updates }
+          : station
+      )
+    );
   };
 
   // Show message if no stations
@@ -266,6 +303,7 @@ export default function FMStationClient({
               stations={filteredStations}
               selectedStation={selectedStation}
               onStationSelect={handleStationSelect}
+              onUpdateStation={handleUpdateStation}
             />
           </div>
           

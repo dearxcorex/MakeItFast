@@ -36,6 +36,7 @@ interface MapProps {
   stations: FMStation[];
   selectedStation?: FMStation;
   onStationSelect: (station: FMStation) => void;
+  onUpdateStation?: (stationId: string | number, updates: Partial<FMStation>) => void;
 }
 
 function LocationTracker({ onLocationUpdate }: { onLocationUpdate: (location: UserLocation) => void }) {
@@ -67,7 +68,7 @@ function LocationTracker({ onLocationUpdate }: { onLocationUpdate: (location: Us
   return null;
 }
 
-export default function Map({ stations, selectedStation, onStationSelect }: MapProps) {
+export default function Map({ stations, selectedStation, onStationSelect, onUpdateStation }: MapProps) {
   const [userLocation, setUserLocation] = useState<UserLocation | null>(null);
   const [isClient, setIsClient] = useState(false);
 
@@ -180,6 +181,14 @@ export default function Map({ stations, selectedStation, onStationSelect }: MapP
                         <span className="text-sm text-muted-foreground px-2 py-1 bg-muted rounded-lg">
                           {station.genre}
                         </span>
+                        <span className={`inline-flex items-center gap-1 px-2 py-1 rounded-lg text-xs font-medium ${
+                          station.onAir 
+                            ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400' 
+                            : 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400'
+                        }`}>
+                          <div className={`w-1.5 h-1.5 rounded-full ${station.onAir ? 'bg-green-500' : 'bg-red-500'}`} />
+                          {station.onAir ? 'On Air' : 'Off Air'}
+                        </span>
                       </div>
                     </div>
                   </div>
@@ -202,12 +211,36 @@ export default function Map({ stations, selectedStation, onStationSelect }: MapP
                       </div>
                     )}
                     
-                    <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                      <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
-                      </svg>
-                      <span>Power: {(station.transmitterPower / 1000).toFixed(0)}kW</span>
-                    </div>
+                    {/* Inspection Status */}
+                    {station.inspection68 && (
+                      <div className="flex items-center justify-between gap-2">
+                        <div className="flex items-center gap-2">
+                          <span className={`inline-flex items-center gap-1 px-2 py-1 rounded-lg text-xs font-medium ${
+                            station.inspection68 === 'ตรวจแล้ว' 
+                              ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400' 
+                              : station.inspection68 === 'ยังไม่ตรวจ'
+                              ? 'bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400'
+                              : 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400'
+                          }`}>
+                            {station.inspection68 === 'ตรวจแล้ว' && '✅'}
+                            {station.inspection68 === 'ยังไม่ตรวจ' && '⏳'}
+                            {station.inspection68 === 'ตรงตามมาตรฐาน' && '🎯'}
+                            {station.inspection68}
+                          </span>
+                        </div>
+                        {onUpdateStation && (
+                          <button
+                            onClick={() => {
+                              const newStatus = station.inspection68 === 'ตรวจแล้ว' ? 'ยังไม่ตรวจ' : 'ตรวจแล้ว';
+                              onUpdateStation(station.id, { inspection68: newStatus });
+                            }}
+                            className="px-2 py-1 text-xs bg-primary text-primary-foreground rounded-md hover:bg-primary/90 transition-colors"
+                          >
+                            Toggle
+                          </button>
+                        )}
+                      </div>
+                    )}
                   </div>
                   
                   {station.description && (
