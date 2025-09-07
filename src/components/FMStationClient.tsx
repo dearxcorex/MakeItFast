@@ -1,0 +1,317 @@
+'use client';
+
+import { useState, useEffect, useMemo } from 'react';
+import dynamic from 'next/dynamic';
+import { FMStation, UserLocation, FilterType } from '@/types/station';
+import Sidebar from '@/components/Sidebar';
+
+const Map = dynamic(() => import('@/components/Map'), {
+  ssr: false,
+  loading: () => (
+    <div className="w-full h-full bg-muted animate-pulse flex items-center justify-center">
+      <div className="flex flex-col items-center gap-3">
+        <div className="w-12 h-12 bg-primary/20 rounded-2xl flex items-center justify-center">
+          <svg className="w-6 h-6 text-primary animate-spin" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+          </svg>
+        </div>
+        <div className="text-muted-foreground font-medium">Loading map...</div>
+      </div>
+    </div>
+  )
+});
+
+interface FMStationClientProps {
+  initialStations: FMStation[];
+  initialOnAirStatuses: boolean[];
+  initialCities: string[];
+  initialProvinces: string[];
+  initialInspectionStatuses: string[];
+}
+
+export default function FMStationClient({ 
+  initialStations, 
+  initialOnAirStatuses, 
+  initialCities, 
+  initialProvinces, 
+  initialInspectionStatuses 
+}: FMStationClientProps) {
+  const [selectedStation, setSelectedStation] = useState<FMStation | undefined>();
+  const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [userLocation, setUserLocation] = useState<UserLocation | undefined>();
+  const [stations, setStations] = useState<FMStation[]>(initialStations);
+  const [filters, setFilters] = useState<FilterType>({
+    onAir: '',
+    city: '',
+    province: '',
+    inspection: '',
+    search: ''
+  });
+
+
+  // Get user location
+  useEffect(() => {
+    if (navigator.geolocation) {
+      navigator.geolocation.getCurrentPosition(
+        (position) => {
+          setUserLocation({
+            latitude: position.coords.latitude,
+            longitude: position.coords.longitude,
+            accuracy: position.coords.accuracy
+          });
+        },
+        (error) => {
+          console.warn('Geolocation error:', error);
+        }
+      );
+    }
+  }, []);
+
+  // Calculate distance between two coordinates
+  const calculateDistance = (lat1: number, lon1: number, lat2: number, lon2: number): number => {
+    const R = 6371; // Earth's radius in kilometers
+    const dLat = (lat2 - lat1) * Math.PI / 180;
+    const dLon = (lon2 - lon1) * Math.PI / 180;
+    const a = 
+      Math.sin(dLat/2) * Math.sin(dLat/2) +
+      Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) * 
+      Math.sin(dLon/2) * Math.sin(dLon/2);
+    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+    return R * c;
+  };
+
+  // Get districts filtered by selected province
+  const availableCities = useMemo(() => {
+    if (!filters.province) {
+      return initialCities; // Show all cities if no province selected
+    }
+    // Filter cities to only those in the selected province
+    const citiesInProvince = stations
+      .filter(station => station.state === filters.province)
+      .map(station => station.city);
+    return Array.from(new Set(citiesInProvince));
+  }, [stations, filters.province, initialCities]);
+
+  // Auto-clear city filter when province changes and city is no longer valid
+  useEffect(() => {
+    if (filters.province && filters.city) {
+      const isCityInProvince = stations.some(station => 
+        station.state === filters.province && station.city === filters.city
+      );
+      if (!isCityInProvince) {
+        setFilters({
+          ...filters,
+          city: '' // Clear city filter if it doesn't exist in selected province
+        });
+      }
+    }
+  }, [filters.province, filters.city, stations]);
+
+  // Filter and sort stations based on current filters and user location
+  const filteredStations = useMemo(() => {
+    let filtered = stations;
+
+    if (filters.onAir !== '') {
+      const onAirValue = filters.onAir === 'true';
+      filtered = filtered.filter(station => station.onAir === onAirValue);
+    }
+
+    if (filters.city) {
+      filtered = filtered.filter(station => station.city === filters.city);
+    }
+
+    if (filters.province) {
+      filtered = filtered.filter(station => station.state === filters.province);
+    }
+
+    if (filters.inspection) {
+      filtered = filtered.filter(station => station.inspection68 === filters.inspection);
+    }
+
+    if (filters.search) {
+      const searchLower = filters.search.toLowerCase();
+      filtered = filtered.filter(station =>
+        station.name.toLowerCase().includes(searchLower) ||
+        station.description?.toLowerCase().includes(searchLower) ||
+        station.genre.toLowerCase().includes(searchLower) ||
+        station.city.toLowerCase().includes(searchLower) ||
+        station.state.toLowerCase().includes(searchLower)
+      );
+    }
+
+    // Sort by distance if user location is available
+    if (userLocation) {
+      filtered = [...filtered].sort((a, b) => {
+        const distanceA = calculateDistance(
+          userLocation.latitude, userLocation.longitude, 
+          a.latitude, a.longitude
+        );
+        const distanceB = calculateDistance(
+          userLocation.latitude, userLocation.longitude, 
+          b.latitude, b.longitude
+        );
+        return distanceA - distanceB;
+      });
+    }
+
+    return filtered;
+  }, [stations, filters, userLocation]);
+
+  const clearFilters = () => {
+    setFilters({
+      onAir: '',
+      city: '',
+      province: '',
+      inspection: '',
+      search: ''
+    });
+  };
+
+  const handleStationSelect = (station: FMStation) => {
+    setSelectedStation(station);
+    // Close sidebar on mobile after selection
+    if (typeof window !== 'undefined' && window.innerWidth < 1024) {
+      setSidebarOpen(false);
+    }
+  };
+
+  // Show message if no stations
+  if (stations.length === 0) {
+    return (
+      <div className="h-screen flex flex-col bg-background">
+        <div className="flex-1 flex items-center justify-center">
+          <div className="flex flex-col items-center gap-4 text-center max-w-md px-6">
+            <div className="w-16 h-16 bg-muted rounded-2xl flex items-center justify-center">
+              <svg className="w-8 h-8 text-muted-foreground" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9.172 16.172a4 4 0 015.656 0M9 12h6m-6-4h6m2 5.291A7.962 7.962 0 0112 15c-2.034 0-3.952.617-5.542 1.673M3 9.5v7.5A2.5 2.5 0 005.5 19H7M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+              </svg>
+            </div>
+            <div>
+              <h2 className="text-xl font-semibold text-foreground mb-2">No FM Stations Found</h2>
+              <p className="text-muted-foreground mb-4">
+                Your fm_station table is empty. Use the tools below to add sample data.
+              </p>
+            </div>
+          </div>
+        </div>
+        
+      </div>
+    );
+  }
+
+  return (
+    <div className="h-screen flex flex-col bg-background">
+      {/* Header */}
+      <header className="bg-card shadow-sm border-b border-border px-6 py-4 flex items-center justify-between relative z-10">
+        <div className="flex items-center gap-4">
+          <button
+            onClick={() => setSidebarOpen(!sidebarOpen)}
+            className="lg:hidden p-2.5 rounded-xl bg-secondary hover:bg-accent transition-all duration-200 hover:scale-105 text-secondary-foreground"
+          >
+            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
+            </svg>
+          </button>
+          
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 bg-gradient-to-br from-primary to-primary/70 rounded-xl flex items-center justify-center">
+              <svg className="w-6 h-6 text-primary-foreground" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8.111 16.404a5.5 5.5 0 017.778 0M12 20h.01m-7.08-7.071c3.904-3.905 10.236-3.905 14.141 0M1.394 9.393c5.857-5.857 15.355-5.857 21.213 0" />
+              </svg>
+            </div>
+            <div>
+              <h1 className="text-xl font-bold text-foreground">FM Station Tracker</h1>
+              <p className="text-sm text-muted-foreground">
+                {filteredStations.length} stations • Database connected ✅
+              </p>
+            </div>
+          </div>
+        </div>
+        
+        {selectedStation && (
+          <div className="hidden sm:flex items-center gap-4 bg-primary/10 border border-primary/20 px-4 py-3 rounded-xl backdrop-blur-sm">
+            <div className="w-2 h-2 bg-primary rounded-full animate-pulse" />
+            <div>
+              <div className="font-semibold text-foreground">{selectedStation.name}</div>
+              <div className="text-sm text-primary font-medium">{selectedStation.frequency} FM • {selectedStation.genre}</div>
+            </div>
+          </div>
+        )}
+      </header>
+
+      {/* Main content */}
+      <div className="flex-1 flex overflow-hidden">
+        {/* Sidebar */}
+        <Sidebar
+          stations={filteredStations}
+          onStationSelect={handleStationSelect}
+          selectedStation={selectedStation}
+          isOpen={sidebarOpen}
+          onToggle={() => setSidebarOpen(!sidebarOpen)}
+          userLocation={userLocation}
+          initialOnAirStatuses={initialOnAirStatuses}
+          initialCities={availableCities}
+          initialProvinces={initialProvinces}
+          initialInspectionStatuses={initialInspectionStatuses}
+          filters={filters}
+          onFiltersChange={setFilters}
+          onClearFilters={clearFilters}
+          calculateDistance={calculateDistance}
+        />
+
+        {/* Map container */}
+        <div className="flex-1 relative bg-muted/30">
+          <div className="absolute inset-4 rounded-2xl overflow-hidden shadow-2xl border border-border/50">
+            <Map
+              stations={filteredStations}
+              selectedStation={selectedStation}
+              onStationSelect={handleStationSelect}
+            />
+          </div>
+          
+          {/* Mobile selected station info */}
+          {selectedStation && (
+            <div className="absolute bottom-6 left-6 right-6 sm:hidden glass-effect rounded-2xl p-4 border border-border/50 shadow-2xl animate-fade-in">
+              <div className="flex justify-between items-start">
+                <div className="flex items-start gap-3">
+                  <div className="w-12 h-12 bg-primary/20 rounded-xl flex items-center justify-center flex-shrink-0">
+                    <svg className="w-6 h-6 text-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8.111 16.404a5.5 5.5 0 717.778 0M12 20h.01m-7.08-7.071c3.904-3.905 10.236-3.905 14.141 0M1.394 9.393c5.857-5.857 15.355-5.857 21.213 0" />
+                    </svg>
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <h3 className="font-bold text-foreground truncate">{selectedStation.name}</h3>
+                    <div className="flex items-center gap-2 mt-1">
+                      <span className="inline-flex items-center px-2 py-0.5 rounded-lg bg-primary/20 text-primary text-xs font-bold">
+                        {selectedStation.frequency} FM
+                      </span>
+                      <span className="text-xs text-muted-foreground px-2 py-0.5 bg-muted/50 rounded-lg">
+                        {selectedStation.genre}
+                      </span>
+                    </div>
+                    <div className="text-xs text-muted-foreground mt-1 flex items-center gap-1">
+                      <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
+                      </svg>
+                      {selectedStation.city}, {selectedStation.state}
+                    </div>
+                  </div>
+                </div>
+                <button
+                  onClick={() => setSelectedStation(undefined)}
+                  className="p-2 hover:bg-muted/50 rounded-xl transition-all duration-200 hover:scale-105 text-muted-foreground hover:text-foreground"
+                >
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                  </svg>
+                </button>
+              </div>
+            </div>
+          )}
+        </div>
+      </div>
+      
+    </div>
+  );
+}
