@@ -15,7 +15,7 @@ export interface FMStation {
   inspection68?: string;
   onAir?: boolean;
   unwanted?: boolean;
-  submitRequest?: boolean;
+  submitRequest?: string;
   createdAt?: string;
   updatedAt?: string;
 }
@@ -24,6 +24,8 @@ export interface UserLocation {
   latitude: number;
   longitude: number;
   accuracy?: number;
+  heading?: number | null;
+  speed?: number | null;
 }
 
 export type FilterType = {
@@ -32,4 +34,5 @@ export type FilterType = {
   province: string;
   inspection: string;
   search: string;
+  submitRequest: string;
 }

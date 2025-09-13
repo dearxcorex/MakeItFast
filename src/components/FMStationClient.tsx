@@ -45,7 +45,8 @@ export default function FMStationClient({
     city: '',
     province: '',
     inspection: '',
-    search: ''
+    search: '',
+    submitRequest: ''
   });
 
 
@@ -143,27 +144,13 @@ export default function FMStationClient({
       );
     }
 
-    // Filter by distance if user location is available - using larger limit for debugging
-    if (userLocation) {
-      const maxDistance = 500; // 500km limit for debugging (was 50km)
-      const beforeDistanceFilter = filtered.length;
-      console.log('User location:', { lat: userLocation.latitude, lng: userLocation.longitude });
-      console.log('Sample station locations:', filtered.slice(0, 3).map(s => ({ 
-        name: s.name, 
-        lat: s.latitude, 
-        lng: s.longitude,
-        distance: calculateDistance(userLocation.latitude, userLocation.longitude, s.latitude, s.longitude).toFixed(1)
-      })));
-      
-      filtered = filtered.filter(station => {
-        const distance = calculateDistance(
-          userLocation.latitude, userLocation.longitude,
-          station.latitude, station.longitude
-        );
-        return distance <= maxDistance;
-      });
-      console.log('After distance filter (500km):', { beforeDistanceFilter, afterDistanceFilter: filtered.length });
+    if (filters.submitRequest !== '') {
+      if (filters.submitRequest === 'ไม่ยื่น') {
+        filtered = filtered.filter(station => station.submitRequest === 'ไม่ยื่น');
+      }
     }
+
+    // Note: Distance filtering is handled in Sidebar component (20km limit)
 
     // Sort by distance if user location is available
     if (userLocation) {
@@ -190,7 +177,8 @@ export default function FMStationClient({
       city: '',
       province: '',
       inspection: '',
-      search: ''
+      search: '',
+      submitRequest: ''
     });
   };
 
@@ -265,15 +253,6 @@ export default function FMStationClient({
           </div>
         </div>
         
-        {selectedStation && (
-          <div className="hidden sm:flex items-center gap-4 bg-primary/10 border border-primary/20 px-4 py-3 rounded-xl backdrop-blur-sm">
-            <div className="w-2 h-2 bg-primary rounded-full animate-pulse" />
-            <div>
-              <div className="font-semibold text-foreground">{selectedStation.name}</div>
-              <div className="text-sm text-primary font-medium">{selectedStation.frequency} FM • {selectedStation.genre}</div>
-            </div>
-          </div>
-        )}
       </header>
 
       {/* Main content */}
@@ -307,46 +286,6 @@ export default function FMStationClient({
             />
           </div>
           
-          {/* Mobile selected station info */}
-          {selectedStation && (
-            <div className="absolute bottom-6 left-6 right-6 sm:hidden glass-effect rounded-2xl p-4 border border-border/50 shadow-2xl animate-fade-in">
-              <div className="flex justify-between items-start">
-                <div className="flex items-start gap-3">
-                  <div className="w-12 h-12 bg-primary/20 rounded-xl flex items-center justify-center flex-shrink-0">
-                    <svg className="w-6 h-6 text-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8.111 16.404a5.5 5.5 0 717.778 0M12 20h.01m-7.08-7.071c3.904-3.905 10.236-3.905 14.141 0M1.394 9.393c5.857-5.857 15.355-5.857 21.213 0" />
-                    </svg>
-                  </div>
-                  <div className="min-w-0 flex-1">
-                    <h3 className="font-bold text-foreground truncate">{selectedStation.name}</h3>
-                    <div className="flex items-center gap-2 mt-1">
-                      <span className="inline-flex items-center px-2 py-0.5 rounded-lg bg-primary/20 text-primary text-xs font-bold">
-                        {selectedStation.frequency} FM
-                      </span>
-                      <span className="text-xs text-muted-foreground px-2 py-0.5 bg-muted/50 rounded-lg">
-                        {selectedStation.genre}
-                      </span>
-                    </div>
-                    <div className="text-xs text-muted-foreground mt-1 flex items-center gap-1">
-                      <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
-                      </svg>
-                      {selectedStation.city}, {selectedStation.state}
-                    </div>
-                  </div>
-                </div>
-                <button
-                  onClick={() => setSelectedStation(undefined)}
-                  className="p-2 hover:bg-muted/50 rounded-xl transition-all duration-200 hover:scale-105 text-muted-foreground hover:text-foreground"
-                >
-                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                  </svg>
-                </button>
-              </div>
-            </div>
-          )}
         </div>
       </div>
       

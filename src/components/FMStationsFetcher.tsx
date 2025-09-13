@@ -61,7 +61,7 @@ export default async function FMStationsFetcher() {
     inspection68: station.inspection_68,
     onAir: station.on_air,
     unwanted: station.unwanted === 'true' || station.unwanted === true,
-    submitRequest: station.submit_a_request === 'true' || station.submit_a_request === true,
+    submitRequest: station.submit_a_request,
     createdAt: undefined,
     updatedAt: undefined,
   })) || [];
