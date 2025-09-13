@@ -1,8 +1,26 @@
-import { supabase, type FMStationRow } from '@/lib/supabase';
+import { supabase } from '@/lib/supabase';
 import type { FMStation } from '@/types/station';
 
+// Database row interface
+interface FMStationRow {
+  id_fm: number;
+  name: string;
+  freq: number;
+  lat: number;
+  long: number;
+  district: string;
+  province: string;
+  type: string;
+  permit?: string;
+  inspection_67?: string;
+  inspection_68?: string;
+  on_air: boolean;
+  unwanted: string | boolean;
+  submit_a_request: string | boolean;
+}
+
 // Convert database row to FMStation interface
-function convertToFMStation(row: any): FMStation {
+function convertToFMStation(row: FMStationRow): FMStation {
   return {
     id: row.id_fm,
     name: row.name,
@@ -20,7 +38,7 @@ function convertToFMStation(row: any): FMStation {
     inspection68: row.inspection_68,
     onAir: row.on_air,
     unwanted: row.unwanted === 'true' || row.unwanted === true,
-    submitRequest: row.submit_a_request === 'true' || row.submit_a_request === true,
+    submitRequest: typeof row.submit_a_request === 'string' ? row.submit_a_request : (row.submit_a_request ? 'ไม่ยื่น' : ''),
     createdAt: undefined,
     updatedAt: undefined,
   };

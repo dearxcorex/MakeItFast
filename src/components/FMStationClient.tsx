@@ -96,14 +96,14 @@ export default function FMStationClient({
   // Auto-clear city filter when province changes and city is no longer valid
   useEffect(() => {
     if (filters.province && filters.city) {
-      const isCityInProvince = stations.some(station => 
+      const isCityInProvince = stations.some(station =>
         station.state === filters.province && station.city === filters.city
       );
       if (!isCityInProvince) {
-        setFilters({
-          ...filters,
+        setFilters(prevFilters => ({
+          ...prevFilters,
           city: '' // Clear city filter if it doesn't exist in selected province
-        });
+        }));
       }
     }
   }, [filters.province, filters.city, stations]);

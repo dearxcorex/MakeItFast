@@ -20,14 +20,13 @@ interface SidebarProps {
   calculateDistance: (lat1: number, lon1: number, lat2: number, lon2: number) => number;
 }
 
-export default function Sidebar({ 
-  stations, 
-  onStationSelect, 
-  selectedStation, 
-  isOpen, 
+export default function Sidebar({
+  stations,
+  onStationSelect,
+  selectedStation,
+  isOpen,
   onToggle,
   userLocation,
-  initialOnAirStatuses,
   initialCities,
   initialProvinces,
   initialInspectionStatuses,
