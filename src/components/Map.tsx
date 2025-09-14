@@ -525,7 +525,7 @@ export default function Map({ stations, selectedStation, onStationSelect, onUpda
           </div>
         )}
 
-        <div className="space-y-2 max-h-[280px] overflow-y-auto">
+        <div className="space-y-2 max-h-[280px] overflow-y-auto scrollbar-stable">
           {stationGroup.map((station) => (
             <div key={station.id} className="border rounded p-2 bg-muted/20">
               <div className="flex items-start gap-2 mb-2">
