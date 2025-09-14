@@ -29,9 +29,9 @@ function convertToFMStation(row: FMStationRow): FMStation {
     longitude: row.long,
     city: row.district,
     state: row.province,
-    genre: row.type,
-    type: row.type, // Station type (e.g., "สถานีหลัก", "สถานีสาขา")
-    description: `${row.type} radio station in ${row.district}, ${row.province}`,
+    genre: row.type?.trim(),
+    type: row.type?.trim(), // Station type (e.g., "สถานีหลัก", "สถานีสาขา")
+    description: `${row.type?.trim()} radio station in ${row.district}, ${row.province}`,
     website: undefined,
     transmitterPower: undefined,
     permit: row.permit,

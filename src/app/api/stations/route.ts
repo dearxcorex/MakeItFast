@@ -15,8 +15,8 @@ export async function GET() {
   try {
     const { data, error } = await adminClient
       .from('fm_station')
-      .select('id_fm, name')
-      .limit(5);
+      .select('*')
+      .order('name');
 
     if (error) {
       console.error('Supabase error:', error);

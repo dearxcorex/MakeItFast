@@ -52,8 +52,9 @@ export default async function FMStationsFetcher() {
     longitude: station.long,
     city: station.district,
     state: station.province,
-    genre: station.type,
-    description: `${station.type} radio station in ${station.district}, ${station.province}`,
+    genre: station.type?.trim(),
+    type: station.type?.trim(), // Station type (e.g., "สถานีหลัก", "สถานีสาขา")
+    description: `${station.type?.trim()} radio station in ${station.district}, ${station.province}`,
     website: undefined,
     transmitterPower: undefined,
     permit: station.permit,
