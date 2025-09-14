@@ -173,9 +173,10 @@ body {
 @media (max-width: 1023px) {
   /* Sidebar behaves as modal on mobile */
   .sidebar-modal {
-    /* Better mobile modal fit */
-    max-height: 100vh;
-    max-width: calc(100vw - 16px);
+    /* Better mobile modal fit with proper centering */
+    max-height: 90vh;
+    max-width: calc(100vw - 32px);
+    min-height: 60vh;
 
     /* Prevent content from being cut off */
     box-sizing: border-box;
@@ -188,6 +189,27 @@ body {
     -webkit-transform: translate3d(0, 0, 0);
     transform: translate3d(0, 0, 0);
     will-change: transform;
+
+    /* Proper modal centering */
+    margin: auto;
+
+    /* Add modal-like appearance */
+    box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+    backdrop-filter: blur(8px);
+  }
+
+  /* Mobile modal backdrop positioning */
+  .mobile-modal-backdrop {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 16px;
+    z-index: 1000;
   }
 
   /* Optimize sidebar content spacing on mobile */

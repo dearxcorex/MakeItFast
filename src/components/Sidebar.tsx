@@ -84,15 +84,26 @@ export default function Sidebar({
 
       {/* Clean Minimal Sidebar */}
       <div className={`
-        fixed lg:static inset-y-0 left-0 z-[1000]
-        w-full max-w-sm sm:max-w-md lg:w-80 xl:w-88
+        fixed lg:static z-[1000]
+        ${isOpen
+          ? 'inset-0 lg:inset-y-0 lg:left-0 flex items-center justify-center lg:block lg:items-start lg:justify-start'
+          : 'inset-y-0 left-0 -translate-x-full lg:translate-x-0'
+        }
+        lg:w-80 xl:w-88
         transform transition-all duration-300 ease-in-out
-        ${isOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'}
-        flex flex-col shadow-xl lg:shadow-none border-r border-border
-        max-h-screen overflow-hidden bg-background sidebar-modal
+        lg:flex lg:flex-col lg:shadow-none lg:border-r lg:border-border
+        lg:max-h-screen lg:overflow-hidden lg:bg-background
       `}
       role="complementary"
       aria-label="Station filters and list">
+
+        {/* Mobile Modal Content Container */}
+        <div className={`
+          w-full max-w-sm mx-auto lg:max-w-none lg:mx-0
+          flex flex-col shadow-xl lg:shadow-none border border-border lg:border-none lg:border-r
+          max-h-[90vh] lg:max-h-screen overflow-hidden bg-background sidebar-modal
+          rounded-lg lg:rounded-none
+        `}>
 
         {/* Mobile-Optimized Header */}
         <div className="p-3 sm:p-4 border-b border-border">
@@ -409,6 +420,8 @@ export default function Sidebar({
             );
           })()}
         </div>
+
+        </div> {/* Close Mobile Modal Content Container */}
       </div>
     </>
   );
