@@ -329,3 +329,39 @@ export async function checkDuplicateCoordinates(): Promise<{[key: string]: FMSta
     return {};
   }
 }
+
+// Update station data in the database
+export async function updateFMStation(stationId: number, updates: Partial<FMStationRow>): Promise<FMStation | null> {
+  try {
+    const { data, error } = await supabase
+      .from('fm_station')
+      .update(updates)
+      .eq('id_fm', stationId)
+      .select('*')
+      .single();
+
+    if (error) {
+      console.error('Error updating FM station:', error);
+      throw new Error(`Failed to update FM station: ${error.message}`);
+    }
+
+    if (!data) {
+      return null;
+    }
+
+    return convertToFMStation(data);
+  } catch (error) {
+    console.error('Service error updating FM station:', error);
+    throw error;
+  }
+}
+
+// Update station on_air status
+export async function updateStationOnAirStatus(stationId: number, onAir: boolean): Promise<FMStation | null> {
+  return updateFMStation(stationId, { on_air: onAir });
+}
+
+// Update station inspection status
+export async function updateStationInspectionStatus(stationId: number, inspectionStatus: string): Promise<FMStation | null> {
+  return updateFMStation(stationId, { inspection_68: inspectionStatus });
+}

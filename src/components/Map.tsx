@@ -209,29 +209,60 @@ export default function Map({ stations, selectedStation, onStationSelect, onUpda
     return R * c;
   };
 
-  const getStationIcon = (stationOrGroup: FMStation | FMStation[]) => {
+  const getStationIcon = (stationOrGroup: FMStation | FMStation[], count?: number) => {
     // If it's an array (multiple stations), use the first station's status
     const station = Array.isArray(stationOrGroup) ? stationOrGroup[0] : stationOrGroup;
+    const isMultiple = count && count > 1;
 
-    // If station submit request equals "ไม่ยื่น", use black pin
+    // Get base icon based on station status
+    let baseIcon;
     if (station.submitRequest === 'ไม่ยื่น') {
-      return blackStationIcon;
-    }
-
-    // If station is off air, use grey pin
-    if (!station.onAir) {
-      return greyStationIcon;
-    }
-
-    // If station is on air, check inspection status
-    if (station.inspection68 === 'ตรวจแล้ว') {
-      return greenStationIcon; // Inspected - green pin
+      baseIcon = blackStationIcon;
+    } else if (!station.onAir) {
+      baseIcon = greyStationIcon;
+    } else if (station.inspection68 === 'ตรวจแล้ว') {
+      baseIcon = greenStationIcon;
     } else if (station.inspection68 === 'ยังไม่ตรวจ') {
-      return redStationIcon; // Not inspected - red pin
+      baseIcon = redStationIcon;
+    } else {
+      baseIcon = redStationIcon;
     }
 
-    // Default to red pin for other cases
-    return redStationIcon;
+    // If multiple stations, create custom icon with count badge
+    if (isMultiple) {
+      return L.divIcon({
+        className: 'custom-station-group-icon',
+        html: `
+          <div style="position: relative;">
+            <img src="${baseIcon.options.iconUrl}"
+                 style="width: 25px; height: 41px;"
+                 alt="Station marker" />
+            <div style="
+              position: absolute;
+              top: -8px;
+              right: -8px;
+              background: #ff4444;
+              color: white;
+              border-radius: 50%;
+              width: 18px;
+              height: 18px;
+              display: flex;
+              align-items: center;
+              justify-content: center;
+              font-size: 11px;
+              font-weight: bold;
+              border: 2px solid white;
+              box-shadow: 0 1px 3px rgba(0,0,0,0.3);
+            ">${count}</div>
+          </div>
+        `,
+        iconSize: [25, 41],
+        iconAnchor: [12, 41],
+        popupAnchor: [1, -34]
+      });
+    }
+
+    return baseIcon;
   };
 
   // Component to render single station popup
@@ -541,7 +572,7 @@ export default function Map({ stations, selectedStation, onStationSelect, onUpda
             <Marker
               key={coordKey}
               position={[lat, lng]}
-              icon={getStationIcon(stationGroup)}
+              icon={getStationIcon(stationGroup, stationGroup.length)}
               aria-label={locationLabel}
               title={isMultiple ? `${stationGroup.length} stations` : `${representativeStation.name} FM ${representativeStation.frequency}`}
               eventHandlers={{

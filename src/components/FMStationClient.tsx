@@ -190,14 +190,66 @@ export default function FMStationClient({
     }
   };
 
-  const handleUpdateStation = (stationId: string | number, updates: Partial<FMStation>) => {
-    setStations(prevStations => 
-      prevStations.map(station => 
-        station.id === stationId 
-          ? { ...station, ...updates }
-          : station
-      )
-    );
+  const handleUpdateStation = async (stationId: string | number, updates: Partial<FMStation>) => {
+    // Store original station data for potential rollback
+    const originalStation = stations.find(station => station.id === stationId);
+    if (!originalStation) return;
+
+    try {
+      // Convert string ID to number if needed
+      const numericId = typeof stationId === 'string' ? parseInt(stationId) : stationId;
+
+      // Update local state immediately for responsive UI
+      setStations(prevStations =>
+        prevStations.map(station =>
+          station.id === stationId
+            ? { ...station, ...updates }
+            : station
+        )
+      );
+
+      // Prepare API request body with only the fields that should be updated
+      const apiUpdates: any = {};
+      if ('onAir' in updates && updates.onAir !== undefined) {
+        apiUpdates.onAir = updates.onAir;
+      }
+      if ('inspection68' in updates && updates.inspection68 !== undefined) {
+        apiUpdates.inspection68 = updates.inspection68;
+      }
+
+      console.log(`Updating station ${numericId} via API with:`, apiUpdates);
+
+      // Call our API route to update the database
+      const response = await fetch(`/api/stations/${numericId}`, {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(apiUpdates),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Failed to update station');
+      }
+
+      const result = await response.json();
+      console.log(`Successfully updated station ${numericId}:`, result);
+
+    } catch (error) {
+      console.error('Error updating station:', error);
+      // Revert local state to original data on error
+      setStations(prevStations =>
+        prevStations.map(station =>
+          station.id === stationId
+            ? originalStation // Restore original station data
+            : station
+        )
+      );
+
+      // Show error to user
+      alert(`Failed to update station. ${error instanceof Error ? error.message : 'Please try again.'}`);
+    }
   };
 
   // Show message if no stations
