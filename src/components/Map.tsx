@@ -4,6 +4,7 @@ import { useEffect, useState, useMemo } from 'react';
 import { MapContainer, TileLayer, Marker, Popup, useMap } from 'react-leaflet';
 import L from 'leaflet';
 import { FMStation, UserLocation } from '@/types/station';
+import { groupStationsByCoordinates } from '@/services/stationService';
 
 // Fix for default markers in react-leaflet
 delete (L.Icon.Default.prototype as unknown as { _getIconUrl?: unknown })._getIconUrl;
@@ -191,6 +192,11 @@ export default function Map({ stations, selectedStation, onStationSelect, onUpda
     return [34.0522, -118.2437] as [number, number]; // Default to Los Angeles
   }, [selectedStation, userLocation]);
 
+  // Group stations by coordinates
+  const groupedStations = useMemo(() => {
+    return groupStationsByCoordinates(stations);
+  }, [stations]);
+
   const calculateDistance = (lat1: number, lon1: number, lat2: number, lon2: number): number => {
     const R = 6371; // Earth's radius in kilometers
     const dLat = (lat2 - lat1) * Math.PI / 180;
@@ -203,7 +209,10 @@ export default function Map({ stations, selectedStation, onStationSelect, onUpda
     return R * c;
   };
 
-  const getStationIcon = (station: FMStation) => {
+  const getStationIcon = (stationOrGroup: FMStation | FMStation[]) => {
+    // If it's an array (multiple stations), use the first station's status
+    const station = Array.isArray(stationOrGroup) ? stationOrGroup[0] : stationOrGroup;
+
     // If station submit request equals "ไม่ยื่น", use black pin
     if (station.submitRequest === 'ไม่ยื่น') {
       return blackStationIcon;
@@ -224,6 +233,234 @@ export default function Map({ stations, selectedStation, onStationSelect, onUpda
     // Default to red pin for other cases
     return redStationIcon;
   };
+
+  // Component to render single station popup
+  const SingleStationPopup = ({ station, distance }: { station: FMStation; distance: number | null }) => (
+    <div className="w-full max-w-[280px] sm:max-w-[320px] p-3 sm:p-4">
+      <div className="mb-4">
+        <div className="flex items-start gap-3 mb-3">
+          <div className="w-8 h-8 sm:w-10 sm:h-10 bg-primary/20 rounded-xl flex items-center justify-center flex-shrink-0">
+            <svg className="w-4 h-4 sm:w-5 sm:h-5 text-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8.111 16.404a5.5 5.5 0 017.778 0M12 20h.01m-7.08-7.071c3.904-3.905 10.236-3.905 14.141 0M1.394 9.393c5.857-5.857 15.355-5.857 21.213 0" />
+            </svg>
+          </div>
+          <div className="min-w-0 flex-1">
+            <h3 className="font-bold text-sm sm:text-base text-card-foreground leading-tight break-words">{station.name}</h3>
+            <div className="flex items-center gap-1 sm:gap-2 mt-2 flex-wrap">
+              <span className="inline-flex items-center px-2 py-1 rounded-lg bg-primary/20 text-primary text-xs font-bold">
+                {station.frequency} FM
+              </span>
+              <span className="text-xs text-muted-foreground px-2 py-1 bg-muted rounded-lg">
+                {station.genre}
+              </span>
+            </div>
+          </div>
+        </div>
+
+        <div className="flex items-center justify-between gap-2 p-2 bg-muted/20 rounded-lg border border-border/50">
+          <span className={`inline-flex items-center gap-2 px-2 py-1 rounded-md text-xs font-medium ${
+            station.onAir
+              ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400'
+              : 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400'
+          }`}>
+            <div className={`w-2 h-2 rounded-full ${station.onAir ? 'bg-green-500' : 'bg-red-500'}`} />
+            {station.onAir ? 'On Air' : 'Off Air'}
+          </span>
+          {onUpdateStation && (
+            <button
+              onClick={() => {
+                onUpdateStation(station.id, { onAir: !station.onAir });
+              }}
+              className="px-2 sm:px-3 py-1 text-xs bg-secondary text-secondary-foreground rounded-md hover:bg-accent transition-colors font-medium whitespace-nowrap"
+              aria-label={`Toggle ${station.name} broadcast status - currently ${station.onAir ? 'on air' : 'off air'}`}
+            >
+              {station.onAir ? 'Set Off' : 'Set On'}
+            </button>
+          )}
+        </div>
+      </div>
+
+      {station.inspection68 && (
+        <div className="flex items-center justify-between gap-2 p-2 bg-muted/20 rounded-lg border border-border/50 mb-3">
+          <span className={`inline-flex items-center gap-2 px-2 py-1 rounded-md text-xs font-medium ${
+            station.inspection68 === 'ตรวจแล้ว'
+              ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400'
+              : station.inspection68 === 'ยังไม่ตรวจ'
+              ? 'bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400'
+              : 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400'
+          }`}>
+            {station.inspection68 === 'ตรวจแล้ว' && '✅'}
+            {station.inspection68 === 'ยังไม่ตรวจ' && '⏳'}
+            {station.inspection68 === 'ตรงตามมาตรฐาน' && '🎯'}
+            <span className="break-words">{station.inspection68}</span>
+          </span>
+          {onUpdateStation && (
+            <button
+              onClick={() => {
+                const newStatus = station.inspection68 === 'ตรวจแล้ว' ? 'ยังไม่ตรวจ' : 'ตรวจแล้ว';
+                onUpdateStation(station.id, { inspection68: newStatus });
+              }}
+              className="px-2 sm:px-3 py-1 text-xs bg-primary text-primary-foreground rounded-md hover:bg-primary/90 transition-colors font-medium whitespace-nowrap"
+              aria-label={`Toggle ${station.name} inspection status - currently ${station.inspection68 || 'not inspected'}`}
+            >
+              {station.inspection68 === 'ยังไม่ตรวจ' ? 'Inspect' : 'Inspected'}
+            </button>
+          )}
+        </div>
+      )}
+
+      {distance && (
+        <div className="flex items-center gap-2 text-xs sm:text-sm text-primary font-semibold bg-primary/10 p-2 rounded-lg mb-4">
+          <svg className="w-3 h-3 sm:w-4 sm:h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6" />
+          </svg>
+          <span>{distance.toFixed(1)} km away</span>
+        </div>
+      )}
+
+      {station.description && (
+        <div className="mt-3 pt-3 border-t border-border">
+          <p className="text-xs text-muted-foreground leading-relaxed break-words">
+            {station.description}
+          </p>
+        </div>
+      )}
+
+      <div className="mt-4 pt-3 border-t border-border">
+        <button
+          onClick={() => {
+            const googleMapsUrl = `https://www.google.com/maps/dir/?api=1&destination=${station.latitude},${station.longitude}&travelmode=driving`;
+            window.open(googleMapsUrl, '_blank', 'noopener,noreferrer');
+          }}
+          className="w-full flex items-center justify-center gap-2 px-3 py-2 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 transition-all duration-200 hover:scale-[1.02] font-medium text-xs sm:text-sm min-h-[44px]"
+          aria-label={`Navigate to ${station.name} with Google Maps`}
+        >
+          <svg className="w-3 h-3 sm:w-4 sm:h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3m-6 3V7m6 10l4.553 2.276A1 1 0 0021 18.382V7.618a1 1 0 00-1.447-.894L15 4m0 13V4m0 0L9 7" />
+          </svg>
+          <span className="hidden sm:inline">Navigate with Google Maps</span>
+          <span className="sm:hidden">Navigate</span>
+        </button>
+      </div>
+    </div>
+  );
+
+  // Component to render multiple stations popup
+  const MultipleStationsPopup = ({ stationGroup, lat, lng, distance }: { stationGroup: FMStation[]; lat: number; lng: number; distance: number | null }) => (
+    <div className="w-full max-w-[320px] sm:max-w-[380px] p-3 sm:p-4">
+      <div className="mb-4">
+        <div className="flex items-start gap-3 mb-3">
+          <div className="w-8 h-8 sm:w-10 sm:h-10 bg-primary/20 rounded-xl flex items-center justify-center flex-shrink-0">
+            <svg className="w-4 h-4 sm:w-5 sm:h-5 text-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8.111 16.404a5.5 5.5 0 017.778 0M12 20h.01m-7.08-7.071c3.904-3.905 10.236-3.905 14.141 0M1.394 9.393c5.857-5.857 15.355-5.857 21.213 0" />
+            </svg>
+          </div>
+          <div className="min-w-0 flex-1">
+            <h3 className="font-bold text-sm sm:text-base text-card-foreground leading-tight break-words">
+              {stationGroup.length} Stations at this Location
+            </h3>
+            <div className="text-xs text-muted-foreground mt-1">
+              {stationGroup[0].city}, {stationGroup[0].state}
+            </div>
+          </div>
+        </div>
+
+        {distance && (
+          <div className="flex items-center gap-2 text-xs sm:text-sm text-primary font-semibold bg-primary/10 p-2 rounded-lg mb-4">
+            <svg className="w-3 h-3 sm:w-4 sm:h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6" />
+            </svg>
+            <span>{distance.toFixed(1)} km away</span>
+          </div>
+        )}
+
+        <div className="space-y-3 max-h-[300px] overflow-y-auto">
+          {stationGroup.map((station) => (
+            <div key={station.id} className="border rounded-lg p-3 bg-muted/20">
+              <div className="flex items-start gap-2 mb-2">
+                <div className="min-w-0 flex-1">
+                  <h4 className="font-semibold text-xs text-card-foreground break-words">{station.name}</h4>
+                  <div className="flex items-center gap-1 mt-1 flex-wrap">
+                    <span className="inline-flex items-center px-1.5 py-0.5 rounded bg-primary/20 text-primary text-xs font-bold">
+                      {station.frequency} FM
+                    </span>
+                    <span className="text-xs text-muted-foreground px-1.5 py-0.5 bg-muted rounded">
+                      {station.genre}
+                    </span>
+                  </div>
+                </div>
+              </div>
+
+              <div className="flex items-center justify-between gap-2 p-2 bg-muted/30 rounded border border-border/50 mb-2">
+                <span className={`inline-flex items-center gap-2 px-2 py-1 rounded-md text-xs font-medium ${
+                  station.onAir
+                    ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400'
+                    : 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400'
+                }`}>
+                  <div className={`w-1.5 h-1.5 rounded-full ${station.onAir ? 'bg-green-500' : 'bg-red-500'}`} />
+                  {station.onAir ? 'On Air' : 'Off Air'}
+                </span>
+                {onUpdateStation && (
+                  <button
+                    onClick={() => {
+                      onUpdateStation(station.id, { onAir: !station.onAir });
+                    }}
+                    className="px-2 py-1 text-xs bg-secondary text-secondary-foreground rounded hover:bg-accent transition-colors font-medium whitespace-nowrap"
+                  >
+                    {station.onAir ? 'Set Off' : 'Set On'}
+                  </button>
+                )}
+              </div>
+
+              {station.inspection68 && (
+                <div className="flex items-center justify-between gap-2 p-2 bg-muted/30 rounded border border-border/50">
+                  <span className={`inline-flex items-center gap-1 px-2 py-1 rounded-md text-xs font-medium ${
+                    station.inspection68 === 'ตรวจแล้ว'
+                      ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400'
+                      : station.inspection68 === 'ยังไม่ตรวจ'
+                      ? 'bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400'
+                      : 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400'
+                  }`}>
+                    {station.inspection68 === 'ตรวจแล้ว' && '✅'}
+                    {station.inspection68 === 'ยังไม่ตรวจ' && '⏳'}
+                    {station.inspection68 === 'ตรงตามมาตรฐาน' && '🎯'}
+                    <span className="break-words text-xs">{station.inspection68}</span>
+                  </span>
+                  {onUpdateStation && (
+                    <button
+                      onClick={() => {
+                        const newStatus = station.inspection68 === 'ตรวจแล้ว' ? 'ยังไม่ตรวจ' : 'ตรวจแล้ว';
+                        onUpdateStation(station.id, { inspection68: newStatus });
+                      }}
+                      className="px-2 py-1 text-xs bg-primary text-primary-foreground rounded hover:bg-primary/90 transition-colors font-medium whitespace-nowrap"
+                    >
+                      {station.inspection68 === 'ยังไม่ตรวจ' ? 'Inspect' : 'Inspected'}
+                    </button>
+                  )}
+                </div>
+              )}
+            </div>
+          ))}
+        </div>
+
+        <div className="mt-4 pt-3 border-t border-border">
+          <button
+            onClick={() => {
+              const googleMapsUrl = `https://www.google.com/maps/dir/?api=1&destination=${lat},${lng}&travelmode=driving`;
+              window.open(googleMapsUrl, '_blank', 'noopener,noreferrer');
+            }}
+            className="w-full flex items-center justify-center gap-2 px-3 py-2 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 transition-all duration-200 hover:scale-[1.02] font-medium text-xs sm:text-sm min-h-[44px]"
+          >
+            <svg className="w-3 h-3 sm:w-4 sm:h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3m-6 3V7m6 10l4.553 2.276A1 1 0 0021 18.382V7.618a1 1 0 00-1.447-.894L15 4m0 13V4m0 0L9 7" />
+            </svg>
+            <span className="hidden sm:inline">Navigate to Location</span>
+            <span className="sm:hidden">Navigate</span>
+          </button>
+        </div>
+      </div>
+    </div>
+  );
 
   if (!isClient) {
     return (
@@ -256,7 +493,6 @@ export default function Map({ stations, selectedStation, onStationSelect, onUpda
 
         <LocationTracker onLocationUpdate={setUserLocation} />
 
-        {/* User location marker */}
         {userLocation && (
           <Marker
             position={[userLocation.latitude, userLocation.longitude]}
@@ -283,145 +519,55 @@ export default function Map({ stations, selectedStation, onStationSelect, onUpda
           </Marker>
         )}
 
-        {/* FM Station markers */}
-        {stations.map((station) => {
+        {Array.from(groupedStations.entries()).map(([coordKey, stationGroup]) => {
+          const [lat, lng] = coordKey.split(',').map(Number);
+          const isMultiple = stationGroup.length > 1;
+          const representativeStation = stationGroup[0];
+
           const distance = userLocation
             ? calculateDistance(
                 userLocation.latitude,
                 userLocation.longitude,
-                station.latitude,
-                station.longitude
+                lat,
+                lng
               )
             : null;
 
-          const statusText = station.onAir ? 'On Air' : 'Off Air';
-          const inspectionText = station.inspection68 || 'Not inspected';
-          const distanceText = distance ? ` - ${distance.toFixed(1)} km away` : '';
+          const locationLabel = isMultiple
+            ? `${stationGroup.length} stations at ${representativeStation.city}, ${representativeStation.state}`
+            : `${representativeStation.name} FM ${representativeStation.frequency} station in ${representativeStation.city}, ${representativeStation.state}`;
 
           return (
             <Marker
-              key={station.id}
-              position={[station.latitude, station.longitude]}
-              icon={getStationIcon(station)}
-              aria-label={`${station.name} FM ${station.frequency} station in ${station.city}, ${station.state} - ${statusText} - ${inspectionText}${distanceText}`}
-              title={`${station.name} FM ${station.frequency}`}
+              key={coordKey}
+              position={[lat, lng]}
+              icon={getStationIcon(stationGroup)}
+              aria-label={locationLabel}
+              title={isMultiple ? `${stationGroup.length} stations` : `${representativeStation.name} FM ${representativeStation.frequency}`}
               eventHandlers={{
-                click: () => onStationSelect(station),
+                click: () => {
+                  if (isMultiple) {
+                    onStationSelect(representativeStation);
+                  } else {
+                    onStationSelect(representativeStation);
+                  }
+                },
               }}
             >
               <Popup>
-                <div className="w-full max-w-[280px] sm:max-w-[320px] p-3 sm:p-4">
-                  {/* Header Section */}
-                  <div className="mb-4">
-                    <div className="flex items-start gap-3 mb-3">
-                      <div className="w-8 h-8 sm:w-10 sm:h-10 bg-primary/20 rounded-xl flex items-center justify-center flex-shrink-0">
-                        <svg className="w-4 h-4 sm:w-5 sm:h-5 text-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8.111 16.404a5.5 5.5 0 017.778 0M12 20h.01m-7.08-7.071c3.904-3.905 10.236-3.905 14.141 0M1.394 9.393c5.857-5.857 15.355-5.857 21.213 0" />
-                        </svg>
-                      </div>
-                      <div className="min-w-0 flex-1">
-                        <h3 className="font-bold text-sm sm:text-base text-card-foreground leading-tight break-words">{station.name}</h3>
-                        <div className="flex items-center gap-1 sm:gap-2 mt-2 flex-wrap">
-                          <span className="inline-flex items-center px-2 py-1 rounded-lg bg-primary/20 text-primary text-xs font-bold">
-                            {station.frequency} FM
-                          </span>
-                          <span className="text-xs text-muted-foreground px-2 py-1 bg-muted rounded-lg">
-                            {station.genre}
-                          </span>
-                        </div>
-                      </div>
-                    </div>
-
-                    {/* On Air Status with Toggle */}
-                    <div className="flex items-center justify-between gap-2 p-2 bg-muted/20 rounded-lg border border-border/50">
-                      <span className={`inline-flex items-center gap-2 px-2 py-1 rounded-md text-xs font-medium ${
-                        station.onAir
-                          ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400'
-                          : 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400'
-                      }`}>
-                        <div className={`w-2 h-2 rounded-full ${station.onAir ? 'bg-green-500' : 'bg-red-500'}`} />
-                        {station.onAir ? 'On Air' : 'Off Air'}
-                      </span>
-                      {onUpdateStation && (
-                        <button
-                          onClick={() => {
-                            onUpdateStation(station.id, { onAir: !station.onAir });
-                          }}
-                          className="px-2 sm:px-3 py-1 text-xs bg-secondary text-secondary-foreground rounded-md hover:bg-accent transition-colors font-medium whitespace-nowrap"
-                          aria-label={`Toggle ${station.name} broadcast status - currently ${station.onAir ? 'on air' : 'off air'}`}
-                        >
-                          {station.onAir ? 'Set Off' : 'Set On'}
-                        </button>
-                      )}
-                    </div>
-                  </div>
-
-                  {/* Inspection Status */}
-                  {station.inspection68 && (
-                    <div className="flex items-center justify-between gap-2 p-2 bg-muted/20 rounded-lg border border-border/50 mb-3">
-                      <span className={`inline-flex items-center gap-2 px-2 py-1 rounded-md text-xs font-medium ${
-                        station.inspection68 === 'ตรวจแล้ว'
-                          ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400'
-                          : station.inspection68 === 'ยังไม่ตรวจ'
-                          ? 'bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400'
-                          : 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400'
-                      }`}>
-                        {station.inspection68 === 'ตรวจแล้ว' && '✅'}
-                        {station.inspection68 === 'ยังไม่ตรวจ' && '⏳'}
-                        {station.inspection68 === 'ตรงตามมาตรฐาน' && '🎯'}
-                        <span className="break-words">{station.inspection68}</span>
-                      </span>
-                      {onUpdateStation && (
-                        <button
-                          onClick={() => {
-                            const newStatus = station.inspection68 === 'ตรวจแล้ว' ? 'ยังไม่ตรวจ' : 'ตรวจแล้ว';
-                            onUpdateStation(station.id, { inspection68: newStatus });
-                          }}
-                          className="px-2 sm:px-3 py-1 text-xs bg-primary text-primary-foreground rounded-md hover:bg-primary/90 transition-colors font-medium whitespace-nowrap"
-                          aria-label={`Toggle ${station.name} inspection status - currently ${station.inspection68 || 'not inspected'}`}
-                        >
-                          {station.inspection68 === 'ยังไม่ตรวจ' ? 'Inspect' : 'Inspected'}
-                        </button>
-                      )}
-                    </div>
-                  )}
-
-                  {/* Distance Information */}
-                  {distance && (
-                    <div className="flex items-center gap-2 text-xs sm:text-sm text-primary font-semibold bg-primary/10 p-2 rounded-lg mb-4">
-                      <svg className="w-3 h-3 sm:w-4 sm:h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6" />
-                      </svg>
-                      <span>{distance.toFixed(1)} km away</span>
-                    </div>
-                  )}
-
-                  {station.description && (
-                    <div className="mt-3 pt-3 border-t border-border">
-                      <p className="text-xs text-muted-foreground leading-relaxed break-words">
-                        {station.description}
-                      </p>
-                    </div>
-                  )}
-
-                  {/* Navigation Button */}
-                  <div className="mt-4 pt-3 border-t border-border">
-                    <button
-                      onClick={() => {
-                        const googleMapsUrl = `https://www.google.com/maps/dir/?api=1&destination=${station.latitude},${station.longitude}&travelmode=driving`;
-                        window.open(googleMapsUrl, '_blank', 'noopener,noreferrer');
-                      }}
-                      className="w-full flex items-center justify-center gap-2 px-3 py-2 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 transition-all duration-200 hover:scale-[1.02] font-medium text-xs sm:text-sm min-h-[44px]"
-                      aria-label={`Navigate to ${station.name} with Google Maps`}
-                    >
-                      <svg className="w-3 h-3 sm:w-4 sm:h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3m-6 3V7m6 10l4.553 2.276A1 1 0 0021 18.382V7.618a1 1 0 00-1.447-.894L15 4m0 13V4m0 0L9 7" />
-                      </svg>
-                      <span className="hidden sm:inline">Navigate with Google Maps</span>
-                      <span className="sm:hidden">Navigate</span>
-                    </button>
-                  </div>
-                </div>
+                {isMultiple ? (
+                  <MultipleStationsPopup
+                    stationGroup={stationGroup}
+                    lat={lat}
+                    lng={lng}
+                    distance={distance}
+                  />
+                ) : (
+                  <SingleStationPopup
+                    station={representativeStation}
+                    distance={distance}
+                  />
+                )}
               </Popup>
             </Marker>
           );

@@ -292,3 +292,40 @@ export async function fetchFMStationsByInspectionStatus(status: string): Promise
     throw error;
   }
 }
+
+// Group stations by identical coordinates
+export function groupStationsByCoordinates(stations: FMStation[]): Map<string, FMStation[]> {
+  const groupedStations = new Map<string, FMStation[]>();
+
+  stations.forEach(station => {
+    const coordKey = `${station.latitude},${station.longitude}`;
+
+    if (groupedStations.has(coordKey)) {
+      groupedStations.get(coordKey)!.push(station);
+    } else {
+      groupedStations.set(coordKey, [station]);
+    }
+  });
+
+  return groupedStations;
+}
+
+// Check for duplicate coordinates in the database
+export async function checkDuplicateCoordinates(): Promise<{[key: string]: FMStation[]}> {
+  try {
+    const stations = await fetchFMStations();
+    const grouped = groupStationsByCoordinates(stations);
+    const duplicates: {[key: string]: FMStation[]} = {};
+
+    grouped.forEach((stationGroup, coordKey) => {
+      if (stationGroup.length > 1) {
+        duplicates[coordKey] = stationGroup;
+      }
+    });
+
+    return duplicates;
+  } catch (error) {
+    console.error('Error checking duplicate coordinates:', error);
+    return {};
+  }
+}
