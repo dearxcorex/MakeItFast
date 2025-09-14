@@ -30,6 +30,7 @@ function convertToFMStation(row: FMStationRow): FMStation {
     city: row.district,
     state: row.province,
     genre: row.type,
+    type: row.type, // Station type (e.g., "สถานีหลัก", "สถานีสาขา")
     description: `${row.type} radio station in ${row.district}, ${row.province}`,
     website: undefined,
     transmitterPower: undefined,

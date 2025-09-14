@@ -7,6 +7,7 @@ export interface FMStation {
   city: string;
   state: string;
   genre: string;
+  type?: string; // Station type (e.g., "สถานีหลัก", "สถานีสาขา")
   description?: string;
   website?: string;
   transmitterPower?: number; // in watts

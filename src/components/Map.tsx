@@ -213,6 +213,7 @@ export default function Map({ stations, selectedStation, onStationSelect, onUpda
     // If it's an array (multiple stations), use the first station's status
     const station = Array.isArray(stationOrGroup) ? stationOrGroup[0] : stationOrGroup;
     const isMultiple = count && count > 1;
+    const isMainStation = station.type === 'สถานีหลัก' || station.genre === 'สถานีหลัก';
 
     // Get base icon based on station status
     let baseIcon;
@@ -228,32 +229,72 @@ export default function Map({ stations, selectedStation, onStationSelect, onUpda
       baseIcon = redStationIcon;
     }
 
-    // If multiple stations, create custom icon with count badge
-    if (isMultiple) {
+    // Create custom icon with main station symbol or count badge
+    if (isMainStation || isMultiple) {
       return L.divIcon({
-        className: 'custom-station-group-icon',
+        className: 'custom-station-icon',
         html: `
           <div style="position: relative;">
             <img src="${baseIcon.options.iconUrl}"
                  style="width: 25px; height: 41px;"
                  alt="Station marker" />
-            <div style="
-              position: absolute;
-              top: -8px;
-              right: -8px;
-              background: #ff4444;
-              color: white;
-              border-radius: 50%;
-              width: 18px;
-              height: 18px;
-              display: flex;
-              align-items: center;
-              justify-content: center;
-              font-size: 11px;
-              font-weight: bold;
-              border: 2px solid white;
-              box-shadow: 0 1px 3px rgba(0,0,0,0.3);
-            ">${count}</div>
+            ${isMainStation ? `
+              <div style="
+                position: absolute;
+                top: -6px;
+                right: -6px;
+                background: #4285F4;
+                color: white;
+                border-radius: 50%;
+                width: 16px;
+                height: 16px;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                font-size: 10px;
+                font-weight: bold;
+                border: 2px solid white;
+                box-shadow: 0 1px 3px rgba(0,0,0,0.3);
+              ">★</div>
+            ` : ''}
+            ${isMultiple && !isMainStation ? `
+              <div style="
+                position: absolute;
+                top: -8px;
+                right: -8px;
+                background: #ff4444;
+                color: white;
+                border-radius: 50%;
+                width: 18px;
+                height: 18px;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                font-size: 11px;
+                font-weight: bold;
+                border: 2px solid white;
+                box-shadow: 0 1px 3px rgba(0,0,0,0.3);
+              ">${count}</div>
+            ` : ''}
+            ${isMultiple && isMainStation ? `
+              <div style="
+                position: absolute;
+                top: -8px;
+                right: -8px;
+                background: #4285F4;
+                color: white;
+                border-radius: 50%;
+                width: 18px;
+                height: 18px;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                font-size: 9px;
+                font-weight: bold;
+                border: 2px solid white;
+                box-shadow: 0 1px 3px rgba(0,0,0,0.3);
+              ">★${count}</div>
+            ` : ''}
           </div>
         `,
         iconSize: [25, 41],
@@ -284,6 +325,12 @@ export default function Map({ stations, selectedStation, onStationSelect, onUpda
               <span className="text-xs text-muted-foreground px-2 py-1 bg-muted rounded-lg">
                 {station.genre}
               </span>
+              {(station.type === 'สถานีหลัก' || station.genre === 'สถานีหลัก') && (
+                <span className="inline-flex items-center gap-1 px-2 py-1 rounded-lg bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400 text-xs font-medium">
+                  <span>★</span>
+                  <span>Main</span>
+                </span>
+              )}
             </div>
           </div>
         </div>
@@ -418,6 +465,12 @@ export default function Map({ stations, selectedStation, onStationSelect, onUpda
                     <span className="text-xs text-muted-foreground px-1.5 py-0.5 bg-muted rounded">
                       {station.genre}
                     </span>
+                    {(station.type === 'สถานีหลัก' || station.genre === 'สถานีหลัก') && (
+                      <span className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400 text-xs font-medium">
+                        <span>★</span>
+                        <span>Main</span>
+                      </span>
+                    )}
                   </div>
                 </div>
               </div>
