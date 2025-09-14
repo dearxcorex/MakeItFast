@@ -145,12 +145,7 @@ function LocationTracker({ onLocationUpdate }: { onLocationUpdate: (location: Us
           };
           onLocationUpdate(location);
 
-          // Smooth pan to new location (don't change zoom for driving)
-          map.panTo([location.latitude, location.longitude], {
-            animate: true,
-            duration: 1.0,
-            easeLinearity: 0.25
-          });
+          // Update location without auto-panning to prevent screen shake
         },
         (error) => {
           console.warn('Watch position error:', error);

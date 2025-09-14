@@ -389,13 +389,14 @@ export default function OptimizedFMStationClient({
           {/* Sidebar */}
           <Sidebar
             stations={filteredStations}
+            allStations={stations}
             onStationSelect={handleStationSelect}
             selectedStation={selectedStation}
             isOpen={sidebarOpen}
             onToggle={() => setSidebarOpen(!sidebarOpen)}
             userLocation={userLocation}
             initialOnAirStatuses={initialOnAirStatuses}
-            initialCities={availableCities}
+            initialCities={initialCities}
             initialProvinces={initialProvinces}
             initialInspectionStatuses={initialInspectionStatuses}
             filters={filters}

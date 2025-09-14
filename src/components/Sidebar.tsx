@@ -5,6 +5,7 @@ import { useTheme } from '@/contexts/ThemeContext';
 
 interface SidebarProps {
   stations: FMStation[]; // Now receives filtered stations
+  allStations: FMStation[]; // All stations for district filtering
   onStationSelect: (station: FMStation) => void;
   selectedStation?: FMStation;
   isOpen: boolean;
@@ -22,6 +23,7 @@ interface SidebarProps {
 
 export default function Sidebar({
   stations,
+  allStations,
   onStationSelect,
   selectedStation,
   isOpen,
@@ -41,6 +43,15 @@ export default function Sidebar({
   const cities = initialCities;
   const provinces = initialProvinces;
   const inspectionStatuses = initialInspectionStatuses;
+
+  // Filter cities based on selected province using ALL stations (not filtered ones)
+  const availableCities = filters.province
+    ? cities.filter(city =>
+        allStations.some(station =>
+          station.state === filters.province && station.city === city
+        )
+      )
+    : cities;
 
   return (
     <>
@@ -137,93 +148,119 @@ export default function Sidebar({
 
         {/* Mobile-Optimized Filters Section */}
         <div className="p-3 sm:p-4 border-b border-border bg-muted/10">
-          <div className="space-y-3">
-            {/* Location Filters */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 sm:gap-3">
-              <div>
-                <select
-                  value={filters.province}
-                  onChange={(e) => onFiltersChange({ ...filters, province: e.target.value })}
-                  className="w-full px-3 py-2.5 sm:py-2 bg-background border border-input rounded-lg focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent text-sm min-h-[44px] sm:min-h-[36px]"
-                >
-                  <option value="">All Provinces</option>
-                  {provinces.map(province => (
-                    <option key={province} value={province}>{province}</option>
-                  ))}
-                </select>
-              </div>
+          <div className="space-y-4">
+            {/* Location Filters - Province First */}
+            <div className="space-y-3">
+              <label className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Location</label>
+              <div className="space-y-2">
+                <div>
+                  <label className="block text-xs font-medium text-foreground mb-1">Province</label>
+                  <select
+                    value={filters.province}
+                    onChange={(e) => {
+                      const newProvince = e.target.value;
+                      onFiltersChange({
+                        ...filters,
+                        province: newProvince,
+                        city: '' // Clear city when province changes
+                      });
+                    }}
+                    className="w-full px-4 py-3 bg-background border border-input rounded-xl focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent text-sm shadow-sm"
+                  >
+                    <option value="">🏛️ Choose Province First</option>
+                    {provinces.map(province => (
+                      <option key={province} value={province}>{province}</option>
+                    ))}
+                  </select>
+                </div>
 
-              <div>
-                <select
-                  value={filters.city}
-                  onChange={(e) => onFiltersChange({ ...filters, city: e.target.value })}
-                  className="w-full px-3 py-2.5 sm:py-2 bg-background border border-input rounded-lg focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent text-sm min-h-[44px] sm:min-h-[36px] disabled:opacity-50"
-                  disabled={!filters.province && cities.length === 0}
-                >
-                  <option value="">All Districts</option>
-                  {cities.map(city => (
-                    <option key={city} value={city}>{city}</option>
-                  ))}
-                </select>
+                <div>
+                  <label className="block text-xs font-medium text-foreground mb-1">District</label>
+                  <select
+                    value={filters.city}
+                    onChange={(e) => onFiltersChange({ ...filters, city: e.target.value })}
+                    className="w-full px-4 py-3 bg-background border border-input rounded-xl focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent text-sm shadow-sm disabled:opacity-50 disabled:cursor-not-allowed"
+                    disabled={!filters.province}
+                  >
+                    {!filters.province ? (
+                      <option value="">🏙️ Select Province First</option>
+                    ) : (
+                      <>
+                        <option value="">🏙️ All Districts</option>
+                        {availableCities.map(city => (
+                          <option key={city} value={city}>{city}</option>
+                        ))}
+                      </>
+                    )}
+                  </select>
+                </div>
               </div>
             </div>
 
             {/* Status Filters */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 sm:gap-3">
-              <div>
-                <select
-                  value={filters.onAir}
-                  onChange={(e) => onFiltersChange({ ...filters, onAir: e.target.value })}
-                  className="w-full px-3 py-2.5 sm:py-2 bg-background border border-input rounded-lg focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent text-sm min-h-[44px] sm:min-h-[36px]"
-                >
-                  <option value="">All Status</option>
-                  <option value="true">🟢 On Air</option>
-                  <option value="false">🔴 Off Air</option>
-                </select>
+            <div className="space-y-3">
+              <label className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Station Status</label>
+              <div className="grid grid-cols-2 gap-2">
+                <div>
+                  <label className="block text-xs font-medium text-foreground mb-1">Broadcast Status</label>
+                  <select
+                    value={filters.onAir}
+                    onChange={(e) => onFiltersChange({ ...filters, onAir: e.target.value })}
+                    className="w-full px-3 py-2.5 bg-background border border-input rounded-xl focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent text-sm shadow-sm"
+                  >
+                    <option value="">📡 All Status</option>
+                    <option value="true">🟢 On Air</option>
+                    <option value="false">🔴 Off Air</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block text-xs font-medium text-foreground mb-1">Inspection Status</label>
+                  <select
+                    value={filters.inspection}
+                    onChange={(e) => onFiltersChange({ ...filters, inspection: e.target.value })}
+                    className="w-full px-3 py-2.5 bg-background border border-input rounded-xl focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent text-sm shadow-sm"
+                  >
+                    <option value="">🔍 All</option>
+                    {inspectionStatuses.map(status => (
+                      <option key={status} value={status}>
+                        {status === 'ตรวจแล้ว' && '✅ '}
+                        {status === 'ยังไม่ตรวจ' && '⏳ '}
+                        {status === 'ตรงตามมาตรฐาน' && '🎯 '}
+                        {status}
+                      </option>
+                    ))}
+                  </select>
+                </div>
               </div>
 
+              {/* Request Status */}
               <div>
+                <label className="block text-xs font-medium text-foreground mb-1">Request Status</label>
                 <select
-                  value={filters.inspection}
-                  onChange={(e) => onFiltersChange({ ...filters, inspection: e.target.value })}
-                  className="w-full px-3 py-2.5 sm:py-2 bg-background border border-input rounded-lg focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent text-sm min-h-[44px] sm:min-h-[36px]"
+                  value={filters.submitRequest}
+                  onChange={(e) => onFiltersChange({ ...filters, submitRequest: e.target.value })}
+                  className="w-full px-3 py-2.5 bg-background border border-input rounded-xl focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent text-sm shadow-sm"
                 >
-                  <option value="">All Inspections</option>
-                  {inspectionStatuses.map(status => (
-                    <option key={status} value={status}>
-                      {status === 'ตรวจแล้ว' && '✅ '}
-                      {status === 'ยังไม่ตรวจ' && '⏳ '}
-                      {status === 'ตรงตามมาตรฐาน' && '🎯 '}
-                      {status}
-                    </option>
-                  ))}
+                  <option value="">📋 All Request Status</option>
+                  <option value="ไม่ยื่น">❌ ไม่ยื่น</option>
                 </select>
               </div>
-            </div>
-
-            {/* Request Status */}
-            <div>
-              <select
-                value={filters.submitRequest}
-                onChange={(e) => onFiltersChange({ ...filters, submitRequest: e.target.value })}
-                className="w-full px-3 py-2.5 sm:py-2 bg-background border border-input rounded-lg focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent text-sm min-h-[44px] sm:min-h-[36px]"
-              >
-                <option value="">All Requests</option>
-                <option value="ไม่ยื่น">📋 ไม่ยื่น</option>
-              </select>
             </div>
 
             {/* Clear Filters */}
             {Object.values(filters).filter(Boolean).length > 0 && (
-              <button
-                onClick={onClearFilters}
-                className="w-full px-3 py-2.5 sm:py-2 text-sm bg-secondary text-secondary-foreground rounded-lg hover:bg-accent transition-colors flex items-center justify-center gap-2 min-h-[44px] sm:min-h-[36px] font-medium"
-              >
-                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
-                </svg>
-                Clear Filters
-              </button>
+              <div className="pt-2">
+                <button
+                  onClick={onClearFilters}
+                  className="w-full px-4 py-3 text-sm bg-secondary text-secondary-foreground rounded-xl hover:bg-accent transition-colors flex items-center justify-center gap-2 font-medium shadow-sm"
+                >
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                  </svg>
+                  Clear All Filters
+                </button>
+              </div>
             )}
           </div>
         </div>
@@ -246,7 +283,7 @@ export default function Sidebar({
               <div className="p-8 text-center">
                 <div className="w-12 h-12 bg-muted/50 rounded-xl flex items-center justify-center mx-auto mb-3">
                   <svg className="w-6 h-6 text-muted-foreground" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8.111 16.404a5.5 5.5 0 717.778 0M12 20h.01m-7.08-7.071c3.904-3.905 10.236-3.905 14.141 0M1.394 9.393c5.857-5.857 15.355-5.857 21.213 0" />
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8.111 16.404a5.5 5.5 0 0 1 7.778 0M12 20h.01m-7.08-7.071c3.904-3.905 10.236-3.905 14.141 0M1.394 9.393c5.857-5.857 15.355-5.857 21.213 0" />
                   </svg>
                 </div>
                 <h3 className="font-medium text-foreground mb-1">No stations found</h3>

@@ -107,7 +107,8 @@ export function useOptimizedFilters({
             station.description?.toLowerCase().includes(searchLower) ||
             station.genre.toLowerCase().includes(searchLower) ||
             station.city.toLowerCase().includes(searchLower) ||
-            station.state.toLowerCase().includes(searchLower)
+            station.state.toLowerCase().includes(searchLower) ||
+            station.frequency.toString().includes(filters.search)
           );
         } :
         null
