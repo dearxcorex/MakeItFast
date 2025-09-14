@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState, useMemo } from 'react';
+import { useEffect, useState, useMemo, useRef } from 'react';
 import { MapContainer, TileLayer, Marker, Popup, useMap } from 'react-leaflet';
 import L from 'leaflet';
 import { FMStation, UserLocation } from '@/types/station';
@@ -302,7 +302,40 @@ export default function Map({ stations, selectedStation, onStationSelect, onUpda
   };
 
   // Component to render single station popup
-  const SingleStationPopup = ({ station, distance }: { station: FMStation; distance: number | null }) => (
+  const SingleStationPopup = ({ station, distance }: { station: FMStation; distance: number | null }) => {
+    const [loadingOnAir, setLoadingOnAir] = useState(false);
+    const [loadingInspection, setLoadingInspection] = useState(false);
+
+    const handleOnAirToggle = async (e: React.MouseEvent) => {
+      e.preventDefault();
+      e.stopPropagation();
+      if (!onUpdateStation || loadingOnAir) return;
+      setLoadingOnAir(true);
+      try {
+        await onUpdateStation(station.id, { onAir: !station.onAir });
+        // Small delay to show success state
+        await new Promise(resolve => setTimeout(resolve, 500));
+      } finally {
+        setLoadingOnAir(false);
+      }
+    };
+
+    const handleInspectionToggle = async (e: React.MouseEvent) => {
+      e.preventDefault();
+      e.stopPropagation();
+      if (!onUpdateStation || loadingInspection) return;
+      setLoadingInspection(true);
+      try {
+        const newStatus = station.inspection68 === 'ตรวจแล้ว' ? 'ยังไม่ตรวจ' : 'ตรวจแล้ว';
+        await onUpdateStation(station.id, { inspection68: newStatus });
+        // Small delay to show success state
+        await new Promise(resolve => setTimeout(resolve, 500));
+      } finally {
+        setLoadingInspection(false);
+      }
+    };
+
+    return (
     <div className="w-full max-w-[240px] sm:max-w-[260px] p-2">
       <div className="mb-3">
         <div className="flex items-start gap-2 mb-2">
@@ -341,13 +374,25 @@ export default function Map({ stations, selectedStation, onStationSelect, onUpda
           </span>
           {onUpdateStation && (
             <button
-              onClick={() => {
-                onUpdateStation(station.id, { onAir: !station.onAir });
-              }}
-              className="px-2 sm:px-3 py-1 text-xs bg-secondary text-secondary-foreground rounded-md hover:bg-accent transition-colors font-medium whitespace-nowrap"
+              onClick={handleOnAirToggle}
+              disabled={loadingOnAir}
+              className={`px-2 sm:px-3 py-1 text-xs rounded-md font-medium whitespace-nowrap transition-all duration-200 ${
+                loadingOnAir
+                  ? 'bg-muted text-muted-foreground cursor-not-allowed'
+                  : 'bg-secondary text-secondary-foreground hover:bg-accent'
+              }`}
               aria-label={`Toggle ${station.name} broadcast status - currently ${station.onAir ? 'on air' : 'off air'}`}
             >
-              {station.onAir ? 'Set Off' : 'Set On'}
+              {loadingOnAir ? (
+                <div className="flex items-center gap-1">
+                  <svg className="w-3 h-3 animate-spin" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                  </svg>
+                  <span>Saving...</span>
+                </div>
+              ) : (
+                station.onAir ? 'Set Off' : 'Set On'
+              )}
             </button>
           )}
         </div>
@@ -369,14 +414,25 @@ export default function Map({ stations, selectedStation, onStationSelect, onUpda
           </span>
           {onUpdateStation && (
             <button
-              onClick={() => {
-                const newStatus = station.inspection68 === 'ตรวจแล้ว' ? 'ยังไม่ตรวจ' : 'ตรวจแล้ว';
-                onUpdateStation(station.id, { inspection68: newStatus });
-              }}
-              className="px-2 sm:px-3 py-1 text-xs bg-primary text-primary-foreground rounded-md hover:bg-primary/90 transition-colors font-medium whitespace-nowrap"
+              onClick={handleInspectionToggle}
+              disabled={loadingInspection}
+              className={`px-2 sm:px-3 py-1 text-xs rounded-md font-medium whitespace-nowrap transition-all duration-200 ${
+                loadingInspection
+                  ? 'bg-muted text-muted-foreground cursor-not-allowed'
+                  : 'bg-primary text-primary-foreground hover:bg-primary/90'
+              }`}
               aria-label={`Toggle ${station.name} inspection status - currently ${station.inspection68 || 'not inspected'}`}
             >
-              {station.inspection68 === 'ยังไม่ตรวจ' ? 'Inspect' : 'Inspected'}
+              {loadingInspection ? (
+                <div className="flex items-center gap-1">
+                  <svg className="w-3 h-3 animate-spin" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                  </svg>
+                  <span>Saving...</span>
+                </div>
+              ) : (
+                station.inspection68 === 'ยังไม่ตรวจ' ? 'Inspect' : 'Inspected'
+              )}
             </button>
           )}
         </div>
@@ -415,10 +471,33 @@ export default function Map({ stations, selectedStation, onStationSelect, onUpda
         </button>
       </div>
     </div>
-  );
+    );
+  };
 
   // Component to render multiple stations popup
-  const MultipleStationsPopup = ({ stationGroup, lat, lng, distance }: { stationGroup: FMStation[]; lat: number; lng: number; distance: number | null }) => (
+  const MultipleStationsPopup = ({ stationGroup, lat, lng, distance }: { stationGroup: FMStation[]; lat: number; lng: number; distance: number | null }) => {
+    const [loadingStations, setLoadingStations] = useState<Set<string | number>>(new Set());
+
+    const handleStationToggle = async (e: React.MouseEvent, stationId: string | number, field: 'onAir' | 'inspection68', value: any) => {
+      e.preventDefault();
+      e.stopPropagation();
+      if (!onUpdateStation || loadingStations.has(stationId)) return;
+
+      setLoadingStations(prev => new Set(prev).add(stationId));
+      try {
+        await onUpdateStation(stationId, { [field]: value });
+        // Small delay to show success state
+        await new Promise(resolve => setTimeout(resolve, 500));
+      } finally {
+        setLoadingStations(prev => {
+          const newSet = new Set(prev);
+          newSet.delete(stationId);
+          return newSet;
+        });
+      }
+    };
+
+    return (
     <div className="w-full max-w-[260px] sm:max-w-[280px] p-2">
       <div className="mb-3">
         <div className="flex items-start gap-2 mb-2">
@@ -480,12 +559,24 @@ export default function Map({ stations, selectedStation, onStationSelect, onUpda
                 </span>
                 {onUpdateStation && (
                   <button
-                    onClick={() => {
-                      onUpdateStation(station.id, { onAir: !station.onAir });
-                    }}
-                    className="px-2 py-1 text-xs bg-secondary text-secondary-foreground rounded hover:bg-accent transition-colors font-medium whitespace-nowrap"
+                    onClick={(e) => handleStationToggle(e, station.id, 'onAir', !station.onAir)}
+                    disabled={loadingStations.has(station.id)}
+                    className={`px-2 py-1 text-xs rounded font-medium whitespace-nowrap transition-all duration-200 ${
+                      loadingStations.has(station.id)
+                        ? 'bg-muted text-muted-foreground cursor-not-allowed'
+                        : 'bg-secondary text-secondary-foreground hover:bg-accent'
+                    }`}
                   >
-                    {station.onAir ? 'Set Off' : 'Set On'}
+                    {loadingStations.has(station.id) ? (
+                      <div className="flex items-center gap-1">
+                        <svg className="w-2.5 h-2.5 animate-spin" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                        </svg>
+                        <span>Save...</span>
+                      </div>
+                    ) : (
+                      station.onAir ? 'Set Off' : 'Set On'
+                    )}
                   </button>
                 )}
               </div>
@@ -506,13 +597,27 @@ export default function Map({ stations, selectedStation, onStationSelect, onUpda
                   </span>
                   {onUpdateStation && (
                     <button
-                      onClick={() => {
+                      onClick={(e) => {
                         const newStatus = station.inspection68 === 'ตรวจแล้ว' ? 'ยังไม่ตรวจ' : 'ตรวจแล้ว';
-                        onUpdateStation(station.id, { inspection68: newStatus });
+                        handleStationToggle(e, station.id, 'inspection68', newStatus);
                       }}
-                      className="px-2 py-1 text-xs bg-primary text-primary-foreground rounded hover:bg-primary/90 transition-colors font-medium whitespace-nowrap"
+                      disabled={loadingStations.has(station.id)}
+                      className={`px-2 py-1 text-xs rounded font-medium whitespace-nowrap transition-all duration-200 ${
+                        loadingStations.has(station.id)
+                          ? 'bg-muted text-muted-foreground cursor-not-allowed'
+                          : 'bg-primary text-primary-foreground hover:bg-primary/90'
+                      }`}
                     >
-                      {station.inspection68 === 'ยังไม่ตรวจ' ? 'Inspect' : 'Inspected'}
+                      {loadingStations.has(station.id) ? (
+                        <div className="flex items-center gap-1">
+                          <svg className="w-2.5 h-2.5 animate-spin" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                          </svg>
+                          <span>Save...</span>
+                        </div>
+                      ) : (
+                        station.inspection68 === 'ยังไม่ตรวจ' ? 'Inspect' : 'Inspected'
+                      )}
                     </button>
                   )}
                 </div>
@@ -537,7 +642,8 @@ export default function Map({ stations, selectedStation, onStationSelect, onUpda
         </div>
       </div>
     </div>
-  );
+    );
+  };
 
   if (!isClient) {
     return (
@@ -631,7 +737,10 @@ export default function Map({ stations, selectedStation, onStationSelect, onUpda
                 },
               }}
             >
-              <Popup>
+              <Popup
+                autoPan={false}
+                keepInView={true}
+              >
                 {isMultiple ? (
                   <MultipleStationsPopup
                     stationGroup={stationGroup}
