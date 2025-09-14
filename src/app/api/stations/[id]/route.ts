@@ -34,7 +34,6 @@ export async function PATCH(
       return NextResponse.json({ error: 'No valid fields to update' }, { status: 400 });
     }
 
-    console.log(`Updating station ${stationId} with:`, updates);
 
     const { data, error } = await adminClient
       .from('fm_station')
@@ -52,7 +51,6 @@ export async function PATCH(
       return NextResponse.json({ error: 'Station not found' }, { status: 404 });
     }
 
-    console.log(`Successfully updated station ${stationId}`);
     return NextResponse.json({ success: true, data });
   } catch (error) {
     console.error('API error:', error);

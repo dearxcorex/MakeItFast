@@ -1,5 +1,5 @@
 import { createClient } from '@supabase/supabase-js';
-import FMStationClient from './FMStationClient';
+import OptimizedFMStationClient from './OptimizedFMStationClient';
 
 // Create admin client with service role key (server-side only)
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
@@ -74,7 +74,7 @@ export default async function FMStationsFetcher() {
   const inspectionStatuses = Array.from(new Set(inspectionResult.data?.map(item => item.inspection_68).filter(Boolean))) || [];
 
   return (
-    <FMStationClient 
+    <OptimizedFMStationClient 
       initialStations={transformedStations}
       initialOnAirStatuses={onAirStatuses}
       initialCities={cities}

@@ -4,10 +4,6 @@ import { NextResponse } from 'next/server';
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
 const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
 
-console.log('Environment check:', {
-  url: supabaseUrl ? 'Available' : 'Missing',
-  serviceKey: serviceKey ? 'Available' : 'Missing'
-});
 
 if (!supabaseUrl || !serviceKey) {
   console.error('Missing environment variables');
@@ -183,7 +179,6 @@ const sampleStations = [
 
 export async function POST() {
   try {
-    console.log('POST /api/seed called');
     
     // Check if admin client is available
     if (!adminClient) {
@@ -194,7 +189,6 @@ export async function POST() {
       );
     }
 
-    console.log('Attempting to clear existing data...');
     
     // Clear existing data first - using name field instead of id since id doesn't exist
     const { error: deleteError } = await adminClient
@@ -205,10 +199,8 @@ export async function POST() {
     if (deleteError) {
       console.error('Delete error:', deleteError);
       // Don't fail on delete error - table might be empty
-      console.log('Delete failed, but continuing with insert...');
     }
 
-    console.log('Attempting to insert new data...');
 
     // Insert new data
     const { data, error } = await adminClient
@@ -224,7 +216,6 @@ export async function POST() {
       );
     }
 
-    console.log('Success! Inserted:', data?.length, 'stations');
 
     return NextResponse.json({
       success: true,

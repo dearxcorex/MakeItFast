@@ -22,7 +22,7 @@
   --ring: #3b82f6;
   --sidebar-bg: #ffffff;
   --sidebar-border: #e2e8f0;
-  --header-bg: linear-gradient(135deg, #06b6d4 0%, #3b82f6 50%, #8b5cf6 100%);
+  --header-bg: linear-gradient(135deg, #0ea5e9 0%, #3b82f6 30%, #6366f1 60%, #8b5cf6 90%, #a855f7 100%);
 }
 
 .dark {
@@ -46,7 +46,7 @@
   --ring: #3b82f6;
   --sidebar-bg: #0f172a;
   --sidebar-border: #334155;
-  --header-bg: linear-gradient(135deg, #0891b2 0%, #1d4ed8 50%, #7c3aed 100%);
+  --header-bg: linear-gradient(135deg, #1e293b 0%, #334155 30%, #475569 60%, #64748b 90%, #94a3b8 100%);
 }
 
 @theme inline {
@@ -118,12 +118,140 @@ body {
   z-index: 800;
 }
 
+/* Ensure popup content and navigation buttons are clickable */
+.leaflet-popup-content {
+  z-index: 1000;
+  position: relative;
+}
+
 .leaflet-popup-content-wrapper {
   background: var(--card);
   color: var(--card-foreground);
   border: 1px solid var(--border);
   border-radius: 12px;
   box-shadow: 0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1);
+  z-index: 1000;
+  position: relative;
+}
+
+/* Ensure navigation buttons and links are always clickable - comprehensive fix */
+.leaflet-popup-content button[aria-label*="Navigate"],
+.leaflet-popup-content a[aria-label*="Navigate"],
+.leaflet-popup-content [title*="Navigate"] {
+  z-index: 2147483647 !important; /* Maximum z-index */
+  position: relative !important;
+  pointer-events: auto !important;
+  isolation: isolate !important;
+  transform: translateZ(0) !important; /* Create new stacking context */
+  will-change: transform !important;
+  backface-visibility: hidden !important;
+}
+
+/* Force all navigation elements to the top layer */
+button[aria-label*="Navigate"],
+a[aria-label*="Navigate"],
+[title*="Navigate"] {
+  z-index: 9999 !important;
+  position: relative !important;
+  pointer-events: auto !important;
+  isolation: isolate !important;
+}
+
+/* Specific fix for sidebar navigation buttons */
+.sidebar button[aria-label*="Navigate"],
+.sidebar a[aria-label*="Navigate"],
+[class*="sidebar"] button[aria-label*="Navigate"],
+[class*="sidebar"] a[aria-label*="Navigate"] {
+  z-index: 10000 !important;
+  position: relative !important;
+  pointer-events: auto !important;
+  isolation: isolate !important;
+}
+
+/* Nuclear option: Force ALL navigation buttons to be unblocked */
+button[aria-label*="Navigate"]:not([disabled]),
+a[aria-label*="Navigate"]:not([disabled]),
+[title*="Navigate"]:not([disabled]) {
+  z-index: 2147483647 !important; /* Maximum z-index value */
+  position: relative !important;
+  pointer-events: auto !important;
+  isolation: isolate !important;
+  transform: translateZ(0) !important; /* Force hardware acceleration and new stacking context */
+  will-change: transform !important;
+  backface-visibility: hidden !important;
+}
+
+/* Additional fix for all interactive elements in popups */
+.leaflet-popup-content button,
+.leaflet-popup-content a {
+  pointer-events: auto !important;
+  position: relative !important;
+  z-index: 2147483646 !important; /* One less than navigation buttons */
+}
+
+/* Proper fix for popup navigation buttons - keep in document flow */
+.leaflet-popup-content a[aria-label*="Navigate"],
+.leaflet-popup-content button[aria-label*="Navigate"] {
+  z-index: 2147483647 !important; /* Absolute maximum */
+  position: relative !important; /* Keep in document flow */
+  pointer-events: auto !important;
+  isolation: isolate !important;
+  transform: translateZ(0) !important; /* Create stacking context without breaking layout */
+  will-change: auto !important;
+  backface-visibility: hidden !important;
+  /* Ensure no interference from parent elements */
+  margin: 0 !important;
+  display: block !important;
+  width: 100% !important;
+  box-sizing: border-box !important;
+  /* Prevent event propagation issues */
+  -webkit-tap-highlight-color: transparent !important;
+}
+
+/* Ensure popup content wrapper doesn't interfere */
+.leaflet-popup-content-wrapper {
+  z-index: 1000 !important;
+  position: relative !important;
+  overflow: visible !important;
+  pointer-events: auto !important;
+}
+
+/* Prevent popup from interfering with button clicks */
+.leaflet-popup {
+  pointer-events: auto !important;
+}
+
+.leaflet-popup-content {
+  pointer-events: auto !important;
+}
+
+/* Ensure no invisible overlays block the navigation buttons */
+.leaflet-popup-content a[aria-label*="Navigate"]:before,
+.leaflet-popup-content button[aria-label*="Navigate"]:before,
+.leaflet-popup-content a[aria-label*="Navigate"]:after,
+.leaflet-popup-content button[aria-label*="Navigate"]:after {
+  content: none !important;
+  display: none !important;
+}
+
+/* Remove any potential blocking pseudo-elements or overlays */
+.leaflet-popup-content *:not(a[aria-label*="Navigate"]):not(button[aria-label*="Navigate"]) {
+  pointer-events: auto !important;
+}
+
+/* Fix for leaflet popup pane layering */
+.leaflet-popup-pane {
+  z-index: 9998 !important;
+}
+
+.leaflet-popup {
+  z-index: 9999 !important;
+}
+
+/* Ensure popup content has proper layering */
+.leaflet-popup-content {
+  z-index: 10000 !important;
+  position: relative !important;
 }
 
 .leaflet-popup-tip {
@@ -143,15 +271,38 @@ body {
 
 /* Glass morphism effect */
 .glass-effect {
-  background: rgba(255, 255, 255, 0.1);
-  backdrop-filter: blur(10px);
-  border: 1px solid rgba(255, 255, 255, 0.2);
+  background: rgba(255, 255, 255, 0.15);
+  backdrop-filter: blur(16px);
+  border: 1px solid rgba(255, 255, 255, 0.25);
+  box-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.15);
 }
 
 .dark .glass-effect {
-  background: rgba(15, 23, 42, 0.8);
-  backdrop-filter: blur(10px);
-  border: 1px solid rgba(51, 65, 85, 0.3);
+  background: rgba(15, 23, 42, 0.85);
+  backdrop-filter: blur(16px);
+  border: 1px solid rgba(51, 65, 85, 0.35);
+  box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.25);
+}
+
+/* Header gradient overlay for extra depth */
+.header-gradient {
+  position: relative;
+  background: var(--header-bg);
+}
+
+.header-gradient::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.1) 0%, rgba(255, 255, 255, 0.05) 50%, rgba(0, 0, 0, 0.05) 100%);
+  pointer-events: none;
+}
+
+.dark .header-gradient::before {
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.08) 0%, rgba(255, 255, 255, 0.03) 50%, rgba(0, 0, 0, 0.1) 100%);
 }
 
 /* Modern animations */
@@ -166,8 +317,38 @@ body {
   }
 }
 
+@keyframes slideIn {
+  from {
+    opacity: 0;
+    transform: translateX(-20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+@keyframes scaleIn {
+  from {
+    opacity: 0;
+    transform: scale(0.95);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
 .animate-fade-in {
   animation: fadeIn 0.3s ease-out;
+}
+
+.animate-slide-in {
+  animation: slideIn 0.3s ease-out;
+}
+
+.animate-scale-in {
+  animation: scaleIn 0.2s ease-out;
 }
 
 /* Modern button styles */
