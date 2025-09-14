@@ -308,21 +308,21 @@ export default function Map({ stations, selectedStation, onStationSelect, onUpda
 
   // Component to render single station popup
   const SingleStationPopup = ({ station, distance }: { station: FMStation; distance: number | null }) => (
-    <div className="w-full max-w-[280px] sm:max-w-[320px] p-3 sm:p-4">
-      <div className="mb-4">
-        <div className="flex items-start gap-3 mb-3">
-          <div className="w-8 h-8 sm:w-10 sm:h-10 bg-primary/20 rounded-xl flex items-center justify-center flex-shrink-0">
-            <svg className="w-4 h-4 sm:w-5 sm:h-5 text-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+    <div className="w-full max-w-[240px] sm:max-w-[260px] p-2">
+      <div className="mb-3">
+        <div className="flex items-start gap-2 mb-2">
+          <div className="w-6 h-6 sm:w-8 sm:h-8 bg-primary/20 rounded-lg flex items-center justify-center flex-shrink-0">
+            <svg className="w-3 h-3 sm:w-4 sm:h-4 text-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8.111 16.404a5.5 5.5 0 017.778 0M12 20h.01m-7.08-7.071c3.904-3.905 10.236-3.905 14.141 0M1.394 9.393c5.857-5.857 15.355-5.857 21.213 0" />
             </svg>
           </div>
           <div className="min-w-0 flex-1">
-            <h3 className="font-bold text-sm sm:text-base text-card-foreground leading-tight break-words">{station.name}</h3>
-            <div className="flex items-center gap-1 sm:gap-2 mt-2 flex-wrap">
-              <span className="inline-flex items-center px-2 py-1 rounded-lg bg-primary/20 text-primary text-xs font-bold">
+            <h3 className="font-semibold text-sm text-card-foreground leading-tight break-words">{station.name}</h3>
+            <div className="flex items-center gap-1 mt-1 flex-wrap">
+              <span className="inline-flex items-center px-1.5 py-0.5 rounded bg-primary/20 text-primary text-xs font-medium">
                 {station.frequency} FM
               </span>
-              <span className="text-xs text-muted-foreground px-2 py-1 bg-muted rounded-lg">
+              <span className="text-xs text-muted-foreground px-1.5 py-0.5 bg-muted rounded">
                 {station.genre}
               </span>
               {(station.type === 'สถานีหลัก' || station.genre === 'สถานีหลัก') && (
@@ -404,20 +404,19 @@ export default function Map({ stations, selectedStation, onStationSelect, onUpda
         </div>
       )}
 
-      <div className="mt-4 pt-3 border-t border-border">
+      <div className="mt-2 pt-2 border-t border-border/30 flex justify-center">
         <button
           onClick={() => {
             const googleMapsUrl = `https://www.google.com/maps/dir/?api=1&destination=${station.latitude},${station.longitude}&travelmode=driving`;
             window.open(googleMapsUrl, '_blank', 'noopener,noreferrer');
           }}
-          className="w-full flex items-center justify-center gap-2 px-3 py-2 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 transition-all duration-200 hover:scale-[1.02] font-medium text-xs sm:text-sm min-h-[44px]"
+          className="inline-flex items-center justify-center gap-1 px-3 py-1 bg-slate-700 hover:bg-slate-600 text-white border border-slate-600 rounded-full text-xs font-medium transition-all duration-200 hover:shadow-sm"
           aria-label={`Navigate to ${station.name} with Google Maps`}
         >
-          <svg className="w-3 h-3 sm:w-4 sm:h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3m-6 3V7m6 10l4.553 2.276A1 1 0 0021 18.382V7.618a1 1 0 00-1.447-.894L15 4m0 13V4m0 0L9 7" />
+          <svg className="w-2.5 h-2.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2.5">
+            <path strokeLinecap="round" strokeLinejoin="round" d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6" />
           </svg>
-          <span className="hidden sm:inline">Navigate with Google Maps</span>
-          <span className="sm:hidden">Navigate</span>
+          <span>Navigate</span>
         </button>
       </div>
     </div>
@@ -425,11 +424,11 @@ export default function Map({ stations, selectedStation, onStationSelect, onUpda
 
   // Component to render multiple stations popup
   const MultipleStationsPopup = ({ stationGroup, lat, lng, distance }: { stationGroup: FMStation[]; lat: number; lng: number; distance: number | null }) => (
-    <div className="w-full max-w-[320px] sm:max-w-[380px] p-3 sm:p-4">
-      <div className="mb-4">
-        <div className="flex items-start gap-3 mb-3">
-          <div className="w-8 h-8 sm:w-10 sm:h-10 bg-primary/20 rounded-xl flex items-center justify-center flex-shrink-0">
-            <svg className="w-4 h-4 sm:w-5 sm:h-5 text-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+    <div className="w-full max-w-[260px] sm:max-w-[280px] p-2">
+      <div className="mb-3">
+        <div className="flex items-start gap-2 mb-2">
+          <div className="w-6 h-6 sm:w-8 sm:h-8 bg-primary/20 rounded-lg flex items-center justify-center flex-shrink-0">
+            <svg className="w-3 h-3 sm:w-4 sm:h-4 text-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8.111 16.404a5.5 5.5 0 017.778 0M12 20h.01m-7.08-7.071c3.904-3.905 10.236-3.905 14.141 0M1.394 9.393c5.857-5.857 15.355-5.857 21.213 0" />
             </svg>
           </div>
@@ -452,9 +451,9 @@ export default function Map({ stations, selectedStation, onStationSelect, onUpda
           </div>
         )}
 
-        <div className="space-y-3 max-h-[300px] overflow-y-auto">
+        <div className="space-y-2 max-h-[280px] overflow-y-auto">
           {stationGroup.map((station) => (
-            <div key={station.id} className="border rounded-lg p-3 bg-muted/20">
+            <div key={station.id} className="border rounded p-2 bg-muted/20">
               <div className="flex items-start gap-2 mb-2">
                 <div className="min-w-0 flex-1">
                   <h4 className="font-semibold text-xs text-card-foreground break-words">{station.name}</h4>
@@ -527,19 +526,18 @@ export default function Map({ stations, selectedStation, onStationSelect, onUpda
           ))}
         </div>
 
-        <div className="mt-4 pt-3 border-t border-border">
+        <div className="mt-2 pt-2 border-t border-border/30 flex justify-center">
           <button
             onClick={() => {
               const googleMapsUrl = `https://www.google.com/maps/dir/?api=1&destination=${lat},${lng}&travelmode=driving`;
               window.open(googleMapsUrl, '_blank', 'noopener,noreferrer');
             }}
-            className="w-full flex items-center justify-center gap-2 px-3 py-2 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 transition-all duration-200 hover:scale-[1.02] font-medium text-xs sm:text-sm min-h-[44px]"
+            className="inline-flex items-center justify-center gap-1 px-3 py-1 bg-slate-700 hover:bg-slate-600 text-white border border-slate-600 rounded-full text-xs font-medium transition-all duration-200 hover:shadow-sm"
           >
-            <svg className="w-3 h-3 sm:w-4 sm:h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3m-6 3V7m6 10l4.553 2.276A1 1 0 0021 18.382V7.618a1 1 0 00-1.447-.894L15 4m0 13V4m0 0L9 7" />
+            <svg className="w-2.5 h-2.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2.5">
+              <path strokeLinecap="round" strokeLinejoin="round" d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6" />
             </svg>
-            <span className="hidden sm:inline">Navigate to Location</span>
-            <span className="sm:hidden">Navigate</span>
+            <span>Navigate</span>
           </button>
         </div>
       </div>
