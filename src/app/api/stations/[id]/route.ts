@@ -26,7 +26,7 @@ export async function PATCH(
     const { onAir, inspection68 } = body;
 
     // Build update object with only provided fields
-    const updates: any = {};
+    const updates: Record<string, boolean | string> = {};
     if (onAir !== undefined) updates.on_air = onAir;
     if (inspection68 !== undefined) updates.inspection_68 = inspection68;
 

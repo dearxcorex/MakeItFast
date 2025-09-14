@@ -209,7 +209,7 @@ export default function FMStationClient({
       );
 
       // Prepare API request body with only the fields that should be updated
-      const apiUpdates: any = {};
+      const apiUpdates: Record<string, boolean | string> = {};
       if ('onAir' in updates && updates.onAir !== undefined) {
         apiUpdates.onAir = updates.onAir;
       }
