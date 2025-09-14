@@ -336,7 +336,7 @@ export default function Map({ stations, selectedStation, onStationSelect, onUpda
     };
 
     return (
-    <div className="w-full max-w-[240px] sm:max-w-[260px] p-2">
+    <div className="w-full max-w-[300px] sm:max-w-[340px] p-3">
       <div className="mb-3">
         <div className="flex items-start gap-2 mb-2">
           <div className="w-6 h-6 sm:w-8 sm:h-8 bg-primary/20 rounded-lg flex items-center justify-center flex-shrink-0">
@@ -509,7 +509,7 @@ export default function Map({ stations, selectedStation, onStationSelect, onUpda
     };
 
     return (
-    <div className="w-full max-w-[260px] sm:max-w-[280px] p-2">
+    <div className="w-full max-w-[320px] sm:max-w-[380px] p-3">
       <div className="mb-3">
         <div className="flex items-start gap-2 mb-2">
           <div className="w-6 h-6 sm:w-8 sm:h-8 bg-primary/20 rounded-lg flex items-center justify-center flex-shrink-0">

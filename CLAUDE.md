@@ -55,3 +55,4 @@ Key state in main component:
 - Fallback to Los Angeles coordinates if geolocation fails
 - Distance calculation using Haversine formula
 - Station list automatically sorts by distance when user location available
+- do not commit and push to github. wait for my command

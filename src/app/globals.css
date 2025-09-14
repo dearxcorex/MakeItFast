@@ -171,12 +171,13 @@ body {
 
 /* Mobile sidebar modal optimizations */
 @media (max-width: 1023px) {
-  /* Sidebar behaves as modal on mobile */
+  /* Sidebar behaves as centered modal on mobile */
   .sidebar-modal {
-    /* Better mobile modal fit with proper centering */
-    max-height: 90vh;
-    max-width: calc(100vw - 32px);
-    min-height: 60vh;
+    /* Perfect mobile modal centering and sizing */
+    max-height: 85vh;
+    max-width: 384px; /* Increased from 320px for better content fit */
+    min-height: 70vh;
+    width: calc(100vw - 32px);
 
     /* Prevent content from being cut off */
     box-sizing: border-box;
@@ -185,17 +186,21 @@ body {
     -webkit-overflow-scrolling: touch;
     overscroll-behavior: contain;
 
-    /* Hardware acceleration */
+    /* Hardware acceleration for smooth animations */
     -webkit-transform: translate3d(0, 0, 0);
     transform: translate3d(0, 0, 0);
     will-change: transform;
 
-    /* Proper modal centering */
-    margin: auto;
+    /* Enhanced modal appearance */
+    box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.6);
+    backdrop-filter: blur(16px);
 
-    /* Add modal-like appearance */
-    box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
-    backdrop-filter: blur(8px);
+    /* Perfect centering - flexbox parent handles positioning */
+    margin: 0 auto;
+    position: relative;
+
+    /* Prevent modal from touching screen edges */
+    min-width: 320px;
   }
 
   /* Mobile modal backdrop positioning */

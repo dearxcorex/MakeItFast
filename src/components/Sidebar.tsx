@@ -73,21 +73,25 @@ export default function Sidebar({
 
   return (
     <>
-      {/* Mobile backdrop */}
+      {/* Mobile Modal Backdrop */}
       {isOpen && (
         <div
-          className="fixed inset-0 bg-black/10 backdrop-blur-xs z-[999] lg:hidden transition-all duration-300"
+          className="fixed inset-0 bg-black/20 backdrop-blur-sm z-[998] lg:hidden transition-all duration-300 flex items-center justify-center p-4"
           onClick={onToggle}
           aria-hidden="true"
-        />
+        >
+          {/* Prevent clicks on modal content from closing */}
+          <div onClick={(e) => e.stopPropagation()}>
+            {/* Modal content will be rendered here by the sidebar container */}
+          </div>
+        </div>
       )}
 
-      {/* Clean Minimal Sidebar */}
+      {/* Sidebar Container - Mobile Modal or Desktop Sidebar */}
       <div className={`
-        fixed lg:static z-[1000]
         ${isOpen
-          ? 'inset-0 lg:inset-y-0 lg:left-0 flex items-center justify-center lg:block lg:items-start lg:justify-start'
-          : 'inset-y-0 left-0 -translate-x-full lg:translate-x-0'
+          ? 'fixed inset-0 z-[999] flex items-center justify-center p-4 lg:static lg:inset-auto lg:p-0 lg:block'
+          : 'fixed inset-y-0 left-0 -translate-x-full lg:static lg:translate-x-0'
         }
         lg:w-80 xl:w-88
         transform transition-all duration-300 ease-in-out
@@ -95,14 +99,24 @@ export default function Sidebar({
         lg:max-h-screen lg:overflow-hidden lg:bg-background
       `}
       role="complementary"
-      aria-label="Station filters and list">
+      aria-label="Station filters and list"
+      onClick={(e) => {
+        // Prevent closing when clicking on modal content on mobile
+        if (isOpen && window.innerWidth < 1024) {
+          e.stopPropagation();
+        }
+      }}>
 
-        {/* Mobile Modal Content Container */}
+        {/* Actual Modal Content - Centered on Mobile */}
         <div className={`
-          w-full max-w-sm mx-auto lg:max-w-none lg:mx-0
-          flex flex-col shadow-xl lg:shadow-none border border-border lg:border-none lg:border-r
-          max-h-[90vh] lg:max-h-screen overflow-hidden bg-background sidebar-modal
-          rounded-lg lg:rounded-none
+          ${isOpen
+            ? 'w-full max-w-sm mx-auto lg:max-w-none lg:mx-0 lg:w-full'
+            : 'w-full'
+          }
+          flex flex-col shadow-2xl lg:shadow-none border border-border lg:border-none lg:border-r
+          max-h-[85vh] lg:max-h-screen overflow-hidden bg-background
+          rounded-2xl lg:rounded-none
+          sidebar-modal
         `}>
 
         {/* Mobile-Optimized Header */}
@@ -421,7 +435,7 @@ export default function Sidebar({
           })()}
         </div>
 
-        </div> {/* Close Mobile Modal Content Container */}
+        </div> {/* Close Modal Content Container */}
       </div>
     </>
   );
