@@ -1,5 +1,6 @@
 'use client';
 
+import { useRef } from 'react';
 import { FMStation, FilterType, UserLocation } from '@/types/station';
 import { useTheme } from '@/contexts/ThemeContext';
 
@@ -38,6 +39,23 @@ export default function Sidebar({
   calculateDistance
 }: SidebarProps) {
   const { theme, toggleTheme } = useTheme();
+  const scrollContainerRef = useRef<HTMLDivElement>(null);
+
+  // Handle station selection with scroll position preservation
+  const handleStationSelect = (station: FMStation) => {
+    // Preserve scroll position
+    const currentScrollTop = scrollContainerRef.current?.scrollTop || 0;
+
+    // Call the original handler
+    onStationSelect(station);
+
+    // Restore scroll position after React updates
+    setTimeout(() => {
+      if (scrollContainerRef.current) {
+        scrollContainerRef.current.scrollTop = currentScrollTop;
+      }
+    }, 0);
+  };
 
   // Filter data arrays from server-side props
   const cities = initialCities;
@@ -71,7 +89,7 @@ export default function Sidebar({
         transform transition-all duration-300 ease-in-out
         ${isOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'}
         flex flex-col shadow-xl lg:shadow-none border-r border-border
-        max-h-screen overflow-hidden bg-background
+        max-h-screen overflow-hidden bg-background sidebar-modal
       `}
       role="complementary"
       aria-label="Station filters and list">
@@ -266,7 +284,10 @@ export default function Sidebar({
         </div>
 
         {/* Station List */}
-        <div className="flex-1 overflow-y-auto">
+        <div
+          ref={scrollContainerRef}
+          className="flex-1 overflow-y-auto scrollbar-stable"
+        >
           {(() => {
             // Filter stations within 20km if user location is available
             const filteredStations = userLocation
@@ -294,7 +315,7 @@ export default function Sidebar({
                 </p>
               </div>
             ) : (
-              <div className="p-2 sm:p-3 space-y-2 sm:space-y-3">
+              <div className="p-2 sm:p-3 space-y-1.5 sm:space-y-2">
                 {filteredStations.map((station) => {
                 const distance = userLocation
                   ? calculateDistance(
@@ -306,9 +327,9 @@ export default function Sidebar({
                 return (
                   <div
                     key={station.id}
-                    onClick={() => onStationSelect(station)}
+                    onClick={() => handleStationSelect(station)}
                     className={`
-                      relative p-3 rounded-lg cursor-pointer transition-all duration-200 border
+                      relative p-2.5 sm:p-3 rounded-lg cursor-pointer transition-all duration-200 border
                       ${selectedStation?.id === station.id
                         ? 'bg-primary/10 border-primary shadow-sm'
                         : 'bg-card border-border hover:border-primary/50 hover:shadow-sm'
@@ -319,7 +340,7 @@ export default function Sidebar({
                     onKeyDown={(e) => {
                       if (e.key === 'Enter' || e.key === ' ') {
                         e.preventDefault();
-                        onStationSelect(station);
+                        handleStationSelect(station);
                       }
                     }}
                   >

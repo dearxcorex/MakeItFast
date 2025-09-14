@@ -169,6 +169,41 @@ body {
   }
 }
 
+/* Mobile sidebar modal optimizations */
+@media (max-width: 1023px) {
+  /* Sidebar behaves as modal on mobile */
+  .sidebar-modal {
+    /* Better mobile modal fit */
+    max-height: 100vh;
+    max-width: calc(100vw - 16px);
+
+    /* Prevent content from being cut off */
+    box-sizing: border-box;
+
+    /* Smooth scrolling */
+    -webkit-overflow-scrolling: touch;
+    overscroll-behavior: contain;
+
+    /* Hardware acceleration */
+    -webkit-transform: translate3d(0, 0, 0);
+    transform: translate3d(0, 0, 0);
+    will-change: transform;
+  }
+
+  /* Optimize sidebar content spacing on mobile */
+  .sidebar-modal .scrollbar-stable {
+    /* Mobile-specific scroll container fixes */
+    -webkit-overflow-scrolling: auto;
+    overscroll-behavior-y: contain;
+
+    /* Prevent scroll bounce that causes shake */
+    overscroll-behavior-x: hidden;
+
+    /* Better touch scrolling */
+    touch-action: pan-y;
+  }
+}
+
 /* Ensure navigation buttons and links are always clickable - comprehensive fix */
 .leaflet-popup-content button[aria-label*="Navigate"],
 .leaflet-popup-content a[aria-label*="Navigate"],
