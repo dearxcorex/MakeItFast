@@ -1,4 +1,8 @@
+# FM Station Tracker
+
 This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+
+A modern, accessible FM radio station tracker with real-time geolocation and Google Maps navigation integration.
 
 ## Getting Started
 
