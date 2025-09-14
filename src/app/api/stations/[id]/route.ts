@@ -1,26 +1,35 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 
-// Create admin client with service role key for database updates
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
-const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY!;
+// Create admin client function to handle environment variables at runtime
+function createAdminClient() {
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
 
-if (!serviceRoleKey) {
-  throw new Error('SUPABASE_SERVICE_ROLE_KEY is not set');
+  if (!supabaseUrl) {
+    throw new Error('NEXT_PUBLIC_SUPABASE_URL is not set');
+  }
+
+  if (!serviceRoleKey) {
+    throw new Error('SUPABASE_SERVICE_ROLE_KEY is not set');
+  }
+
+  return createClient(supabaseUrl, serviceRoleKey);
 }
-
-const adminClient = createClient(supabaseUrl, serviceRoleKey);
 
 export async function PATCH(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    // Create admin client at runtime
+    const adminClient = createAdminClient();
+
     // Debug logging for Vercel deployment
     console.log('🔍 API Debug - Environment check:');
-    console.log('- SUPABASE_URL exists:', !!supabaseUrl);
-    console.log('- SERVICE_ROLE_KEY exists:', !!serviceRoleKey);
-    console.log('- SERVICE_ROLE_KEY length:', serviceRoleKey?.length || 0);
+    console.log('- SUPABASE_URL exists:', !!process.env.NEXT_PUBLIC_SUPABASE_URL);
+    console.log('- SERVICE_ROLE_KEY exists:', !!process.env.SUPABASE_SERVICE_ROLE_KEY);
+    console.log('- SERVICE_ROLE_KEY length:', process.env.SUPABASE_SERVICE_ROLE_KEY?.length || 0);
 
     const { id } = await params;
     const stationId = parseInt(id);

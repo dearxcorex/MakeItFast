@@ -1,18 +1,25 @@
 import { NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 
-// Create admin client with service role key
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
-const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY!;
+// Create admin client function to handle environment variables at runtime
+function createAdminClient() {
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
 
-if (!serviceRoleKey) {
-  throw new Error('SUPABASE_SERVICE_ROLE_KEY is not set');
+  if (!supabaseUrl) {
+    throw new Error('NEXT_PUBLIC_SUPABASE_URL is not set');
+  }
+
+  if (!serviceRoleKey) {
+    throw new Error('SUPABASE_SERVICE_ROLE_KEY is not set');
+  }
+
+  return createClient(supabaseUrl, serviceRoleKey);
 }
-
-const adminClient = createClient(supabaseUrl, serviceRoleKey);
 
 export async function GET() {
   try {
+    const adminClient = createAdminClient();
     const { data, error } = await adminClient
       .from('fm_station')
       .select('*')
