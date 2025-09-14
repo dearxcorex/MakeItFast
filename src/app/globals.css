@@ -132,6 +132,41 @@ body {
   box-shadow: 0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1);
   z-index: 1000;
   position: relative;
+
+  /* Mobile optimizations for iOS Safari */
+  -webkit-transform: translateZ(0);
+  transform: translateZ(0);
+  -webkit-backface-visibility: hidden;
+  backface-visibility: hidden;
+}
+
+/* Mobile-specific popup fixes */
+@media (max-width: 768px) {
+  .leaflet-popup-content-wrapper {
+    /* Prevent zoom on input focus on mobile */
+    touch-action: manipulation;
+    /* Better touch scrolling */
+    -webkit-overflow-scrolling: touch;
+    /* Prevent bounce effects that cause shake */
+    overscroll-behavior: contain;
+    /* Force hardware acceleration */
+    -webkit-transform: translate3d(0, 0, 0);
+    transform: translate3d(0, 0, 0);
+    will-change: transform;
+  }
+
+  /* Fix popup width on mobile to prevent shake */
+  .leaflet-popup-content {
+    width: 280px !important;
+    max-width: calc(100vw - 40px) !important;
+    margin: 0 !important;
+  }
+
+  /* Ensure stable container dimensions */
+  .leaflet-popup {
+    -webkit-transform: translate3d(0, 0, 0);
+    transform: translate3d(0, 0, 0);
+  }
 }
 
 /* Ensure navigation buttons and links are always clickable - comprehensive fix */
@@ -373,26 +408,61 @@ a[aria-label*="Navigate"]:not([disabled]),
   /* Modern Firefox scrollbar styling */
   scrollbar-width: thin;
   scrollbar-color: var(--muted-foreground) transparent;
+
+  /* iOS Safari specific fixes */
+  -webkit-overflow-scrolling: touch;
+  /* Prevent bounce scrolling that causes layout shifts */
+  overscroll-behavior: contain;
+  /* Prevent scroll position changes during updates */
+  scroll-behavior: auto;
+  /* Fix for iOS Safari scroll position retention */
+  transform: translateZ(0);
+  /* Prevent layout recalculation during scroll */
+  will-change: scroll-position;
 }
 
-/* Webkit scrollbar styling for stable scrollbars */
-.scrollbar-stable::-webkit-scrollbar {
-  width: 8px;
+/* Mobile-specific scrollbar fixes */
+@media (max-width: 768px) {
+  .scrollbar-stable {
+    /* Hide scrollbar on mobile to prevent shake */
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+    /* More aggressive iOS fixes */
+    -webkit-transform: translate3d(0, 0, 0);
+    transform: translate3d(0, 0, 0);
+    /* Prevent momentum scrolling issues */
+    -webkit-overflow-scrolling: auto;
+    /* Contain scrolling within element */
+    overscroll-behavior-y: contain;
+    overscroll-behavior-x: hidden;
+  }
+
+  .scrollbar-stable::-webkit-scrollbar {
+    display: none;
+    width: 0;
+  }
 }
 
-.scrollbar-stable::-webkit-scrollbar-track {
-  background: transparent;
-  border-radius: 4px;
-}
+/* Desktop scrollbar styling */
+@media (min-width: 769px) {
+  .scrollbar-stable::-webkit-scrollbar {
+    width: 8px;
+  }
 
-.scrollbar-stable::-webkit-scrollbar-thumb {
-  background: var(--muted-foreground);
-  border-radius: 4px;
-  border: 2px solid transparent;
-  background-clip: content-box;
-}
+  .scrollbar-stable::-webkit-scrollbar-track {
+    background: transparent;
+    border-radius: 4px;
+  }
 
-.scrollbar-stable::-webkit-scrollbar-thumb:hover {
-  background: var(--foreground);
-  background-clip: content-box;
+  .scrollbar-stable::-webkit-scrollbar-thumb {
+    background: var(--muted-foreground);
+    border-radius: 4px;
+    border: 2px solid transparent;
+    background-clip: content-box;
+  }
+
+  .scrollbar-stable::-webkit-scrollbar-thumb:hover {
+    background: var(--foreground);
+    background-clip: content-box;
+  }
 }

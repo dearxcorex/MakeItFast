@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState, useMemo } from 'react';
+import { useEffect, useState, useMemo, useRef } from 'react';
 import { MapContainer, TileLayer, Marker, Popup, useMap } from 'react-leaflet';
 import L from 'leaflet';
 import { FMStation, UserLocation } from '@/types/station';
@@ -477,11 +477,15 @@ export default function Map({ stations, selectedStation, onStationSelect, onUpda
   // Component to render multiple stations popup
   const MultipleStationsPopup = ({ stationGroup, lat, lng, distance }: { stationGroup: FMStation[]; lat: number; lng: number; distance: number | null }) => {
     const [loadingStations, setLoadingStations] = useState<Set<string | number>>(new Set());
+    const scrollContainerRef = useRef<HTMLDivElement>(null);
 
     const handleStationToggle = async (e: React.MouseEvent, stationId: string | number, field: 'onAir' | 'inspection68', value: boolean | string) => {
       e.preventDefault();
       e.stopPropagation();
       if (!onUpdateStation || loadingStations.has(stationId)) return;
+
+      // Preserve scroll position before update
+      const currentScrollTop = scrollContainerRef.current?.scrollTop || 0;
 
       setLoadingStations(prev => new Set(prev).add(stationId));
       try {
@@ -494,6 +498,13 @@ export default function Map({ stations, selectedStation, onStationSelect, onUpda
           newSet.delete(stationId);
           return newSet;
         });
+
+        // Restore scroll position after update (iOS Safari fix)
+        setTimeout(() => {
+          if (scrollContainerRef.current) {
+            scrollContainerRef.current.scrollTop = currentScrollTop;
+          }
+        }, 0);
       }
     };
 
@@ -525,7 +536,10 @@ export default function Map({ stations, selectedStation, onStationSelect, onUpda
           </div>
         )}
 
-        <div className="space-y-2 max-h-[280px] overflow-y-auto scrollbar-stable">
+        <div
+          ref={scrollContainerRef}
+          className="space-y-2 max-h-[280px] overflow-y-auto scrollbar-stable"
+        >
           {stationGroup.map((station) => (
             <div key={station.id} className="border rounded p-2 bg-muted/20">
               <div className="flex items-start gap-2 mb-2">
