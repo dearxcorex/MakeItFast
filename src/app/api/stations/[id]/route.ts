@@ -16,6 +16,12 @@ export async function PATCH(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    // Debug logging for Vercel deployment
+    console.log('🔍 API Debug - Environment check:');
+    console.log('- SUPABASE_URL exists:', !!supabaseUrl);
+    console.log('- SERVICE_ROLE_KEY exists:', !!serviceRoleKey);
+    console.log('- SERVICE_ROLE_KEY length:', serviceRoleKey?.length || 0);
+
     const { id } = await params;
     const stationId = parseInt(id);
     if (isNaN(stationId)) {
@@ -24,6 +30,10 @@ export async function PATCH(
 
     const body = await request.json();
     const { onAir, inspection68 } = body;
+
+    console.log('📡 API Debug - Request data:');
+    console.log('- Station ID:', stationId);
+    console.log('- Updates:', { onAir, inspection68 });
 
     // Build update object with only provided fields
     const updates: Record<string, boolean | string> = {};
@@ -35,6 +45,11 @@ export async function PATCH(
     }
 
 
+    console.log('🔄 API Debug - Attempting Supabase update:');
+    console.log('- Table: fm_station');
+    console.log('- Where id_fm =', stationId);
+    console.log('- Updates:', updates);
+
     const { data, error } = await adminClient
       .from('fm_station')
       .update(updates)
@@ -43,14 +58,25 @@ export async function PATCH(
       .single();
 
     if (error) {
-      console.error('Supabase error:', error);
-      return NextResponse.json({ error: error.message }, { status: 500 });
+      console.error('❌ Supabase error details:', {
+        message: error.message,
+        code: error.code,
+        details: error.details,
+        hint: error.hint
+      });
+      return NextResponse.json({
+        error: error.message,
+        code: error.code,
+        details: error.details
+      }, { status: 500 });
     }
 
     if (!data) {
+      console.log('⚠️ No data returned from Supabase update');
       return NextResponse.json({ error: 'Station not found' }, { status: 404 });
     }
 
+    console.log('✅ Supabase update successful:', data);
     return NextResponse.json({ success: true, data });
   } catch (error) {
     console.error('API error:', error);
