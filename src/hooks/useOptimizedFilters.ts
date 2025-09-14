@@ -179,7 +179,7 @@ export function useOptimizedFilters({
 
 
     return sorted;
-  }, [filteredStations, userLocation, distanceCache]);
+  }, [filteredStations, userLocation]);
 
   // Calculate distance for a specific station (with caching)
   const calculateDistance = useCallback((
@@ -198,7 +198,7 @@ export function useOptimizedFilters({
       filteredStations: filteredStations.length,
       sortedStations: sortedStations.length,
       distanceCache: distanceCache.getStats(),
-      activeFilters: Object.entries(filters).filter(([_, value]) => value !== '').length
+      activeFilters: Object.entries(filters).filter(([, value]) => value !== '').length
     };
   }, [stations.length, filteredStations.length, sortedStations.length, filters]);
 

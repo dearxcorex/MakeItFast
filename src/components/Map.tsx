@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState, useMemo, useRef } from 'react';
+import { useEffect, useState, useMemo } from 'react';
 import { MapContainer, TileLayer, Marker, Popup, useMap } from 'react-leaflet';
 import L from 'leaflet';
 import { FMStation, UserLocation } from '@/types/station';
@@ -478,7 +478,7 @@ export default function Map({ stations, selectedStation, onStationSelect, onUpda
   const MultipleStationsPopup = ({ stationGroup, lat, lng, distance }: { stationGroup: FMStation[]; lat: number; lng: number; distance: number | null }) => {
     const [loadingStations, setLoadingStations] = useState<Set<string | number>>(new Set());
 
-    const handleStationToggle = async (e: React.MouseEvent, stationId: string | number, field: 'onAir' | 'inspection68', value: any) => {
+    const handleStationToggle = async (e: React.MouseEvent, stationId: string | number, field: 'onAir' | 'inspection68', value: boolean | string) => {
       e.preventDefault();
       e.stopPropagation();
       if (!onUpdateStation || loadingStations.has(stationId)) return;

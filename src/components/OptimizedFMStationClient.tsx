@@ -12,12 +12,12 @@ import { useOptimizedFilters, useOptimizedCityFilter, useMemoryMonitor } from '@
 // Simple replacements for removed debug utilities
 const GeolocationDebugger = {
   cleanupWatchers: () => {},
-  trackWatcher: (_: number) => {}
+  trackWatcher: () => {}
 };
 const MapPerformanceMonitor = {
-  startTimer: (_: string) => {},
-  endTimer: (_: string) => {},
-  recordMemoryUsage: (_: string) => {}
+  startTimer: () => {},
+  endTimer: () => {},
+  recordMemoryUsage: () => {}
 };
 import Sidebar from '@/components/Sidebar';
 
@@ -86,7 +86,7 @@ export default function OptimizedFMStationClient({
   });
 
   // Optimized city filtering
-  const availableCities = useOptimizedCityFilter(stations, filters.province, initialCities);
+  useOptimizedCityFilter(stations, filters.province, initialCities);
 
   // Cleanup function for geolocation
   const cleanupGeolocation = useCallback(() => {
@@ -104,7 +104,7 @@ export default function OptimizedFMStationClient({
       return;
     }
 
-    MapPerformanceMonitor.startTimer('geolocation-setup');
+    MapPerformanceMonitor.startTimer();
 
     // Get initial position
     navigator.geolocation.getCurrentPosition(
@@ -115,7 +115,7 @@ export default function OptimizedFMStationClient({
           accuracy: position.coords.accuracy
         };
         setUserLocation(location);
-        MapPerformanceMonitor.endTimer('geolocation-setup');
+        MapPerformanceMonitor.endTimer();
       },
       (error) => {
         console.error('❌ Geolocation failed:', {
@@ -146,7 +146,7 @@ export default function OptimizedFMStationClient({
 
         // Only use default if we can't get real location
 
-        MapPerformanceMonitor.endTimer('geolocation-setup');
+        MapPerformanceMonitor.endTimer();
       },
       {
         enableHighAccuracy: true,
@@ -182,7 +182,7 @@ export default function OptimizedFMStationClient({
     );
 
     geolocationWatcherRef.current = watchId;
-    GeolocationDebugger.trackWatcher(watchId);
+    GeolocationDebugger.trackWatcher();
 
     return cleanupGeolocation;
   }, [cleanupGeolocation]);
@@ -192,7 +192,7 @@ export default function OptimizedFMStationClient({
 
     const monitorPerformance = () => {
       checkMemoryUsage();
-      MapPerformanceMonitor.recordMemoryUsage('Periodic check');
+      MapPerformanceMonitor.recordMemoryUsage();
 
       const metrics = getPerformanceMetrics();
       if (metrics.filteredStations > 1000) {
@@ -261,7 +261,7 @@ export default function OptimizedFMStationClient({
     const originalStation = stations.find(station => station.id === stationId);
     if (!originalStation) return;
 
-    MapPerformanceMonitor.startTimer(`station-update-${stationId}`);
+    MapPerformanceMonitor.startTimer();
 
     try {
       const numericId = typeof stationId === 'string' ? parseInt(stationId) : stationId;
@@ -297,11 +297,11 @@ export default function OptimizedFMStationClient({
       }
 
       await response.json();
-      MapPerformanceMonitor.endTimer(`station-update-${stationId}`);
+      MapPerformanceMonitor.endTimer();
 
     } catch (error) {
       console.error('❌ Error updating station:', error);
-      MapPerformanceMonitor.endTimer(`station-update-${stationId}`);
+      MapPerformanceMonitor.endTimer();
 
       // Revert optimistic update
       setStations(prevStations =>
