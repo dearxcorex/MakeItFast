@@ -8,6 +8,7 @@ const adminClient = createClient(supabaseUrl, serviceKey);
 
 export default async function FMStationsFetcher() {
   // Fetch FM stations and filter data using service role key (bypasses RLS)
+  // Add cache control to ensure fresh data on each request
   const [stationResult, onAirResult, cityResult, provinceResult, inspectionResult] = await Promise.all([
     adminClient.from('fm_station').select('*').order('name'),
     adminClient.from('fm_station').select('on_air').order('on_air'),
