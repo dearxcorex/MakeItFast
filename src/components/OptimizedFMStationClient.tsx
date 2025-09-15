@@ -8,6 +8,7 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import dynamic from 'next/dynamic';
 import { FMStation, UserLocation, FilterType } from '@/types/station';
+import { createClient } from '@/utils/supabase/client';
 import { useOptimizedFilters, useOptimizedCityFilter, useMemoryMonitor } from '@/hooks/useOptimizedFilters';
 // Simple replacements for removed debug utilities
 const GeolocationDebugger = {
@@ -72,6 +73,9 @@ export default function OptimizedFMStationClient({
   const { checkMemoryUsage } = useMemoryMonitor();
   const geolocationWatcherRef = useRef<number | null>(null);
   const performanceMonitorRef = useRef<NodeJS.Timeout | null>(null);
+
+  // Supabase client for real-time (created once)
+  const supabaseClient = useRef(createClient()).current;
 
   // Optimized filtering
   const {
@@ -186,6 +190,68 @@ export default function OptimizedFMStationClient({
 
     return cleanupGeolocation;
   }, [cleanupGeolocation]);
+
+  // Simple real-time subscription for station updates
+  useEffect(() => {
+    console.log('🔄 Setting up real-time subscription...');
+
+    const channel = supabaseClient
+      .channel('station_updates')
+      .on(
+        'postgres_changes',
+        {
+          event: 'UPDATE',
+          schema: 'public',
+          table: 'fm_station'
+        },
+        (payload) => {
+          console.log('📡 Real-time update received:', payload);
+
+          if (payload.new && payload.new.id_fm) {
+            const updatedData = payload.new;
+
+            // Simple state update - only update the changed station
+            setStations(prevStations =>
+              prevStations.map(station =>
+                station.id === updatedData.id_fm
+                  ? {
+                      ...station,
+                      onAir: updatedData.on_air,
+                      inspection68: updatedData.inspection_68,
+                      unwanted: updatedData.unwanted === 'true' || updatedData.unwanted === true,
+                      submitRequest: updatedData.submit_a_request
+                    }
+                  : station
+              )
+            );
+
+            // Update selected station if it matches
+            setSelectedStation(prevSelected =>
+              prevSelected && prevSelected.id === updatedData.id_fm
+                ? {
+                    ...prevSelected,
+                    onAir: updatedData.on_air,
+                    inspection68: updatedData.inspection_68,
+                    unwanted: updatedData.unwanted === 'true' || updatedData.unwanted === true,
+                    submitRequest: updatedData.submit_a_request
+                  }
+                : prevSelected
+            );
+
+            console.log(`✅ Updated station ${updatedData.id_fm} - onAir: ${updatedData.on_air}, inspection68: ${updatedData.inspection_68}`);
+          }
+        }
+      )
+      .subscribe((status) => {
+        console.log('📡 Subscription status:', status);
+      });
+
+    // Cleanup
+    return () => {
+      console.log('🔄 Cleaning up real-time subscription...');
+      supabaseClient.removeChannel(channel);
+    };
+  }, [supabaseClient]); // Include supabaseClient dependency
 
   // Performance monitoring
   useEffect(() => {
