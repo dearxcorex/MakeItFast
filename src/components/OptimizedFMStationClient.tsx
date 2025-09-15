@@ -76,6 +76,8 @@ export default function OptimizedFMStationClient({
 
   // Supabase client for real-time (created once)
   const supabaseClient = useRef(createClient()).current;
+  const [realtimeConnected, setRealtimeConnected] = useState(false);
+  const pollingIntervalRef = useRef<NodeJS.Timeout | null>(null);
 
   // Optimized filtering
   const {
@@ -191,67 +193,203 @@ export default function OptimizedFMStationClient({
     return cleanupGeolocation;
   }, [cleanupGeolocation]);
 
-  // Simple real-time subscription for station updates
+  // Polling fallback for when real-time doesn't work (Vercel issues)
+  const startPollingFallback = useCallback(() => {
+    if (pollingIntervalRef.current) return; // Already polling
+
+    console.log('🔄 Starting polling fallback for real-time updates...');
+
+    pollingIntervalRef.current = setInterval(async () => {
+      try {
+        // Check for recent station updates via API
+        const response = await fetch('/api/stations/recent');
+        if (response.ok) {
+          const data = await response.json();
+          if (data.updated && data.updated.length > 0) {
+            console.log(`🔄 Polling found ${data.updated.length} updates`);
+
+            // Handle updates similar to real-time
+            data.updated.forEach((updatedStation: {
+              id: number;
+              onAir: boolean;
+              inspection68: string;
+              unwanted: boolean;
+              submitRequest: string;
+            }) => {
+              setStations(prevStations =>
+                prevStations.map(station =>
+                  station.id === updatedStation.id
+                    ? {
+                        ...station,
+                        onAir: updatedStation.onAir,
+                        inspection68: updatedStation.inspection68,
+                        unwanted: updatedStation.unwanted,
+                        submitRequest: updatedStation.submitRequest
+                      }
+                    : station
+                )
+              );
+
+              // Update selected station if it matches
+              setSelectedStation(prevSelected =>
+                prevSelected && prevSelected.id === updatedStation.id
+                  ? {
+                      ...prevSelected,
+                      onAir: updatedStation.onAir,
+                      inspection68: updatedStation.inspection68,
+                      unwanted: updatedStation.unwanted,
+                      submitRequest: updatedStation.submitRequest
+                    }
+                  : prevSelected
+              );
+            });
+          }
+        }
+      } catch (error) {
+        console.warn('⚠️ Polling error (will retry):', error);
+      }
+    }, 5000); // Poll every 5 seconds
+  }, []);
+
+  // Enhanced real-time subscription with better error handling
   useEffect(() => {
-    console.log('🔄 Setting up real-time subscription...');
+    console.log('🔄 Setting up enhanced real-time subscription...');
+
+    // Add connection state logging
+    const logConnectionState = () => {
+      console.log('🌐 Environment:', {
+        isProduction: process.env.NODE_ENV === 'production',
+        hasSupabaseUrl: !!process.env.NEXT_PUBLIC_SUPABASE_URL,
+        hasAnonKey: !!process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY,
+        userAgent: typeof window !== 'undefined' ? window.navigator.userAgent : 'SSR'
+      });
+    };
+
+    logConnectionState();
 
     const channel = supabaseClient
-      .channel('station_updates')
+      .channel('fm_station_realtime', {
+        config: {
+          broadcast: { self: false },
+          presence: { key: 'user_id' }
+        }
+      })
       .on(
         'postgres_changes',
         {
           event: 'UPDATE',
           schema: 'public',
-          table: 'fm_station'
+          table: 'fm_station',
+          filter: undefined // Listen to all updates
         },
         (payload) => {
-          console.log('📡 Real-time update received:', payload);
+          console.log('📡 Real-time update received:', {
+            event: payload.eventType,
+            table: payload.table,
+            old: payload.old,
+            new: payload.new,
+            timestamp: new Date().toISOString()
+          });
 
           if (payload.new && payload.new.id_fm) {
             const updatedData = payload.new;
 
-            // Simple state update - only update the changed station
-            setStations(prevStations =>
-              prevStations.map(station =>
-                station.id === updatedData.id_fm
+            // Robust state update with error handling
+            try {
+              setStations(prevStations => {
+                const updatedStations = prevStations.map(station =>
+                  station.id === updatedData.id_fm
+                    ? {
+                        ...station,
+                        onAir: updatedData.on_air,
+                        inspection68: updatedData.inspection_68,
+                        unwanted: updatedData.unwanted === 'true' || updatedData.unwanted === true,
+                        submitRequest: updatedData.submit_a_request
+                      }
+                    : station
+                );
+
+                console.log(`✅ Station ${updatedData.id_fm} updated: onAir=${updatedData.on_air}, inspection68=${updatedData.inspection_68}`);
+                return updatedStations;
+              });
+
+              // Update selected station if it matches
+              setSelectedStation(prevSelected =>
+                prevSelected && prevSelected.id === updatedData.id_fm
                   ? {
-                      ...station,
+                      ...prevSelected,
                       onAir: updatedData.on_air,
                       inspection68: updatedData.inspection_68,
                       unwanted: updatedData.unwanted === 'true' || updatedData.unwanted === true,
                       submitRequest: updatedData.submit_a_request
                     }
-                  : station
-              )
-            );
-
-            // Update selected station if it matches
-            setSelectedStation(prevSelected =>
-              prevSelected && prevSelected.id === updatedData.id_fm
-                ? {
-                    ...prevSelected,
-                    onAir: updatedData.on_air,
-                    inspection68: updatedData.inspection_68,
-                    unwanted: updatedData.unwanted === 'true' || updatedData.unwanted === true,
-                    submitRequest: updatedData.submit_a_request
-                  }
-                : prevSelected
-            );
-
-            console.log(`✅ Updated station ${updatedData.id_fm} - onAir: ${updatedData.on_air}, inspection68: ${updatedData.inspection_68}`);
+                  : prevSelected
+              );
+            } catch (error) {
+              console.error('❌ Error updating station state:', error);
+            }
           }
         }
       )
-      .subscribe((status) => {
-        console.log('📡 Subscription status:', status);
+      .subscribe((status, err) => {
+        console.log('📡 Real-time subscription status:', status);
+
+        if (err) {
+          console.error('❌ Real-time subscription error:', err);
+        }
+
+        switch (status) {
+          case 'SUBSCRIBED':
+            console.log('✅ Real-time subscription established successfully');
+            setRealtimeConnected(true);
+            // Clear any existing polling since real-time is working
+            if (pollingIntervalRef.current) {
+              clearInterval(pollingIntervalRef.current);
+              pollingIntervalRef.current = null;
+              console.log('🔄 Stopped polling - real-time connected');
+            }
+            break;
+          case 'CHANNEL_ERROR':
+          case 'TIMED_OUT':
+          case 'CLOSED':
+            console.error(`❌ Real-time issue: ${status}`);
+            setRealtimeConnected(false);
+            // Start polling as fallback
+            startPollingFallback();
+            break;
+          default:
+            console.log(`📡 Real-time status: ${status}`);
+        }
       });
 
-    // Cleanup
+    // Start polling fallback after 5 seconds if real-time doesn't connect
+    const fallbackTimeout = setTimeout(() => {
+      if (!realtimeConnected) {
+        console.log('⚠️ Real-time not connected after 5s, starting polling fallback');
+        startPollingFallback();
+      }
+    }, 5000);
+
+    // Enhanced cleanup
     return () => {
+      clearTimeout(fallbackTimeout);
       console.log('🔄 Cleaning up real-time subscription...');
-      supabaseClient.removeChannel(channel);
+
+      try {
+        supabaseClient.removeChannel(channel);
+        console.log('✅ Real-time subscription cleaned up successfully');
+      } catch (error) {
+        console.error('❌ Error cleaning up real-time subscription:', error);
+      }
+
+      // Cleanup polling
+      if (pollingIntervalRef.current) {
+        clearInterval(pollingIntervalRef.current);
+        pollingIntervalRef.current = null;
+        console.log('✅ Polling cleanup completed');
+      }
     };
-  }, [supabaseClient]); // Include supabaseClient dependency
+  }, [supabaseClient, realtimeConnected, startPollingFallback]);
 
   // Performance monitoring
   useEffect(() => {
