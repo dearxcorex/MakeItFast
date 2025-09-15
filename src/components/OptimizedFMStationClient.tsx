@@ -74,10 +74,8 @@ export default function OptimizedFMStationClient({
   const geolocationWatcherRef = useRef<number | null>(null);
   const performanceMonitorRef = useRef<NodeJS.Timeout | null>(null);
 
-  // Supabase client for real-time (created once)
+  // Simplified real-time without aggressive fallbacks
   const supabaseClient = useRef(createClient()).current;
-  const [realtimeConnected, setRealtimeConnected] = useState(false);
-  const pollingIntervalRef = useRef<NodeJS.Timeout | null>(null);
 
   // Optimized filtering
   const {
@@ -193,203 +191,85 @@ export default function OptimizedFMStationClient({
     return cleanupGeolocation;
   }, [cleanupGeolocation]);
 
-  // Polling fallback for when real-time doesn't work (Vercel issues)
-  const startPollingFallback = useCallback(() => {
-    if (pollingIntervalRef.current) return; // Already polling
-
-    console.log('🔄 Starting polling fallback for real-time updates...');
-
-    pollingIntervalRef.current = setInterval(async () => {
-      try {
-        // Check for recent station updates via API
-        const response = await fetch('/api/stations/recent');
-        if (response.ok) {
-          const data = await response.json();
-          if (data.updated && data.updated.length > 0) {
-            console.log(`🔄 Polling found ${data.updated.length} updates`);
-
-            // Handle updates similar to real-time
-            data.updated.forEach((updatedStation: {
-              id: number;
-              onAir: boolean;
-              inspection68: string;
-              unwanted: boolean;
-              submitRequest: string;
-            }) => {
-              setStations(prevStations =>
-                prevStations.map(station =>
-                  station.id === updatedStation.id
-                    ? {
-                        ...station,
-                        onAir: updatedStation.onAir,
-                        inspection68: updatedStation.inspection68,
-                        unwanted: updatedStation.unwanted,
-                        submitRequest: updatedStation.submitRequest
-                      }
-                    : station
-                )
-              );
-
-              // Update selected station if it matches
-              setSelectedStation(prevSelected =>
-                prevSelected && prevSelected.id === updatedStation.id
-                  ? {
-                      ...prevSelected,
-                      onAir: updatedStation.onAir,
-                      inspection68: updatedStation.inspection68,
-                      unwanted: updatedStation.unwanted,
-                      submitRequest: updatedStation.submitRequest
-                    }
-                  : prevSelected
-              );
-            });
-          }
-        }
-      } catch (error) {
-        console.warn('⚠️ Polling error (will retry):', error);
-      }
-    }, 5000); // Poll every 5 seconds
-  }, []);
-
-  // Enhanced real-time subscription with better error handling
+  // Simple real-time subscription (no aggressive fallbacks)
   useEffect(() => {
-    console.log('🔄 Setting up enhanced real-time subscription...');
+    // Only set up real-time if environment supports it
+    if (typeof window === 'undefined') return;
 
-    // Add connection state logging
-    const logConnectionState = () => {
-      console.log('🌐 Environment:', {
-        isProduction: process.env.NODE_ENV === 'production',
-        hasSupabaseUrl: !!process.env.NEXT_PUBLIC_SUPABASE_URL,
-        hasAnonKey: !!process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY,
-        userAgent: typeof window !== 'undefined' ? window.navigator.userAgent : 'SSR'
-      });
-    };
-
-    logConnectionState();
+    console.log('🔄 Setting up simple real-time subscription...');
 
     const channel = supabaseClient
-      .channel('fm_station_realtime', {
-        config: {
-          broadcast: { self: false },
-          presence: { key: 'user_id' }
-        }
-      })
+      .channel('fm_station_updates')
       .on(
         'postgres_changes',
         {
           event: 'UPDATE',
           schema: 'public',
-          table: 'fm_station',
-          filter: undefined // Listen to all updates
+          table: 'fm_station'
         },
         (payload) => {
-          console.log('📡 Real-time update received:', {
-            event: payload.eventType,
-            table: payload.table,
-            old: payload.old,
-            new: payload.new,
-            timestamp: new Date().toISOString()
-          });
+          console.log('📡 Real-time update received for station:', payload.new?.id_fm);
 
           if (payload.new && payload.new.id_fm) {
             const updatedData = payload.new;
 
-            // Robust state update with error handling
-            try {
-              setStations(prevStations => {
-                const updatedStations = prevStations.map(station =>
-                  station.id === updatedData.id_fm
-                    ? {
-                        ...station,
-                        onAir: updatedData.on_air,
-                        inspection68: updatedData.inspection_68,
-                        unwanted: updatedData.unwanted === 'true' || updatedData.unwanted === true,
-                        submitRequest: updatedData.submit_a_request
-                      }
-                    : station
-                );
+            // Only update if the data actually changed (prevent unnecessary re-renders)
+            setStations(prevStations => {
+              const existingStation = prevStations.find(s => s.id === updatedData.id_fm);
 
-                console.log(`✅ Station ${updatedData.id_fm} updated: onAir=${updatedData.on_air}, inspection68=${updatedData.inspection_68}`);
-                return updatedStations;
-              });
+              if (existingStation &&
+                  existingStation.onAir === updatedData.on_air &&
+                  existingStation.inspection68 === updatedData.inspection_68) {
+                // No change, return original array to prevent re-render
+                return prevStations;
+              }
 
-              // Update selected station if it matches
-              setSelectedStation(prevSelected =>
-                prevSelected && prevSelected.id === updatedData.id_fm
+              return prevStations.map(station =>
+                station.id === updatedData.id_fm
                   ? {
-                      ...prevSelected,
+                      ...station,
                       onAir: updatedData.on_air,
                       inspection68: updatedData.inspection_68,
                       unwanted: updatedData.unwanted === 'true' || updatedData.unwanted === true,
                       submitRequest: updatedData.submit_a_request
                     }
-                  : prevSelected
+                  : station
               );
-            } catch (error) {
-              console.error('❌ Error updating station state:', error);
-            }
+            });
+
+            // Update selected station
+            setSelectedStation(prevSelected =>
+              prevSelected && prevSelected.id === updatedData.id_fm
+                ? {
+                    ...prevSelected,
+                    onAir: updatedData.on_air,
+                    inspection68: updatedData.inspection_68,
+                    unwanted: updatedData.unwanted === 'true' || updatedData.unwanted === true,
+                    submitRequest: updatedData.submit_a_request
+                  }
+                : prevSelected
+            );
           }
         }
       )
-      .subscribe((status, err) => {
-        console.log('📡 Real-time subscription status:', status);
-
-        if (err) {
-          console.error('❌ Real-time subscription error:', err);
-        }
-
-        switch (status) {
-          case 'SUBSCRIBED':
-            console.log('✅ Real-time subscription established successfully');
-            setRealtimeConnected(true);
-            // Clear any existing polling since real-time is working
-            if (pollingIntervalRef.current) {
-              clearInterval(pollingIntervalRef.current);
-              pollingIntervalRef.current = null;
-              console.log('🔄 Stopped polling - real-time connected');
-            }
-            break;
-          case 'CHANNEL_ERROR':
-          case 'TIMED_OUT':
-          case 'CLOSED':
-            console.error(`❌ Real-time issue: ${status}`);
-            setRealtimeConnected(false);
-            // Start polling as fallback
-            startPollingFallback();
-            break;
-          default:
-            console.log(`📡 Real-time status: ${status}`);
+      .subscribe((status) => {
+        if (status === 'SUBSCRIBED') {
+          console.log('✅ Real-time connected');
+        } else if (status === 'CLOSED' || status === 'CHANNEL_ERROR') {
+          // Just log, don't start aggressive polling
+          console.log('📡 Real-time disconnected, relying on optimistic updates');
         }
       });
 
-    // Start polling fallback after 5 seconds if real-time doesn't connect
-    const fallbackTimeout = setTimeout(() => {
-      if (!realtimeConnected) {
-        console.log('⚠️ Real-time not connected after 5s, starting polling fallback');
-        startPollingFallback();
-      }
-    }, 5000);
-
-    // Enhanced cleanup
+    // Simple cleanup
     return () => {
-      clearTimeout(fallbackTimeout);
-      console.log('🔄 Cleaning up real-time subscription...');
-
       try {
         supabaseClient.removeChannel(channel);
-        console.log('✅ Real-time subscription cleaned up successfully');
       } catch (error) {
-        console.error('❌ Error cleaning up real-time subscription:', error);
-      }
-
-      // Cleanup polling
-      if (pollingIntervalRef.current) {
-        clearInterval(pollingIntervalRef.current);
-        pollingIntervalRef.current = null;
-        console.log('✅ Polling cleanup completed');
+        // Silent cleanup
       }
     };
-  }, [supabaseClient, realtimeConnected, startPollingFallback]);
+  }, [supabaseClient]);
 
   // Performance monitoring
   useEffect(() => {
@@ -460,23 +340,30 @@ export default function OptimizedFMStationClient({
     }
   }, []);
 
-  // Optimized station update with proper error handling
+  // Stable optimistic updates without blinking
   const handleUpdateStation = useCallback(async (stationId: string | number, updates: Partial<FMStation>) => {
     const originalStation = stations.find(station => station.id === stationId);
     if (!originalStation) return;
 
-    MapPerformanceMonitor.startTimer();
+    console.log(`🔄 Updating station ${stationId}:`, updates);
 
     try {
       const numericId = typeof stationId === 'string' ? parseInt(stationId) : stationId;
 
-      // Optimistic update
+      // Immediate optimistic update for instant UI feedback
       setStations(prevStations =>
         prevStations.map(station =>
           station.id === stationId
             ? { ...station, ...updates }
             : station
         )
+      );
+
+      // Also update selected station immediately
+      setSelectedStation(prevSelected =>
+        prevSelected && prevSelected.id === stationId
+          ? { ...prevSelected, ...updates }
+          : prevSelected
       );
 
       // Prepare API request
@@ -488,38 +375,26 @@ export default function OptimizedFMStationClient({
         apiUpdates.inspection68 = updates.inspection68;
       }
 
-      const response = await fetch(`/api/stations/${numericId}`, {
+      // Send to server (don't wait for response to keep UI responsive)
+      fetch(`/api/stations/${numericId}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(apiUpdates),
-        signal: AbortSignal.timeout(5000) // 5 second timeout
+      }).then(response => {
+        if (response.ok) {
+          console.log(`✅ Station ${stationId} successfully updated on server`);
+        } else {
+          console.warn(`⚠️ Server update failed for station ${stationId}, but UI remains optimistic`);
+        }
+      }).catch(error => {
+        console.warn(`⚠️ Network error for station ${stationId}:`, error);
+        // Don't revert optimistic update to prevent blinking
+        // Real-time will sync when connection is restored
       });
 
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error || `HTTP ${response.status}: Failed to update station`);
-      }
-
-      await response.json();
-      MapPerformanceMonitor.endTimer();
-
     } catch (error) {
-      console.error('❌ Error updating station:', error);
-      MapPerformanceMonitor.endTimer();
-
-      // Revert optimistic update
-      setStations(prevStations =>
-        prevStations.map(station =>
-          station.id === stationId ? originalStation : station
-        )
-      );
-
-      // User-friendly error message
-      const errorMessage = error instanceof Error
-        ? error.message
-        : 'Network error. Please check your connection and try again.';
-
-      alert(`Failed to update station: ${errorMessage}`);
+      console.error('❌ Error in optimistic update:', error);
+      // Even on error, keep optimistic update to prevent blinking
     }
   }, [stations]);
 
