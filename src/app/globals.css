@@ -2,27 +2,34 @@
 @import 'leaflet/dist/leaflet.css';
 
 :root {
-  /* Light theme colors */
+  /* Enhanced light theme for better visibility and contrast */
   --background: #ffffff;
-  --foreground: #0f172a;
+  --foreground: #1e293b;  /* Darker for better contrast */
   --card: #ffffff;
-  --card-foreground: #0f172a;
-  --primary: #3b82f6;
+  --card-foreground: #1e293b;
+  --primary: #2563eb;  /* Deeper blue for better visibility */
   --primary-foreground: #ffffff;
-  --secondary: #f1f5f9;
-  --secondary-foreground: #0f172a;
+  --secondary: #e2e8f0;  /* Better contrast than previous light gray */
+  --secondary-foreground: #1e293b;
   --muted: #f8fafc;
-  --muted-foreground: #64748b;
-  --accent: #f1f5f9;
-  --accent-foreground: #0f172a;
-  --destructive: #ef4444;
+  --muted-foreground: #475569;  /* Darker for better readability */
+  --accent: #dbeafe;  /* Light blue accent for better visibility */
+  --accent-foreground: #1e293b;
+  --destructive: #dc2626;  /* Deeper red for better contrast */
   --destructive-foreground: #ffffff;
-  --border: #e2e8f0;
-  --input: #e2e8f0;
-  --ring: #3b82f6;
+  --border: #cbd5e1;  /* More visible borders */
+  --input: #cbd5e1;  /* Clearer input borders */
+  --ring: #2563eb;  /* Match primary color */
   --sidebar-bg: #ffffff;
-  --sidebar-border: #e2e8f0;
-  --header-bg: linear-gradient(135deg, #0ea5e9 0%, #3b82f6 30%, #6366f1 60%, #8b5cf6 90%, #a855f7 100%);
+  --sidebar-border: #cbd5e1;  /* Match border color */
+  --header-bg: linear-gradient(135deg, #0ea5e9 0%, #2563eb 30%, #6366f1 60%, #8b5cf6 90%, #a855f7 100%);
+
+  /* Toggle-specific colors for light theme */
+  --toggle-bg-off: #f1f5f9;
+  --toggle-bg-on: #10b981;
+  --toggle-border: #94a3b8;
+  --toggle-thumb: #ffffff;
+  --toggle-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
 }
 
 .dark {
@@ -526,5 +533,70 @@ a[aria-label*="Navigate"]:not([disabled]),
   .scrollbar-stable::-webkit-scrollbar-thumb:hover {
     background: var(--foreground);
     background-clip: content-box;
+  }
+}
+
+/* Enhanced toggle switch styles for better visibility */
+input[type="checkbox"][role="switch"] {
+  appearance: none;
+  -webkit-appearance: none;
+  background: var(--toggle-bg-off, #f1f5f9);
+  border: 2px solid var(--toggle-border, #94a3b8);
+  border-radius: 1rem;
+  width: 3rem;
+  height: 1.5rem;
+  position: relative;
+  cursor: pointer;
+  transition: all 0.2s ease-in-out;
+  box-shadow: var(--toggle-shadow, 0 2px 4px rgba(0, 0, 0, 0.1));
+}
+
+input[type="checkbox"][role="switch"]:checked {
+  background: var(--toggle-bg-on, #10b981);
+  border-color: var(--toggle-bg-on, #10b981);
+}
+
+input[type="checkbox"][role="switch"]::before {
+  content: '';
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  width: 1rem;
+  height: 1rem;
+  background: var(--toggle-thumb, #ffffff);
+  border-radius: 50%;
+  transition: transform 0.2s ease-in-out;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
+}
+
+input[type="checkbox"][role="switch"]:checked::before {
+  transform: translateX(1.5rem);
+}
+
+input[type="checkbox"][role="switch"]:focus {
+  outline: none;
+  ring: 2px;
+  ring-color: var(--ring, #2563eb);
+  ring-offset: 2px;
+}
+
+/* Dark theme toggle overrides */
+.dark input[type="checkbox"][role="switch"] {
+  --toggle-bg-off: #374151;
+  --toggle-bg-on: #10b981;
+  --toggle-border: #6b7280;
+  --toggle-thumb: #ffffff;
+  --toggle-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+}
+
+/* High contrast mode for accessibility */
+@media (prefers-contrast: high) {
+  input[type="checkbox"][role="switch"] {
+    border-width: 3px;
+    --toggle-border: #000000;
+  }
+
+  .dark input[type="checkbox"][role="switch"] {
+    --toggle-border: #ffffff;
   }
 }
