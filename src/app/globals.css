@@ -590,6 +590,24 @@ a[aria-label*="Navigate"]:not([disabled]),
     overflow-x: hidden;
     /* Better touch response */
     -webkit-tap-highlight-color: transparent;
+    /* Aggressive mobile fixes */
+    contain: layout style paint size;
+    /* Prevent scroll position jumps */
+    scroll-padding: 0;
+    /* Force stable scroll container */
+    position: relative;
+    /* Prevent layout shifts */
+    will-change: auto;
+    /* Better scroll anchoring */
+    overflow-anchor: none;
+  }
+
+  /* Mobile scroll container stabilization */
+  .leaflet-popup-content .scrollbar-stable > * {
+    /* Prevent individual items from affecting scroll position */
+    contain: layout style;
+    /* Stable positioning */
+    position: relative;
   }
 }
 

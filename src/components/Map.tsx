@@ -547,6 +547,8 @@ export default function Map({ stations, selectedStation, onStationSelect, onUpda
     const [loadingStations, setLoadingStations] = useState<Set<string | number>>(new Set());
     const scrollContainerRef = useRef<HTMLDivElement>(null);
     const [isMobile, setIsMobile] = useState(false);
+    const [isUserScrolling, setIsUserScrolling] = useState(false);
+    const scrollTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
     // Detect mobile device
     useEffect(() => {
@@ -558,19 +560,81 @@ export default function Map({ stations, selectedStation, onStationSelect, onUpda
       return () => window.removeEventListener('resize', checkMobile);
     }, []);
 
+    // Track when user is actively scrolling on mobile
+    useEffect(() => {
+      if (!isMobile || !scrollContainerRef.current) return;
+
+      const container = scrollContainerRef.current;
+
+      const handleTouchStart = () => {
+        setIsUserScrolling(true);
+        if (scrollTimeoutRef.current) {
+          clearTimeout(scrollTimeoutRef.current);
+        }
+      };
+
+      const handleTouchEnd = () => {
+        // Keep the scrolling flag active for a bit longer to prevent interference
+        scrollTimeoutRef.current = setTimeout(() => {
+          setIsUserScrolling(false);
+        }, 1000);
+      };
+
+      const handleScroll = () => {
+        if (isMobile) {
+          setIsUserScrolling(true);
+          if (scrollTimeoutRef.current) {
+            clearTimeout(scrollTimeoutRef.current);
+          }
+          scrollTimeoutRef.current = setTimeout(() => {
+            setIsUserScrolling(false);
+          }, 1000);
+        }
+      };
+
+      container.addEventListener('touchstart', handleTouchStart, { passive: true });
+      container.addEventListener('touchend', handleTouchEnd, { passive: true });
+      container.addEventListener('scroll', handleScroll, { passive: true });
+
+      return () => {
+        container.removeEventListener('touchstart', handleTouchStart);
+        container.removeEventListener('touchend', handleTouchEnd);
+        container.removeEventListener('scroll', handleScroll);
+        if (scrollTimeoutRef.current) {
+          clearTimeout(scrollTimeoutRef.current);
+        }
+      };
+    }, [isMobile]);
+
     const handleStationToggle = async (e: React.MouseEvent, stationId: string | number, field: 'onAir' | 'inspection68' | 'details', value: boolean | string) => {
       e.preventDefault();
       e.stopPropagation();
       if (!onUpdateStation || loadingStations.has(stationId)) return;
 
-      // Preserve scroll position before update
+      // On mobile, don't do any scroll position preservation to avoid interference
+      if (isMobile) {
+        setLoadingStations(prev => new Set(prev).add(stationId));
+        try {
+          await onUpdateStation(stationId, { [field]: value });
+          // Shorter delay on mobile for better responsiveness
+          await new Promise(resolve => setTimeout(resolve, 200));
+        } finally {
+          setLoadingStations(prev => {
+            const newSet = new Set(prev);
+            newSet.delete(stationId);
+            return newSet;
+          });
+        }
+        return;
+      }
+
+      // Desktop scroll position preservation (original behavior)
       const currentScrollTop = scrollContainerRef.current?.scrollTop || 0;
       const wasScrolled = currentScrollTop > 0;
 
       setLoadingStations(prev => new Set(prev).add(stationId));
       try {
         await onUpdateStation(stationId, { [field]: value });
-        // Small delay to show success state
         await new Promise(resolve => setTimeout(resolve, 500));
       } finally {
         setLoadingStations(prev => {
@@ -579,9 +643,8 @@ export default function Map({ stations, selectedStation, onStationSelect, onUpda
           return newSet;
         });
 
-        // Only restore scroll position on desktop to prevent mobile scrolling issues
-        if (!isMobile && wasScrolled && scrollContainerRef.current) {
-          // Use requestAnimationFrame for better performance
+        // Only restore scroll position on desktop
+        if (wasScrolled && scrollContainerRef.current) {
           requestAnimationFrame(() => {
             if (scrollContainerRef.current && Math.abs(scrollContainerRef.current.scrollTop - currentScrollTop) > 10) {
               scrollContainerRef.current.scrollTop = currentScrollTop;
