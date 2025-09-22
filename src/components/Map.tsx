@@ -567,65 +567,42 @@ export default function Map({ stations, selectedStation, onStationSelect, onUpda
       ? [stationGroup[currentPage]]
       : stationGroup.slice(currentPage * itemsPerPage, (currentPage + 1) * itemsPerPage);
 
-    // iOS Safari nuclear option - completely disable all scroll behavior
+    // iOS Safari minimal scroll prevention - only block container scrolling, not button clicks
     useEffect(() => {
       if (!isMobile || !containerRef.current) return;
 
       const container = containerRef.current;
 
-      // Completely disable iOS Safari scroll restoration
+      // Disable scroll restoration for this session only
       if ('scrollRestoration' in history) {
         history.scrollRestoration = 'manual';
       }
 
-      // Disable all default touch behaviors
-      const preventAllDefaults = (e: Event) => {
-        e.preventDefault();
-        e.stopPropagation();
+      // Only prevent scroll events, not touch events on interactive elements
+      const preventScrollOnly = (e: Event) => {
+        // Only prevent default if it's a scroll event, not touch on buttons/interactive elements
+        if (e.type === 'scroll' || e.type === 'wheel') {
+          e.preventDefault();
+          e.stopPropagation();
+        }
       };
 
-      const handleTouchStart = (e: TouchEvent) => {
-        isScrollingRef.current = true;
-        touchStartRef.current = {
-          y: e.touches[0].clientY,
-          scrollY: manualScrollY
-        };
-        preventAllDefaults(e);
-      };
-
-      const handleTouchMove = (e: TouchEvent) => {
-        if (!isScrollingRef.current) return;
-
-        const deltaY = e.touches[0].clientY - touchStartRef.current.y;
-        const newScrollY = Math.max(0, Math.min(200, touchStartRef.current.scrollY - deltaY));
-        setManualScrollY(newScrollY);
-        preventAllDefaults(e);
-      };
-
-      const handleTouchEnd = (e: TouchEvent) => {
-        isScrollingRef.current = false;
-        preventAllDefaults(e);
-      };
-
-      // Add aggressive event listeners
-      container.addEventListener('touchstart', handleTouchStart, { passive: false });
-      container.addEventListener('touchmove', handleTouchMove, { passive: false });
-      container.addEventListener('touchend', handleTouchEnd, { passive: false });
-      container.addEventListener('scroll', preventAllDefaults, { passive: false });
-      container.addEventListener('wheel', preventAllDefaults, { passive: false });
+      // Add minimal event prevention - only for scroll, not touch interactions
+      container.addEventListener('scroll', preventScrollOnly, { passive: false });
+      container.addEventListener('wheel', preventScrollOnly, { passive: false });
 
       return () => {
-        container.removeEventListener('touchstart', handleTouchStart);
-        container.removeEventListener('touchmove', handleTouchMove);
-        container.removeEventListener('touchend', handleTouchEnd);
-        container.removeEventListener('scroll', preventAllDefaults);
-        container.removeEventListener('wheel', preventAllDefaults);
+        container.removeEventListener('scroll', preventScrollOnly);
+        container.removeEventListener('wheel', preventScrollOnly);
       };
-    }, [manualScrollY]);
+    }, []);
 
     const handleStationToggle = async (e: React.MouseEvent, stationId: string | number, field: 'onAir' | 'inspection68' | 'details', value: boolean | string) => {
-      e.preventDefault();
-      e.stopPropagation();
+      // Don't prevent default on mobile to allow touch interactions
+      if (!isMobile) {
+        e.preventDefault();
+        e.stopPropagation();
+      }
       if (!onUpdateStation || loadingStations.has(stationId)) return;
 
       setLoadingStations(prev => new Set(prev).add(stationId));
@@ -646,14 +623,12 @@ export default function Map({ stations, selectedStation, onStationSelect, onUpda
     <div
       className={`w-full p-3 ${isMobile ? 'max-w-[320px]' : 'max-w-[320px] sm:max-w-[380px]'}`}
       style={{
-        // iOS Safari popup stability fixes
+        // iOS Safari popup stability fixes - allow interactions
         contain: isMobile ? 'layout style paint' : 'none',
         transform: isMobile ? 'translate3d(0, 0, 0)' : 'none',
         willChange: isMobile ? 'auto' : 'auto',
-        touchAction: isMobile ? 'manipulation' : 'auto',
-        WebkitUserSelect: isMobile ? 'none' : 'auto',
-        userSelect: isMobile ? 'none' : 'auto',
-        WebkitTouchCallout: isMobile ? 'none' : undefined
+        touchAction: 'manipulation', // Allow button interactions but prevent zoom
+        pointerEvents: 'auto' // Ensure all interactions work
       }}
     >
       <div className="mb-3">
@@ -691,7 +666,7 @@ export default function Map({ stations, selectedStation, onStationSelect, onUpda
               maxHeight: '400px', // Increased max height to show full station details
               minHeight: '200px', // Minimum height for consistency
               overflow: 'visible', // Allow content to be fully visible
-              touchAction: 'none', // Completely disable touch scrolling
+              touchAction: 'manipulation', // Allow button clicks but prevent zoom
               contain: 'layout style paint'
             }}
           >
@@ -733,13 +708,14 @@ export default function Map({ stations, selectedStation, onStationSelect, onUpda
               key={station.id}
               className="border rounded-lg p-3 bg-muted/20 hover:bg-muted/30 transition-colors"
               style={{
-                // iOS Safari layout stability fixes - allow full height expansion
+                // iOS Safari layout stability fixes - allow full height expansion and touch
                 contain: isMobile ? 'layout style' : 'none',
                 transform: isMobile ? 'translateZ(0)' : 'none',
                 willChange: isMobile ? 'auto' : 'auto',
-                touchAction: isMobile ? 'manipulation' : 'auto',
+                touchAction: 'manipulation', // Allow all button clicks and interactions
                 height: 'auto', // Allow full height
-                overflow: 'visible' // Show all content
+                overflow: 'visible', // Show all content
+                pointerEvents: 'auto' // Ensure all interactions work
               }}
             >
               {station.unwanted && (
