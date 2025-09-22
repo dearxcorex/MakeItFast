@@ -61,6 +61,8 @@ export default async function FMStationsFetcher() {
     permit: station.permit,
     inspection67: station.inspection_67,
     inspection68: station.inspection_68,
+    dateInspected: station.date_inspected,
+    details: station.details,
     onAir: station.on_air,
     unwanted: station.unwanted === 'true' || station.unwanted === true,
     submitRequest: station.submit_a_request,

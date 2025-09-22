@@ -38,16 +38,32 @@ export async function PATCH(
     }
 
     const body = await request.json();
-    const { onAir, inspection68 } = body;
+    const { onAir, inspection68, details } = body;
 
     console.log('📡 API Debug - Request data:');
     console.log('- Station ID:', stationId);
-    console.log('- Updates:', { onAir, inspection68 });
+    console.log('- Updates:', { onAir, inspection68, details });
+    console.log('- Auto-date feature enabled for inspection changes');
 
     // Build update object with only provided fields
-    const updates: Record<string, boolean | string> = {};
+    const updates: Record<string, boolean | string | null> = {};
     if (onAir !== undefined) updates.on_air = onAir;
-    if (inspection68 !== undefined) updates.inspection_68 = inspection68;
+    if (details !== undefined) updates.details = details;
+    if (inspection68 !== undefined) {
+      updates.inspection_68 = inspection68;
+
+      // Auto-set current date when inspection status changes to "ตรวจแล้ว"
+      if (inspection68 === 'ตรวจแล้ว') {
+        const currentDate = new Date().toISOString().split('T')[0]; // Format: YYYY-MM-DD
+        updates.date_inspected = currentDate;
+        console.log('🗓️ Auto-setting inspection date:', currentDate);
+      }
+      // Auto-remove date when inspection status changes to "ยังไม่ตรวจ"
+      else if (inspection68 === 'ยังไม่ตรวจ') {
+        updates.date_inspected = null;
+        console.log('🗑️ Auto-removing inspection date for status:', inspection68);
+      }
+    }
 
     if (Object.keys(updates).length === 0) {
       return NextResponse.json({ error: 'No valid fields to update' }, { status: 400 });

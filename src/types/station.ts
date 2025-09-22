@@ -14,6 +14,8 @@ export interface FMStation {
   permit?: string;
   inspection67?: string;
   inspection68?: string;
+  dateInspected?: string; // Date when the station was inspected (from วันที่ตรวจสอบ column)
+  details?: string; // Hashtags like #deviation, #intermod for station details
   onAir?: boolean;
   unwanted?: boolean;
   submitRequest?: string;
@@ -30,10 +32,11 @@ export interface UserLocation {
 }
 
 export type FilterType = {
-  onAir: string;
-  city: string;
-  province: string;
-  inspection: string;
-  search: string;
-  submitRequest: string;
+  onAir?: boolean;
+  city?: string;
+  province?: string;
+  inspection?: string;
+  inspection68?: string;
+  search?: string;
+  submitRequest?: string;
 }

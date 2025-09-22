@@ -22,6 +22,8 @@ export interface Database {
           description?: string
           website?: string
           transmitter_power: number
+          date_inspected?: string
+          details?: string
           created_at: string
           updated_at?: string
         }
@@ -37,6 +39,8 @@ export interface Database {
           description?: string
           website?: string
           transmitter_power: number
+          date_inspected?: string
+          details?: string
           created_at?: string
           updated_at?: string
         }
@@ -52,6 +56,8 @@ export interface Database {
           description?: string
           website?: string
           transmitter_power?: number
+          date_inspected?: string
+          details?: string
           created_at?: string
           updated_at?: string
         }

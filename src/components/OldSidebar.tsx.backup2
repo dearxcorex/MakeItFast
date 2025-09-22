@@ -1,0 +1,412 @@
+'use client';
+
+import { useRef, useState } from 'react';
+import { FMStation, FilterType, UserLocation } from '@/types/station';
+import { useTheme } from '@/contexts/ThemeContext';
+
+interface SidebarProps {
+  stations: FMStation[];
+  allStations: FMStation[];
+  onStationSelect: (station: FMStation) => void;
+  selectedStation?: FMStation;
+  isOpen: boolean;
+  onToggle: () => void;
+  userLocation?: UserLocation;
+  initialOnAirStatuses: boolean[];
+  initialCities: string[];
+  initialProvinces: string[];
+  initialInspectionStatuses: string[];
+  filters: FilterType;
+  onFiltersChange: (filters: FilterType) => void;
+  onClearFilters: () => void;
+  calculateDistance: (lat1: number, lon1: number, lat2: number, lon2: number) => number;
+}
+
+export default function Sidebar({
+  stations,
+  allStations,
+  onStationSelect,
+  selectedStation,
+  isOpen,
+  onToggle,
+  userLocation,
+  initialCities,
+  initialProvinces,
+  initialInspectionStatuses,
+  filters,
+  onFiltersChange,
+  onClearFilters,
+  calculateDistance
+}: SidebarProps) {
+  const { theme, toggleTheme } = useTheme();
+  const scrollContainerRef = useRef<HTMLDivElement>(null);
+  const [filtersExpanded, setFiltersExpanded] = useState(false);
+
+  // Handle station selection with scroll position preservation
+  const handleStationSelect = (station: FMStation) => {
+    const currentScrollTop = scrollContainerRef.current?.scrollTop || 0;
+    onStationSelect(station);
+    setTimeout(() => {
+      if (scrollContainerRef.current) {
+        scrollContainerRef.current.scrollTop = currentScrollTop;
+      }
+    }, 0);
+  };
+
+  // Filter data arrays from server-side props
+  const cities = initialCities;
+  const provinces = initialProvinces;
+  const inspectionStatuses = initialInspectionStatuses;
+
+  // Filter cities based on selected province
+  const availableCities = filters.province
+    ? cities.filter(city =>
+        allStations.some(station =>
+          station.state === filters.province && station.city === city
+        )
+      )
+    : cities;
+
+  // Filter stations within 20km if user location is available
+  const nearbyStations = userLocation
+    ? stations.filter(station => {
+        const distance = calculateDistance(
+          userLocation.latitude, userLocation.longitude,
+          station.latitude, station.longitude
+        );
+        return distance <= 20;
+      })
+    : stations;
+
+  const activeFiltersCount = Object.values(filters).filter(Boolean).length;
+
+  return (
+    <>
+      {/* Mobile Backdrop */}
+      {isOpen && (
+        <div
+          className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[998] lg:hidden transition-all duration-300"
+          onClick={onToggle}
+          aria-hidden="true"
+        />
+      )}
+
+      {/* Sidebar Container */}
+      <div className={`
+        ${isOpen
+          ? 'fixed inset-0 z-[999] flex items-end justify-center lg:static lg:inset-auto lg:items-start'
+          : 'fixed inset-y-0 left-0 -translate-x-full lg:static lg:translate-x-0'
+        }
+        lg:w-80 xl:w-96
+        transform transition-all duration-300 ease-out
+        lg:flex lg:flex-col lg:shadow-none lg:border-r lg:border-border/40
+        lg:max-h-screen lg:overflow-hidden lg:bg-background
+      `}>
+
+        {/* Mobile Modal Content */}
+        <div className={`
+          ${isOpen
+            ? 'w-full max-w-lg mx-4 mb-4 lg:max-w-none lg:mx-0 lg:mb-0 lg:w-full'
+            : 'w-full'
+          }
+          flex flex-col shadow-2xl lg:shadow-none
+          max-h-[85vh] lg:max-h-screen overflow-hidden bg-background/95 backdrop-blur-sm lg:bg-background
+          rounded-t-3xl lg:rounded-none border-t lg:border-t-0 border-l border-r lg:border-l-0 lg:border-r border-border/40
+        `}
+        onClick={(e) => isOpen && window.innerWidth < 1024 && e.stopPropagation()}
+        >
+
+          {/* Header Section */}
+          <div className="relative px-6 py-4 lg:py-6 border-b border-border/20 bg-gradient-to-r from-background to-background/80">
+            {/* Pull Handle for Mobile */}
+            <div className="flex lg:hidden justify-center mb-3">
+              <div className="w-8 h-1 bg-border rounded-full" />
+            </div>
+
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-4">
+                {/* Modern Radio Icon */}
+                <div className="w-11 h-11 bg-gradient-to-br from-primary/20 to-primary/10 rounded-2xl flex items-center justify-center shadow-sm">
+                  <svg className="w-6 h-6 text-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 2L12 22M8 6L12 2L16 6M6 10L12 4L18 10M4 14L12 6L20 14" />
+                    <circle cx="12" cy="18" r="2" fill="currentColor" />
+                  </svg>
+                </div>
+
+                {/* Station Count */}
+                <div>
+                  <div className="flex items-baseline gap-2">
+                    <span className="text-2xl font-bold text-foreground">
+                      {nearbyStations.length}
+                    </span>
+                    <span className="text-sm font-medium text-muted-foreground">
+                      {userLocation ? 'nearby stations' : 'total stations'}
+                    </span>
+                  </div>
+                  {userLocation && (
+                    <p className="text-xs text-muted-foreground">
+                      within 20km radius
+                    </p>
+                  )}
+                </div>
+              </div>
+
+              {/* Action Buttons */}
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={toggleTheme}
+                  className="p-2.5 rounded-xl hover:bg-accent transition-colors border border-border/40 shadow-sm"
+                  title={`Switch to ${theme === 'dark' ? 'light' : 'dark'} mode`}
+                >
+                  {theme === 'dark' ? (
+                    <svg className="w-5 h-5 text-yellow-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z" />
+                    </svg>
+                  ) : (
+                    <svg className="w-5 h-5 text-slate-800" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20.354 15.354A9 9 0 0 1 8.646 3.646 9.003 9.003 0 0 0 12 21a9.003 9.003 0 0 0 8.354-5.646z" />
+                    </svg>
+                  )}
+                </button>
+
+                <button
+                  onClick={onToggle}
+                  className="lg:hidden p-2.5 rounded-xl hover:bg-accent transition-colors border border-border/40 shadow-sm"
+                  aria-label="Close sidebar"
+                >
+                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                  </svg>
+                </button>
+              </div>
+            </div>
+          </div>
+
+          {/* Filters Section */}
+          <div className="px-6 py-4 bg-muted/20 border-b border-border/10">
+            <button
+              onClick={() => setFiltersExpanded(!filtersExpanded)}
+              className="flex items-center justify-between w-full text-left group"
+            >
+              <div className="flex items-center gap-3">
+                <svg className="w-5 h-5 text-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z" />
+                </svg>
+                <span className="font-medium text-foreground">Filters</span>
+                {activeFiltersCount > 0 && (
+                  <span className="px-2 py-0.5 text-xs font-medium bg-primary text-primary-foreground rounded-full">
+                    {activeFiltersCount}
+                  </span>
+                )}
+              </div>
+              <svg
+                className={`w-5 h-5 text-muted-foreground transition-transform ${filtersExpanded ? 'rotate-180' : ''}`}
+                fill="none" stroke="currentColor" viewBox="0 0 24 24"
+              >
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+              </svg>
+            </button>
+
+            {filtersExpanded && (
+              <div className="mt-4 space-y-4 animate-in slide-in-from-top-2 duration-200">
+                {/* Location Filters */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <div>
+                    <label className="block text-xs font-medium text-muted-foreground mb-2">Province</label>
+                    <select
+                      value={filters.province}
+                      onChange={(e) => onFiltersChange({
+                        ...filters,
+                        province: e.target.value,
+                        city: ''
+                      })}
+                      className="w-full px-3 py-2 bg-background border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary text-sm"
+                    >
+                      <option value="">All Provinces</option>
+                      {provinces.map(province => (
+                        <option key={province} value={province}>{province}</option>
+                      ))}
+                    </select>
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-medium text-muted-foreground mb-2">District</label>
+                    <select
+                      value={filters.city}
+                      onChange={(e) => onFiltersChange({ ...filters, city: e.target.value })}
+                      className="w-full px-3 py-2 bg-background border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary text-sm disabled:opacity-50"
+                      disabled={!filters.province}
+                    >
+                      <option value="">{!filters.province ? 'Select Province First' : 'All Districts'}</option>
+                      {availableCities.map(city => (
+                        <option key={city} value={city}>{city}</option>
+                      ))}
+                    </select>
+                  </div>
+                </div>
+
+                {/* Status Filters */}
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className="block text-xs font-medium text-muted-foreground mb-2">Status</label>
+                    <select
+                      value={filters.onAir}
+                      onChange={(e) => onFiltersChange({ ...filters, onAir: e.target.value })}
+                      className="w-full px-3 py-2 bg-background border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary text-sm"
+                    >
+                      <option value="">All Status</option>
+                      <option value="true">On Air</option>
+                      <option value="false">Off Air</option>
+                    </select>
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-medium text-muted-foreground mb-2">Inspection</label>
+                    <select
+                      value={filters.inspection}
+                      onChange={(e) => onFiltersChange({ ...filters, inspection: e.target.value })}
+                      className="w-full px-3 py-2 bg-background border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary text-sm"
+                    >
+                      <option value="">All</option>
+                      {inspectionStatuses.map(status => (
+                        <option key={status} value={status}>{status}</option>
+                      ))}
+                    </select>
+                  </div>
+                </div>
+
+                {/* Clear Filters */}
+                {activeFiltersCount > 0 && (
+                  <button
+                    onClick={onClearFilters}
+                    className="w-full px-4 py-2 text-sm bg-secondary text-secondary-foreground rounded-lg hover:bg-accent transition-colors flex items-center justify-center gap-2"
+                  >
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                    </svg>
+                    Clear Filters
+                  </button>
+                )}
+              </div>
+            )}
+          </div>
+
+          {/* Station List */}
+          <div
+            ref={scrollContainerRef}
+            className="flex-1 overflow-y-auto px-6 py-4"
+          >
+            {nearbyStations.length === 0 ? (
+              <div className="text-center py-12">
+                <div className="w-16 h-16 bg-muted/50 rounded-2xl flex items-center justify-center mx-auto mb-4">
+                  <svg className="w-8 h-8 text-muted-foreground" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8.111 16.404a5.5 5.5 0 0 1 7.778 0M12 20h.01m-7.08-7.071c3.904-3.905 10.236-3.905 14.141 0M1.394 9.393c5.857-5.857 15.355-5.857 21.213 0" />
+                  </svg>
+                </div>
+                <h3 className="font-semibold text-foreground mb-2">No stations found</h3>
+                <p className="text-sm text-muted-foreground">
+                  {userLocation ? "No stations within 20km radius" : "Try adjusting your filters"}
+                </p>
+              </div>
+            ) : (
+              <div className="space-y-3">
+                {nearbyStations.map((station) => {
+                  const distance = userLocation
+                    ? calculateDistance(
+                        userLocation.latitude, userLocation.longitude,
+                        station.latitude, station.longitude
+                      )
+                    : null;
+
+                  return (
+                    <div
+                      key={station.id}
+                      onClick={() => handleStationSelect(station)}
+                      className={`
+                        relative group p-4 rounded-xl cursor-pointer transition-all duration-200 border-2
+                        ${selectedStation?.id === station.id
+                          ? 'bg-primary/5 border-primary shadow-md shadow-primary/10'
+                          : 'bg-card border-transparent hover:border-primary/20 hover:shadow-lg hover:shadow-black/5'
+                        }
+                      `}
+                    >
+                      {/* Station Header */}
+                      <div className="flex items-start justify-between mb-3">
+                        <div className="flex-1 min-w-0">
+                          <h3 className="font-semibold text-card-foreground text-base truncate mb-1">
+                            {station.name}
+                          </h3>
+                          <div className="flex items-center gap-2">
+                            <span className="inline-flex items-center px-3 py-1 rounded-full bg-primary/15 text-primary text-sm font-medium">
+                              {station.frequency} FM
+                            </span>
+                            <span className={`inline-flex items-center gap-1.5 px-2 py-1 rounded-full text-xs font-medium ${
+                              station.onAir
+                                ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400'
+                                : 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400'
+                            }`}>
+                              <div className={`w-2 h-2 rounded-full ${station.onAir ? 'bg-emerald-500' : 'bg-red-500'}`} />
+                              {station.onAir ? 'Live' : 'Off Air'}
+                            </span>
+                          </div>
+                        </div>
+
+                        {/* Navigation Button - Only for nearby stations */}
+                        {distance && distance <= 20 && (
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              const googleMapsUrl = `https://www.google.com/maps/dir/?api=1&destination=${station.latitude},${station.longitude}&travelmode=driving`;
+                              window.open(googleMapsUrl, '_blank');
+                            }}
+                            className="opacity-0 group-hover:opacity-100 transition-all duration-200 p-2 bg-primary/10 hover:bg-primary/20 text-primary rounded-lg"
+                            title={`Navigate to ${station.name}`}
+                          >
+                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 20l-5.447-2.724A1 1 0 713 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3m-6 3V7m6 10l4.553 2.276A1 1 0 0021 18.382V7.618a1 1 0 00-1.447-.894L15 4m0 13V4m0 0L9 7" />
+                            </svg>
+                          </button>
+                        )}
+                      </div>
+
+                      {/* Location & Distance */}
+                      <div className="flex items-center justify-between text-sm mb-3">
+                        <span className="text-muted-foreground truncate">
+                          {station.city}, {station.state}
+                        </span>
+                        {distance && (
+                          <span className="text-primary font-semibold bg-primary/10 px-2 py-0.5 rounded-md text-xs">
+                            {distance.toFixed(1)} km
+                          </span>
+                        )}
+                      </div>
+
+                      {/* Tags */}
+                      <div className="flex flex-wrap gap-2">
+                        {station.inspection68 && (
+                          <span className={`inline-flex items-center px-2 py-0.5 rounded-md text-xs font-medium ${
+                            station.inspection68 === 'ตรวจแล้ว'
+                              ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400'
+                              : 'bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400'
+                          }`}>
+                            {station.inspection68 === 'ตรวจแล้ว' ? '✅ Inspected' : '⏳ Pending'}
+                          </span>
+                        )}
+                        {(station.type === 'สถานีหลัก' || station.genre === 'สถานีหลัก') && (
+                          <span className="inline-flex items-center px-2 py-0.5 rounded-md bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400 text-xs font-medium">
+                            ⭐ Main Station
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+
+        </div>
+      </div>
+    </>
+  );
+}

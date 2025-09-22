@@ -60,14 +60,7 @@ export default function OptimizedFMStationClient({
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [userLocation, setUserLocation] = useState<UserLocation | undefined>();
   const [stations, setStations] = useState<FMStation[]>(initialStations);
-  const [filters, setFilters] = useState<FilterType>({
-    onAir: '',
-    city: '',
-    province: '',
-    inspection: '',
-    search: '',
-    submitRequest: ''
-  });
+  const [filters, setFilters] = useState<FilterType>({});
 
   // Performance monitoring
   const { checkMemoryUsage } = useMemoryMonitor();
@@ -219,7 +212,9 @@ export default function OptimizedFMStationClient({
 
               if (existingStation &&
                   existingStation.onAir === updatedData.on_air &&
-                  existingStation.inspection68 === updatedData.inspection_68) {
+                  existingStation.inspection68 === updatedData.inspection_68 &&
+                  existingStation.dateInspected === updatedData.date_inspected &&
+                  existingStation.details === updatedData.details) {
                 // No change, return original array to prevent re-render
                 return prevStations;
               }
@@ -230,6 +225,8 @@ export default function OptimizedFMStationClient({
                       ...station,
                       onAir: updatedData.on_air,
                       inspection68: updatedData.inspection_68,
+                      dateInspected: updatedData.date_inspected,
+                      details: updatedData.details,
                       unwanted: updatedData.unwanted === 'true' || updatedData.unwanted === true,
                       submitRequest: updatedData.submit_a_request
                     }
@@ -244,6 +241,8 @@ export default function OptimizedFMStationClient({
                     ...prevSelected,
                     onAir: updatedData.on_air,
                     inspection68: updatedData.inspection_68,
+                    dateInspected: updatedData.date_inspected,
+                    details: updatedData.details,
                     unwanted: updatedData.unwanted === 'true' || updatedData.unwanted === true,
                     submitRequest: updatedData.submit_a_request
                   }
@@ -320,14 +319,7 @@ export default function OptimizedFMStationClient({
 
   // Optimized clear filters
   const clearFilters = useCallback(() => {
-    setFilters({
-      onAir: '',
-      city: '',
-      province: '',
-      inspection: '',
-      search: '',
-      submitRequest: ''
-    });
+    setFilters({});
     clearCaches(); // Clear distance cache when filters reset
   }, [clearCaches]);
 
@@ -374,15 +366,47 @@ export default function OptimizedFMStationClient({
       if ('inspection68' in updates && updates.inspection68 !== undefined) {
         apiUpdates.inspection68 = updates.inspection68;
       }
+      if ('details' in updates && updates.details !== undefined) {
+        apiUpdates.details = updates.details;
+      }
 
-      // Send to server (don't wait for response to keep UI responsive)
+      // Send to server and wait for response to get auto-generated fields like dateInspected
       fetch(`/api/stations/${numericId}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(apiUpdates),
-      }).then(response => {
+      }).then(async response => {
         if (response.ok) {
-          console.log(`✅ Station ${stationId} successfully updated on server`);
+          const result = await response.json();
+          console.log(`✅ Station ${stationId} successfully updated on server`, result);
+
+          // Update with server response data (includes auto-generated dateInspected)
+          if (result.data) {
+            const serverData = {
+              onAir: result.data.on_air,
+              inspection68: result.data.inspection_68,
+              dateInspected: result.data.date_inspected,
+              details: result.data.details,
+              unwanted: result.data.unwanted === 'true' || result.data.unwanted === true,
+              submitRequest: result.data.submit_a_request
+            };
+
+            // Update stations with server data
+            setStations(prevStations =>
+              prevStations.map(station =>
+                station.id === stationId
+                  ? { ...station, ...serverData }
+                  : station
+              )
+            );
+
+            // Update selected station with server data
+            setSelectedStation(prevSelected =>
+              prevSelected && prevSelected.id === stationId
+                ? { ...prevSelected, ...serverData }
+                : prevSelected
+            );
+          }
         } else {
           console.warn(`⚠️ Server update failed for station ${stationId}, but UI remains optimistic`);
         }

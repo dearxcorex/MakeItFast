@@ -14,6 +14,8 @@ interface FMStationRow {
   permit?: string;
   inspection_67?: string;
   inspection_68?: string;
+  date_inspected?: string;
+  details?: string;
   on_air: boolean;
   unwanted: string | boolean;
   submit_a_request: string | boolean;
@@ -37,6 +39,8 @@ function convertToFMStation(row: FMStationRow): FMStation {
     permit: row.permit,
     inspection67: row.inspection_67,
     inspection68: row.inspection_68,
+    dateInspected: row.date_inspected,
+    details: row.details,
     onAir: row.on_air,
     unwanted: row.unwanted === 'true' || row.unwanted === true,
     submitRequest: typeof row.submit_a_request === 'string' ? row.submit_a_request : (row.submit_a_request ? 'ไม่ยื่น' : ''),
