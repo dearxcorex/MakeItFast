@@ -556,6 +556,40 @@ export default function Map({ stations, selectedStation, onStationSelect, onUpda
     const [loadingStations, setLoadingStations] = useState<Set<string | number>>(new Set());
     const scrollContainerRef = useRef<HTMLDivElement>(null);
 
+    // iOS Safari scroll container fix
+    useEffect(() => {
+      if (!isMobile || !scrollContainerRef.current) return;
+
+      const container = scrollContainerRef.current;
+
+      // Disable scroll restoration for this session only
+      if ('scrollRestoration' in history) {
+        history.scrollRestoration = 'manual';
+      }
+
+      // Prevent any automatic scroll position changes
+      const preventAutoScroll = () => {
+        if (container.scrollTop === 0) return; // Don't interfere if already at top
+
+        // Store current scroll position
+        const currentScrollTop = container.scrollTop;
+
+        // Prevent browser from changing scroll position
+        requestAnimationFrame(() => {
+          if (container.scrollTop !== currentScrollTop) {
+            container.scrollTop = currentScrollTop;
+          }
+        });
+      };
+
+      // Add scroll position preservation
+      container.addEventListener('scroll', preventAutoScroll, { passive: true });
+
+      return () => {
+        container.removeEventListener('scroll', preventAutoScroll);
+      };
+    }, []);
+
     const handleStationToggle = async (e: React.MouseEvent, stationId: string | number, field: 'onAir' | 'inspection68' | 'details', value: boolean | string) => {
       e.preventDefault();
       e.stopPropagation();
@@ -576,7 +610,19 @@ export default function Map({ stations, selectedStation, onStationSelect, onUpda
     };
 
     return (
-    <div className={`w-full p-3 ${isMobile ? 'max-w-[300px]' : 'max-w-[320px] sm:max-w-[380px]'}`}>
+    <div
+      className={`w-full p-3 ${isMobile ? 'max-w-[300px]' : 'max-w-[320px] sm:max-w-[380px]'}`}
+      style={{
+        // iOS Safari popup stability fixes
+        contain: isMobile ? 'layout style paint' : 'none',
+        transform: isMobile ? 'translate3d(0, 0, 0)' : 'none',
+        willChange: isMobile ? 'auto' : 'auto',
+        touchAction: isMobile ? 'manipulation' : 'auto',
+        WebkitUserSelect: isMobile ? 'none' : 'auto',
+        userSelect: isMobile ? 'none' : 'auto',
+        WebkitTouchCallout: isMobile ? 'none' : undefined
+      }}
+    >
       <div className="mb-3">
         <div className="flex items-start gap-2 mb-2">
           <div className="w-6 h-6 sm:w-8 sm:h-8 bg-primary/20 rounded-lg flex items-center justify-center flex-shrink-0">
@@ -607,13 +653,30 @@ export default function Map({ stations, selectedStation, onStationSelect, onUpda
           ref={scrollContainerRef}
           className={`space-y-2 overflow-y-auto ${isMobile ? 'max-h-[240px]' : 'max-h-[280px]'}`}
           style={{
-            WebkitOverflowScrolling: 'touch',
-            transform: 'translateZ(0)', // Force hardware acceleration on mobile
-            willChange: isMobile ? 'scroll-position' : 'auto'
+            // iOS Safari specific fixes
+            WebkitOverflowScrolling: isMobile ? 'auto' : 'touch', // Disable momentum scrolling on mobile
+            transform: 'translate3d(0, 0, 0)', // Force hardware acceleration
+            willChange: 'auto', // Prevent layout recalculation
+            scrollBehavior: 'auto', // Disable smooth scrolling that causes jumps
+            overflowAnchor: 'none', // Prevent automatic scroll adjustments
+            scrollSnapType: 'none', // Disable scroll snapping
+            touchAction: isMobile ? 'pan-y' : 'auto', // Only allow vertical scrolling on mobile
+            overscrollBehavior: isMobile ? 'contain' : 'auto', // Contain scroll within element
+            contain: isMobile ? 'layout style paint' : 'none' // Optimize rendering on mobile
           }}
         >
           {stationGroup.map((station, index) => (
-            <div key={station.id} className="border rounded-lg p-3 bg-muted/20 hover:bg-muted/30 transition-colors">
+            <div
+              key={station.id}
+              className="border rounded-lg p-3 bg-muted/20 hover:bg-muted/30 transition-colors"
+              style={{
+                // iOS Safari layout stability fixes
+                contain: isMobile ? 'layout style' : 'none',
+                transform: isMobile ? 'translateZ(0)' : 'none',
+                willChange: isMobile ? 'auto' : 'auto',
+                touchAction: isMobile ? 'manipulation' : 'auto'
+              }}
+            >
               {stationGroup.length > 1 && (
                 <div className="flex items-center justify-between mb-2">
                   <span className="text-xs font-medium text-primary bg-primary/10 px-2 py-1 rounded">
@@ -895,6 +958,7 @@ export default function Map({ stations, selectedStation, onStationSelect, onUpda
                 closeOnEscapeKey={true}
                 maxWidth={isMobile ? 320 : 380}
                 minWidth={isMobile ? 280 : 300}
+                className={isMobile ? 'mobile-stable-popup' : ''}
               >
                 {isMultiple ? (
                   <MultipleStationsPopup

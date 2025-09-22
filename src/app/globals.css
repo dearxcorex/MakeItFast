@@ -153,13 +153,17 @@ body {
     /* Prevent zoom on input focus on mobile */
     touch-action: manipulation;
     /* Better touch scrolling */
-    -webkit-overflow-scrolling: touch;
+    -webkit-overflow-scrolling: auto; /* Changed from touch to auto */
     /* Prevent bounce effects that cause shake */
     overscroll-behavior: contain;
     /* Force hardware acceleration */
     -webkit-transform: translate3d(0, 0, 0);
     transform: translate3d(0, 0, 0);
-    will-change: transform;
+    will-change: auto; /* Changed from transform to auto */
+    /* Additional iOS Safari fixes */
+    contain: layout style paint;
+    scroll-behavior: auto !important;
+    overflow-anchor: none !important;
   }
 
   /* Fix popup width on mobile to prevent shake */
@@ -167,12 +171,38 @@ body {
     width: 280px !important;
     max-width: calc(100vw - 40px) !important;
     margin: 0 !important;
+    /* Additional stability fixes */
+    contain: layout style;
+    transform: translateZ(0);
   }
 
   /* Ensure stable container dimensions */
   .leaflet-popup {
     -webkit-transform: translate3d(0, 0, 0);
     transform: translate3d(0, 0, 0);
+    /* Additional iOS Safari fixes */
+    contain: layout style;
+    scroll-behavior: auto !important;
+  }
+
+  /* Specific mobile stable popup class */
+  .mobile-stable-popup .leaflet-popup-content-wrapper {
+    /* Aggressive iOS Safari fixes */
+    -webkit-overflow-scrolling: auto !important;
+    overscroll-behavior: contain !important;
+    scroll-behavior: auto !important;
+    overflow-anchor: none !important;
+    scroll-snap-type: none !important;
+    will-change: auto !important;
+    contain: layout style paint !important;
+  }
+
+  .mobile-stable-popup .leaflet-popup-content {
+    /* Prevent any layout shifts */
+    contain: layout style paint !important;
+    overflow-anchor: none !important;
+    scroll-behavior: auto !important;
+    transform: translate3d(0, 0, 0) !important;
   }
 }
 
