@@ -1,6 +1,6 @@
 'use client';
 
-import { useRef, useState, useEffect } from 'react';
+import { useRef, useState, useEffect, useCallback } from 'react';
 import { FMStation, FilterType, UserLocation } from '@/types/station';
 import { useTheme } from '@/contexts/ThemeContext';
 
@@ -72,7 +72,7 @@ export default function Sidebar({
   };
 
   // Handle station selection with scroll position preservation
-  const handleStationSelect = (station: FMStation) => {
+  const handleStationSelect = useCallback((station: FMStation) => {
     // Preserve scroll position
     const currentScrollTop = scrollContainerRef.current?.scrollTop || 0;
 
@@ -85,7 +85,7 @@ export default function Sidebar({
         scrollContainerRef.current.scrollTop = currentScrollTop;
       }
     }, 0);
-  };
+  }, [onStationSelect]);
 
   // Keyboard navigation handlers
   useEffect(() => {
@@ -135,7 +135,11 @@ export default function Sidebar({
 
         case '/':
           e.preventDefault();
-          // Focus search input if we had one
+          // Focus search input
+          const searchInput = document.getElementById('search-filter');
+          if (searchInput) {
+            searchInput.focus();
+          }
           break;
       }
     };
@@ -224,6 +228,22 @@ export default function Sidebar({
                   </div>
                 )}
               </div>
+
+              {/* Inspection Statistics */}
+              <div className="flex items-center gap-3 text-xs text-muted-foreground bg-muted/20 p-2 rounded-lg border border-border/30">
+                <div className="flex items-center gap-1">
+                  <div className="w-2 h-2 bg-green-500 rounded-full"></div>
+                  <span>
+                    {stations.filter(station => station.inspection68 === 'ตรวจแล้ว' && station.submitRequest !== 'ไม่ยื่น').length} inspected
+                  </span>
+                </div>
+                <div className="flex items-center gap-1">
+                  <div className="w-2 h-2 bg-yellow-500 rounded-full"></div>
+                  <span>
+                    {stations.filter(station => station.inspection68 === 'ยังไม่ตรวจ' && station.submitRequest !== 'ไม่ยื่น').length} pending
+                  </span>
+                </div>
+              </div>
             </div>
 
             {/* Desktop Action Buttons */}
@@ -251,6 +271,41 @@ export default function Sidebar({
         {/* Desktop Filters Section */}
         <div className="p-4 border-b border-border bg-muted/10" role="search" aria-label="Station filters">
           <div className="space-y-4">
+            {/* Search Bar */}
+            <fieldset className="space-y-3">
+              <legend className="section-title">Search</legend>
+              <div className="relative">
+                <svg
+                  className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-muted-foreground"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                </svg>
+                <input
+                  id="search-filter"
+                  type="text"
+                  placeholder="Search by name, frequency, city, province..."
+                  value={filters.search || ''}
+                  onChange={(e) => onFiltersChange({ ...filters, search: e.target.value || undefined })}
+                  className="w-full pl-10 pr-10 py-2 text-sm border border-border rounded-lg bg-background focus:ring-2 focus:ring-primary focus:border-transparent"
+                  aria-label="Search stations by name, frequency, city, or province"
+                />
+                {filters.search && (
+                  <button
+                    onClick={() => onFiltersChange({ ...filters, search: undefined })}
+                    className="absolute right-3 top-1/2 transform -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
+                    aria-label="Clear search"
+                  >
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                    </svg>
+                  </button>
+                )}
+              </div>
+            </fieldset>
+
             {/* Location Filters */}
             <fieldset className="space-y-3">
               <legend className="section-title">Location</legend>
@@ -259,7 +314,7 @@ export default function Sidebar({
                   <select
                     id="province-filter"
                     value={filters.province || ''}
-                    onChange={(e) => onFiltersChange({ ...filters, province: e.target.value || undefined, city: undefined })}
+                    onChange={(e) => onFiltersChange({ ...filters, province: e.target.value === '' ? undefined : e.target.value, city: undefined })}
                     className="w-full p-2 text-sm border border-border rounded-lg bg-background focus:ring-2 focus:ring-primary focus:border-transparent"
                     aria-label="Filter by province"
                   >
@@ -273,7 +328,7 @@ export default function Sidebar({
                   <select
                     id="city-filter"
                     value={filters.city || ''}
-                    onChange={(e) => onFiltersChange({ ...filters, city: e.target.value || undefined })}
+                    onChange={(e) => onFiltersChange({ ...filters, city: e.target.value === '' ? undefined : e.target.value })}
                     className="w-full p-2 text-sm border border-border rounded-lg bg-background focus:ring-2 focus:ring-primary focus:border-transparent"
                     disabled={!filters.province}
                     aria-label="Filter by city"
@@ -300,7 +355,7 @@ export default function Sidebar({
                 <div>
                   <select
                     id="status-filter"
-                    value={filters.onAir || ''}
+                    value={filters.onAir === undefined ? '' : filters.onAir.toString()}
                     onChange={(e) => onFiltersChange({ ...filters, onAir: e.target.value === '' ? undefined : e.target.value === 'true' })}
                     className="w-full p-2 text-sm border border-border rounded-lg bg-background focus:ring-2 focus:ring-primary focus:border-transparent"
                     aria-label="Filter by broadcast status"
@@ -313,7 +368,7 @@ export default function Sidebar({
                 <div>
                   <select
                     value={filters.inspection68 || ''}
-                    onChange={(e) => onFiltersChange({ ...filters, inspection68: e.target.value || undefined })}
+                    onChange={(e) => onFiltersChange({ ...filters, inspection68: e.target.value === '' ? undefined : e.target.value })}
                     className="w-full p-2 text-sm border border-border rounded-lg bg-background focus:ring-2 focus:ring-primary focus:border-transparent"
                   >
                     <option value="">All Inspections</option>
@@ -326,7 +381,7 @@ export default function Sidebar({
             </fieldset>
 
             {/* Clear Filters Button */}
-            {(filters.province || filters.city || filters.onAir !== undefined || filters.inspection68) && (
+            {(filters.search || filters.province || filters.city || filters.onAir !== undefined || filters.inspection68) && (
               <div className="pt-2">
                 <button
                   onClick={onClearFilters}
@@ -437,6 +492,27 @@ export default function Sidebar({
                       )}
                     </div>
 
+                    {/* Inspection Date Only */}
+                    {station.dateInspected && (
+                      <div className="flex items-center gap-2 text-xs text-muted-foreground bg-muted/20 p-2 rounded-md border border-border/30 mb-2">
+                        <svg className="w-3 h-3 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                        </svg>
+                        <span>Inspected: {(() => {
+                          try {
+                            const date = new Date(station.dateInspected);
+                            return date.toLocaleDateString('th-TH', {
+                              year: 'numeric',
+                              month: 'short',
+                              day: 'numeric'
+                            });
+                          } catch {
+                            return station.dateInspected;
+                          }
+                        })()}</span>
+                      </div>
+                    )}
+
                     {/* Station Type */}
                     <div className="flex items-center justify-between">
                       <span className="text-xs text-muted-foreground">{station.type}</span>
@@ -515,6 +591,22 @@ export default function Sidebar({
                   </div>
                 )}
               </div>
+
+              {/* Mobile Inspection Statistics */}
+              <div className="flex items-center gap-2 text-xs text-muted-foreground bg-muted/20 p-1.5 rounded-lg border border-border/30">
+                <div className="flex items-center gap-1">
+                  <div className="w-1.5 h-1.5 bg-green-500 rounded-full"></div>
+                  <span>
+                    {stations.filter(station => station.inspection68 === 'ตรวจแล้ว' && station.submitRequest !== 'ไม่ยื่น').length} inspected
+                  </span>
+                </div>
+                <div className="flex items-center gap-1">
+                  <div className="w-1.5 h-1.5 bg-yellow-500 rounded-full"></div>
+                  <span>
+                    {stations.filter(station => station.inspection68 === 'ยังไม่ตรวจ' && station.submitRequest !== 'ไม่ยื่น').length} pending
+                  </span>
+                </div>
+              </div>
             </div>
 
             {/* Mobile Action Buttons */}
@@ -552,6 +644,37 @@ export default function Sidebar({
         {/* Mobile Filters */}
         <div className="p-4 border-b border-border bg-muted/10">
           <div className="space-y-3">
+            {/* Mobile Search Bar */}
+            <div className="relative">
+              <svg
+                className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-muted-foreground"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+              </svg>
+              <input
+                type="text"
+                placeholder="🔍 Search stations..."
+                value={filters.search || ''}
+                onChange={(e) => onFiltersChange({ ...filters, search: e.target.value || undefined })}
+                className="w-full pl-10 pr-10 touch-target text-sm border border-border rounded-lg bg-background focus:ring-2 focus:ring-primary focus:border-transparent"
+                aria-label="Search stations"
+              />
+              {filters.search && (
+                <button
+                  onClick={() => onFiltersChange({ ...filters, search: undefined })}
+                  className="absolute right-3 top-1/2 transform -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors touch-target"
+                  aria-label="Clear search"
+                >
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                  </svg>
+                </button>
+              )}
+            </div>
+
             {/* Quick Status Filter */}
             <div className="flex gap-2">
               <button
@@ -603,7 +726,7 @@ export default function Sidebar({
             )}
 
             {/* Clear Filters */}
-            {(filters.province || filters.city || filters.onAir !== undefined) && (
+            {(filters.search || filters.province || filters.city || filters.onAir !== undefined) && (
               <button
                 onClick={onClearFilters}
                 className="w-full touch-target flex items-center justify-center gap-2 text-sm bg-muted hover:bg-muted/80 rounded-lg transition-colors"

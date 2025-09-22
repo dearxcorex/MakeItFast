@@ -79,8 +79,8 @@ export function useOptimizedFilters({
   // Memoized filter predicates to avoid recreation
   const filterPredicates = useMemo(() => {
     return {
-      onAir: filters.onAir !== '' ?
-        (station: FMStation) => station.onAir === (filters.onAir === 'true') :
+      onAir: filters.onAir !== undefined ?
+        (station: FMStation) => station.onAir === filters.onAir :
         null,
 
       city: filters.city ?
@@ -101,14 +101,19 @@ export function useOptimizedFilters({
 
       search: filters.search ?
         (station: FMStation) => {
-          const searchLower = filters.search.toLowerCase();
+          const searchLower = filters.search!.toLowerCase();
+          const searchTerm = filters.search!;
           return (
             station.name.toLowerCase().includes(searchLower) ||
             station.description?.toLowerCase().includes(searchLower) ||
             station.genre.toLowerCase().includes(searchLower) ||
             station.city.toLowerCase().includes(searchLower) ||
             station.state.toLowerCase().includes(searchLower) ||
-            station.frequency.toString().includes(filters.search)
+            station.details?.toLowerCase().includes(searchLower) ||
+            station.frequency.toString().includes(searchTerm) ||
+            // Support searching for hashtags without # prefix
+            (searchLower.startsWith('#') && station.details?.toLowerCase().includes(searchLower)) ||
+            (!searchLower.startsWith('#') && station.details?.toLowerCase().includes(`#${searchLower}`))
           );
         } :
         null
@@ -216,7 +221,7 @@ export function useOptimizedFilters({
 }
 
 // Hook for optimized city filtering based on province
-export function useOptimizedCityFilter(stations: FMStation[], selectedProvince: string, initialCities: string[]) {
+export function useOptimizedCityFilter(stations: FMStation[], selectedProvince: string | undefined, initialCities: string[]) {
   return useMemo(() => {
     if (!selectedProvince) {
       return initialCities;

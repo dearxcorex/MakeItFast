@@ -301,6 +301,22 @@ export default function Map({ stations, selectedStation, onStationSelect, onUpda
     return baseIcon;
   };
 
+  // Function to format inspection date
+  const formatInspectionDate = (dateStr?: string) => {
+    if (!dateStr) return null;
+    try {
+      const date = new Date(dateStr);
+      return date.toLocaleDateString('th-TH', {
+        year: 'numeric',
+        month: 'long',
+        day: 'numeric'
+      });
+    } catch {
+      return dateStr;
+    }
+  };
+
+
   // Component to render single station popup
   const SingleStationPopup = ({ station, distance }: { station: FMStation; distance: number | null }) => {
     const [loadingOnAir, setLoadingOnAir] = useState(false);
@@ -438,6 +454,17 @@ export default function Map({ stations, selectedStation, onStationSelect, onUpda
         </div>
       )}
 
+      {/* Inspection Date Only */}
+      {station.dateInspected && (
+        <div className="flex items-center gap-2 text-xs sm:text-sm text-muted-foreground bg-muted/20 p-2 rounded-lg border border-border/50 mb-3">
+          <svg className="w-3 h-3 sm:w-4 sm:h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+          </svg>
+          <span>Inspected: {formatInspectionDate(station.dateInspected)}</span>
+        </div>
+      )}
+
+
       {distance && (
         <div className="flex items-center gap-2 text-xs sm:text-sm text-primary font-semibold bg-primary/10 p-2 rounded-lg mb-4">
           <svg className="w-3 h-3 sm:w-4 sm:h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -452,6 +479,47 @@ export default function Map({ stations, selectedStation, onStationSelect, onUpda
           <p className="text-xs text-muted-foreground leading-relaxed break-words">
             {station.description}
           </p>
+        </div>
+      )}
+
+      {/* Hashtag Selection */}
+      {onUpdateStation && (
+        <div className="mt-3 pt-3 border-t border-border/50">
+          <div className="mb-2">
+            <label className="text-xs font-medium text-foreground">Station Details:</label>
+          </div>
+          <div className="flex flex-wrap gap-2">
+            <button
+              onClick={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                const newDetails = station.details === '#deviation' ? '' : '#deviation';
+                onUpdateStation(station.id, { details: newDetails });
+              }}
+              className={`px-2 py-1 text-xs rounded-md font-medium transition-all duration-200 ${
+                station.details === '#deviation'
+                  ? 'bg-red-100 text-red-700 border border-red-300 dark:bg-red-900/30 dark:text-red-400 dark:border-red-700'
+                  : 'bg-muted text-muted-foreground border border-border hover:bg-accent hover:text-accent-foreground'
+              }`}
+            >
+              #deviation
+            </button>
+            <button
+              onClick={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                const newDetails = station.details === '#intermod' ? '' : '#intermod';
+                onUpdateStation(station.id, { details: newDetails });
+              }}
+              className={`px-2 py-1 text-xs rounded-md font-medium transition-all duration-200 ${
+                station.details === '#intermod'
+                  ? 'bg-orange-100 text-orange-700 border border-orange-300 dark:bg-orange-900/30 dark:text-orange-400 dark:border-orange-700'
+                  : 'bg-muted text-muted-foreground border border-border hover:bg-accent hover:text-accent-foreground'
+              }`}
+            >
+              #intermod
+            </button>
+          </div>
         </div>
       )}
 
@@ -479,7 +547,7 @@ export default function Map({ stations, selectedStation, onStationSelect, onUpda
     const [loadingStations, setLoadingStations] = useState<Set<string | number>>(new Set());
     const scrollContainerRef = useRef<HTMLDivElement>(null);
 
-    const handleStationToggle = async (e: React.MouseEvent, stationId: string | number, field: 'onAir' | 'inspection68', value: boolean | string) => {
+    const handleStationToggle = async (e: React.MouseEvent, stationId: string | number, field: 'onAir' | 'inspection68' | 'details', value: boolean | string) => {
       e.preventDefault();
       e.stopPropagation();
       if (!onUpdateStation || loadingStations.has(stationId)) return;
@@ -596,7 +664,7 @@ export default function Map({ stations, selectedStation, onStationSelect, onUpda
               </div>
 
               {station.inspection68 && (
-                <div className="flex items-center justify-between gap-2 p-2 bg-muted/30 rounded border border-border/50">
+                <div className="flex items-center justify-between gap-2 p-2 bg-muted/30 rounded border border-border/50 mb-2">
                   <span className={`inline-flex items-center gap-1 px-2 py-1 rounded-md text-xs font-medium ${
                     station.inspection68 === 'ตรวจแล้ว'
                       ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400'
@@ -636,6 +704,60 @@ export default function Map({ stations, selectedStation, onStationSelect, onUpda
                   )}
                 </div>
               )}
+
+              {/* Inspection Date Only for Multiple Stations */}
+              {station.dateInspected && (
+                <div className="flex items-center gap-2 text-xs text-muted-foreground bg-muted/30 p-2 rounded border border-border/50 mt-2">
+                  <svg className="w-3 h-3 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                  </svg>
+                  <span>Inspected: {formatInspectionDate(station.dateInspected)}</span>
+                </div>
+              )}
+
+              {/* Hashtag Selection for Multiple Stations */}
+              {onUpdateStation && (
+                <div className="mt-2 pt-2 border-t border-border/30">
+                  <div className="mb-1.5">
+                    <label className="text-xs font-medium text-foreground">Details:</label>
+                  </div>
+                  <div className="flex flex-wrap gap-1.5">
+                    <button
+                      onClick={(e) => {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        const newDetails = station.details === '#deviation' ? '' : '#deviation';
+                        handleStationToggle(e, station.id, 'details' as 'onAir' | 'inspection68' | 'details', newDetails);
+                      }}
+                      disabled={loadingStations.has(station.id)}
+                      className={`px-1.5 py-0.5 text-xs rounded font-medium transition-all duration-200 ${
+                        station.details === '#deviation'
+                          ? 'bg-red-100 text-red-700 border border-red-300 dark:bg-red-900/30 dark:text-red-400 dark:border-red-700'
+                          : 'bg-muted text-muted-foreground border border-border hover:bg-accent hover:text-accent-foreground'
+                      } ${loadingStations.has(station.id) ? 'opacity-50 cursor-not-allowed' : ''}`}
+                    >
+                      #deviation
+                    </button>
+                    <button
+                      onClick={(e) => {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        const newDetails = station.details === '#intermod' ? '' : '#intermod';
+                        handleStationToggle(e, station.id, 'details' as 'onAir' | 'inspection68' | 'details', newDetails);
+                      }}
+                      disabled={loadingStations.has(station.id)}
+                      className={`px-1.5 py-0.5 text-xs rounded font-medium transition-all duration-200 ${
+                        station.details === '#intermod'
+                          ? 'bg-orange-100 text-orange-700 border border-orange-300 dark:bg-orange-900/30 dark:text-orange-400 dark:border-orange-700'
+                          : 'bg-muted text-muted-foreground border border-border hover:bg-accent hover:text-accent-foreground'
+                      } ${loadingStations.has(station.id) ? 'opacity-50 cursor-not-allowed' : ''}`}
+                    >
+                      #intermod
+                    </button>
+                  </div>
+                </div>
+              )}
+
             </div>
           ))}
         </div>
