@@ -558,11 +558,38 @@ a[aria-label*="Navigate"]:not([disabled]),
     /* Contain scrolling within element */
     overscroll-behavior-y: contain;
     overscroll-behavior-x: hidden;
+    /* Prevent scroll position jumps on content updates */
+    contain: layout style paint;
+    /* Better mobile scroll handling */
+    touch-action: pan-y;
+    /* Prevent iOS Safari zoom on double tap */
+    user-select: none;
+    -webkit-user-select: none;
+    -webkit-touch-callout: none;
   }
 
   .scrollbar-stable::-webkit-scrollbar {
     display: none;
     width: 0;
+  }
+
+  /* Additional fixes for map popup modals on mobile */
+  .leaflet-popup-content .scrollbar-stable {
+    /* Prevent scroll restoration interference */
+    scroll-snap-type: none;
+    /* Force immediate scroll updates */
+    scroll-behavior: auto !important;
+    /* Prevent elastic bounce */
+    overscroll-behavior: contain;
+    /* Optimize rendering */
+    content-visibility: auto;
+    /* Lock scroll axis */
+    overscroll-behavior-x: none;
+    overscroll-behavior-y: contain;
+    /* Prevent accidental horizontal scroll */
+    overflow-x: hidden;
+    /* Better touch response */
+    -webkit-tap-highlight-color: transparent;
   }
 }
 

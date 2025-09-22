@@ -546,6 +546,17 @@ export default function Map({ stations, selectedStation, onStationSelect, onUpda
   const MultipleStationsPopup = ({ stationGroup, lat, lng, distance }: { stationGroup: FMStation[]; lat: number; lng: number; distance: number | null }) => {
     const [loadingStations, setLoadingStations] = useState<Set<string | number>>(new Set());
     const scrollContainerRef = useRef<HTMLDivElement>(null);
+    const [isMobile, setIsMobile] = useState(false);
+
+    // Detect mobile device
+    useEffect(() => {
+      const checkMobile = () => {
+        setIsMobile(window.innerWidth <= 768 || /Android|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent));
+      };
+      checkMobile();
+      window.addEventListener('resize', checkMobile);
+      return () => window.removeEventListener('resize', checkMobile);
+    }, []);
 
     const handleStationToggle = async (e: React.MouseEvent, stationId: string | number, field: 'onAir' | 'inspection68' | 'details', value: boolean | string) => {
       e.preventDefault();
@@ -554,6 +565,7 @@ export default function Map({ stations, selectedStation, onStationSelect, onUpda
 
       // Preserve scroll position before update
       const currentScrollTop = scrollContainerRef.current?.scrollTop || 0;
+      const wasScrolled = currentScrollTop > 0;
 
       setLoadingStations(prev => new Set(prev).add(stationId));
       try {
@@ -567,12 +579,15 @@ export default function Map({ stations, selectedStation, onStationSelect, onUpda
           return newSet;
         });
 
-        // Restore scroll position after update (iOS Safari fix)
-        setTimeout(() => {
-          if (scrollContainerRef.current) {
-            scrollContainerRef.current.scrollTop = currentScrollTop;
-          }
-        }, 0);
+        // Only restore scroll position on desktop to prevent mobile scrolling issues
+        if (!isMobile && wasScrolled && scrollContainerRef.current) {
+          // Use requestAnimationFrame for better performance
+          requestAnimationFrame(() => {
+            if (scrollContainerRef.current && Math.abs(scrollContainerRef.current.scrollTop - currentScrollTop) > 10) {
+              scrollContainerRef.current.scrollTop = currentScrollTop;
+            }
+          });
+        }
       }
     };
 
@@ -606,7 +621,11 @@ export default function Map({ stations, selectedStation, onStationSelect, onUpda
 
         <div
           ref={scrollContainerRef}
-          className="space-y-2 max-h-[280px] overflow-y-auto scrollbar-stable"
+          className="space-y-2 max-h-[280px] overflow-y-auto scrollbar-stable overscroll-contain"
+          style={{
+            WebkitOverflowScrolling: 'touch',
+            scrollBehavior: 'smooth'
+          }}
         >
           {stationGroup.map((station) => (
             <div key={station.id} className="border rounded p-2 bg-muted/20">
