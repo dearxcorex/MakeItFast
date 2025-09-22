@@ -551,44 +551,77 @@ export default function Map({ stations, selectedStation, onStationSelect, onUpda
     );
   };
 
-  // Component to render multiple stations popup
+  // Component to render multiple stations popup - iOS Safari aggressive fix
   const MultipleStationsPopup = ({ stationGroup, lat, lng, distance }: { stationGroup: FMStation[]; lat: number; lng: number; distance: number | null }) => {
     const [loadingStations, setLoadingStations] = useState<Set<string | number>>(new Set());
-    const scrollContainerRef = useRef<HTMLDivElement>(null);
+    const [currentPage, setCurrentPage] = useState(0);
+    const [manualScrollY, setManualScrollY] = useState(0);
+    const containerRef = useRef<HTMLDivElement>(null);
+    const isScrollingRef = useRef(false);
+    const touchStartRef = useRef({ y: 0, scrollY: 0 });
 
-    // iOS Safari scroll container fix
+    // On iOS, use pagination instead of scrolling to completely avoid iOS Safari scroll issues
+    const itemsPerPage = isMobile ? 1 : 3; // Show 1 station per page on mobile
+    const totalPages = Math.ceil(stationGroup.length / itemsPerPage);
+    const currentStations = isMobile
+      ? [stationGroup[currentPage]]
+      : stationGroup.slice(currentPage * itemsPerPage, (currentPage + 1) * itemsPerPage);
+
+    // iOS Safari nuclear option - completely disable all scroll behavior
     useEffect(() => {
-      if (!isMobile || !scrollContainerRef.current) return;
+      if (!isMobile || !containerRef.current) return;
 
-      const container = scrollContainerRef.current;
+      const container = containerRef.current;
 
-      // Disable scroll restoration for this session only
+      // Completely disable iOS Safari scroll restoration
       if ('scrollRestoration' in history) {
         history.scrollRestoration = 'manual';
       }
 
-      // Prevent any automatic scroll position changes
-      const preventAutoScroll = () => {
-        if (container.scrollTop === 0) return; // Don't interfere if already at top
-
-        // Store current scroll position
-        const currentScrollTop = container.scrollTop;
-
-        // Prevent browser from changing scroll position
-        requestAnimationFrame(() => {
-          if (container.scrollTop !== currentScrollTop) {
-            container.scrollTop = currentScrollTop;
-          }
-        });
+      // Disable all default touch behaviors
+      const preventAllDefaults = (e: Event) => {
+        e.preventDefault();
+        e.stopPropagation();
       };
 
-      // Add scroll position preservation
-      container.addEventListener('scroll', preventAutoScroll, { passive: true });
+      const handleTouchStart = (e: TouchEvent) => {
+        isScrollingRef.current = true;
+        touchStartRef.current = {
+          y: e.touches[0].clientY,
+          scrollY: manualScrollY
+        };
+        preventAllDefaults(e);
+      };
+
+      const handleTouchMove = (e: TouchEvent) => {
+        if (!isScrollingRef.current) return;
+
+        const deltaY = e.touches[0].clientY - touchStartRef.current.y;
+        const newScrollY = Math.max(0, Math.min(200, touchStartRef.current.scrollY - deltaY));
+        setManualScrollY(newScrollY);
+        preventAllDefaults(e);
+      };
+
+      const handleTouchEnd = (e: TouchEvent) => {
+        isScrollingRef.current = false;
+        preventAllDefaults(e);
+      };
+
+      // Add aggressive event listeners
+      container.addEventListener('touchstart', handleTouchStart, { passive: false });
+      container.addEventListener('touchmove', handleTouchMove, { passive: false });
+      container.addEventListener('touchend', handleTouchEnd, { passive: false });
+      container.addEventListener('scroll', preventAllDefaults, { passive: false });
+      container.addEventListener('wheel', preventAllDefaults, { passive: false });
 
       return () => {
-        container.removeEventListener('scroll', preventAutoScroll);
+        container.removeEventListener('touchstart', handleTouchStart);
+        container.removeEventListener('touchmove', handleTouchMove);
+        container.removeEventListener('touchend', handleTouchEnd);
+        container.removeEventListener('scroll', preventAllDefaults);
+        container.removeEventListener('wheel', preventAllDefaults);
       };
-    }, []);
+    }, [manualScrollY]);
 
     const handleStationToggle = async (e: React.MouseEvent, stationId: string | number, field: 'onAir' | 'inspection68' | 'details', value: boolean | string) => {
       e.preventDefault();
@@ -611,7 +644,7 @@ export default function Map({ stations, selectedStation, onStationSelect, onUpda
 
     return (
     <div
-      className={`w-full p-3 ${isMobile ? 'max-w-[300px]' : 'max-w-[320px] sm:max-w-[380px]'}`}
+      className={`w-full p-3 ${isMobile ? 'max-w-[320px]' : 'max-w-[320px] sm:max-w-[380px]'}`}
       style={{
         // iOS Safari popup stability fixes
         contain: isMobile ? 'layout style paint' : 'none',
@@ -649,44 +682,71 @@ export default function Map({ stations, selectedStation, onStationSelect, onUpda
           </div>
         )}
 
-        <div
-          ref={scrollContainerRef}
-          className={`space-y-2 overflow-y-auto ${isMobile ? 'max-h-[240px]' : 'max-h-[280px]'}`}
-          style={{
-            // iOS Safari specific fixes
-            WebkitOverflowScrolling: isMobile ? 'auto' : 'touch', // Disable momentum scrolling on mobile
-            transform: 'translate3d(0, 0, 0)', // Force hardware acceleration
-            willChange: 'auto', // Prevent layout recalculation
-            scrollBehavior: 'auto', // Disable smooth scrolling that causes jumps
-            overflowAnchor: 'none', // Prevent automatic scroll adjustments
-            scrollSnapType: 'none', // Disable scroll snapping
-            touchAction: isMobile ? 'pan-y' : 'auto', // Only allow vertical scrolling on mobile
-            overscrollBehavior: isMobile ? 'contain' : 'auto', // Contain scroll within element
-            contain: isMobile ? 'layout style paint' : 'none' // Optimize rendering on mobile
-          }}
-        >
-          {stationGroup.map((station, index) => (
+        {/* Mobile: Use pagination to completely avoid iOS Safari scroll issues */}
+        {isMobile ? (
+          <div
+            ref={containerRef}
+            className="space-y-2"
+            style={{
+              maxHeight: '400px', // Increased max height to show full station details
+              minHeight: '200px', // Minimum height for consistency
+              overflow: 'visible', // Allow content to be fully visible
+              touchAction: 'none', // Completely disable touch scrolling
+              contain: 'layout style paint'
+            }}
+          >
+            {/* Pagination controls for mobile */}
+            {totalPages > 1 && (
+              <div className="flex items-center justify-between mb-3 p-2 bg-primary/10 rounded-lg">
+                <button
+                  onClick={() => setCurrentPage(Math.max(0, currentPage - 1))}
+                  disabled={currentPage === 0}
+                  className={`px-3 py-1 text-xs rounded-lg font-medium transition-all ${
+                    currentPage === 0
+                      ? 'bg-muted text-muted-foreground cursor-not-allowed'
+                      : 'bg-primary text-primary-foreground hover:bg-primary/90'
+                  }`}
+                >
+                  ← Previous
+                </button>
+                <span className="text-xs font-medium text-primary">
+                  Station {currentPage + 1} of {stationGroup.length}
+                </span>
+                <button
+                  onClick={() => setCurrentPage(Math.min(totalPages - 1, currentPage + 1))}
+                  disabled={currentPage === totalPages - 1}
+                  className={`px-3 py-1 text-xs rounded-lg font-medium transition-all ${
+                    currentPage === totalPages - 1
+                      ? 'bg-muted text-muted-foreground cursor-not-allowed'
+                      : 'bg-primary text-primary-foreground hover:bg-primary/90'
+                  }`}
+                >
+                  Next →
+                </button>
+              </div>
+            )}
+
+            {/* Station content - no scrolling on mobile, full height */}
+            <div className="space-y-2" style={{ minHeight: 'auto' }}>
+              {currentStations.map((station, index) => (
             <div
               key={station.id}
               className="border rounded-lg p-3 bg-muted/20 hover:bg-muted/30 transition-colors"
               style={{
-                // iOS Safari layout stability fixes
+                // iOS Safari layout stability fixes - allow full height expansion
                 contain: isMobile ? 'layout style' : 'none',
                 transform: isMobile ? 'translateZ(0)' : 'none',
                 willChange: isMobile ? 'auto' : 'auto',
-                touchAction: isMobile ? 'manipulation' : 'auto'
+                touchAction: isMobile ? 'manipulation' : 'auto',
+                height: 'auto', // Allow full height
+                overflow: 'visible' // Show all content
               }}
             >
-              {stationGroup.length > 1 && (
-                <div className="flex items-center justify-between mb-2">
-                  <span className="text-xs font-medium text-primary bg-primary/10 px-2 py-1 rounded">
-                    Station {index + 1} of {stationGroup.length}
+              {station.unwanted && (
+                <div className="flex justify-end mb-2">
+                  <span className="text-xs font-medium text-orange-600 bg-orange-100 dark:bg-orange-900/30 dark:text-orange-400 px-2 py-1 rounded">
+                    ⚠️ Unwanted
                   </span>
-                  {station.unwanted && (
-                    <span className="text-xs font-medium text-orange-600 bg-orange-100 dark:bg-orange-900/30 dark:text-orange-400 px-2 py-1 rounded">
-                      ⚠️ Unwanted
-                    </span>
-                  )}
                 </div>
               )}
               <div className="flex items-start gap-2 mb-2">
@@ -837,9 +897,186 @@ export default function Map({ stations, selectedStation, onStationSelect, onUpda
                 </div>
               )}
 
+                </div>
+              ))}
             </div>
-          ))}
-        </div>
+          </div>
+        ) : (
+          /* Desktop: Use normal scrolling */
+          <div
+            className="space-y-2 max-h-[280px] overflow-y-auto"
+            style={{
+              WebkitOverflowScrolling: 'touch',
+              transform: 'translateZ(0)'
+            }}
+          >
+            {stationGroup.map((station, index) => (
+              <div
+                key={station.id}
+                className="border rounded-lg p-3 bg-muted/20 hover:bg-muted/30 transition-colors"
+              >
+                {stationGroup.length > 1 && (
+                  <div className="flex items-center justify-between mb-2">
+                    <span className="text-xs font-medium text-primary bg-primary/10 px-2 py-1 rounded">
+                      Station {index + 1} of {stationGroup.length}
+                    </span>
+                    {station.unwanted && (
+                      <span className="text-xs font-medium text-orange-600 bg-orange-100 dark:bg-orange-900/30 dark:text-orange-400 px-2 py-1 rounded">
+                        ⚠️ Unwanted
+                      </span>
+                    )}
+                  </div>
+                )}
+                <div className="flex items-start gap-2 mb-2">
+                  <div className="min-w-0 flex-1">
+                    <h4 className="font-semibold text-sm text-card-foreground break-words">{station.name}</h4>
+                    <div className="flex items-center gap-1 mt-1 flex-wrap">
+                      <span className="inline-flex items-center px-1.5 py-0.5 rounded bg-primary/20 text-primary text-xs font-bold">
+                        {station.frequency} FM
+                      </span>
+                      <span className="text-xs text-muted-foreground px-1.5 py-0.5 bg-muted rounded">
+                        {station.genre}
+                      </span>
+                      {(station.type === 'สถานีหลัก' || station.genre === 'สถานีหลัก') && (
+                        <span className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400 text-xs font-medium">
+                          <span>★</span>
+                          <span>Main</span>
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                </div>
+
+                <div className="flex items-center justify-between gap-2 p-2 bg-muted/30 rounded border border-border/50 mb-2">
+                  <span className={`inline-flex items-center gap-2 px-2 py-1 rounded-md text-xs font-medium ${
+                    station.onAir
+                      ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400'
+                      : 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400'
+                  }`}>
+                    <div className={`w-1.5 h-1.5 rounded-full ${station.onAir ? 'bg-green-500' : 'bg-red-500'}`} />
+                    {station.onAir ? 'On Air' : 'Off Air'}
+                  </span>
+                  {onUpdateStation && (
+                    <button
+                      onClick={(e) => handleStationToggle(e, station.id, 'onAir', !station.onAir)}
+                      disabled={loadingStations.has(station.id)}
+                      className={`px-2 py-1 text-xs rounded font-medium whitespace-nowrap transition-all duration-200 ${
+                        loadingStations.has(station.id)
+                          ? 'bg-muted text-muted-foreground cursor-not-allowed'
+                          : 'bg-secondary text-secondary-foreground hover:bg-accent'
+                      }`}
+                    >
+                      {loadingStations.has(station.id) ? (
+                        <div className="flex items-center gap-1">
+                          <svg className="w-2.5 h-2.5 animate-spin" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                          </svg>
+                          <span>Save...</span>
+                        </div>
+                      ) : (
+                        station.onAir ? 'Set Off' : 'Set On'
+                      )}
+                    </button>
+                  )}
+                </div>
+
+                {station.inspection68 && (
+                  <div className="flex items-center justify-between gap-2 p-2 bg-muted/30 rounded border border-border/50 mb-2">
+                    <span className={`inline-flex items-center gap-1 px-2 py-1 rounded-md text-xs font-medium ${
+                      station.inspection68 === 'ตรวจแล้ว'
+                        ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400'
+                        : station.inspection68 === 'ยังไม่ตรวจ'
+                        ? 'bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400'
+                        : 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400'
+                    }`}>
+                      {station.inspection68 === 'ตรวจแล้ว' && '✅'}
+                      {station.inspection68 === 'ยังไม่ตรวจ' && '⏳'}
+                      {station.inspection68 === 'ตรงตามมาตรฐาน' && '🎯'}
+                      <span className="break-words text-xs">{station.inspection68}</span>
+                    </span>
+                    {onUpdateStation && (
+                      <button
+                        onClick={(e) => {
+                          const newStatus = station.inspection68 === 'ตรวจแล้ว' ? 'ยังไม่ตรวจ' : 'ตรวจแล้ว';
+                          handleStationToggle(e, station.id, 'inspection68', newStatus);
+                        }}
+                        disabled={loadingStations.has(station.id)}
+                        className={`px-2 py-1 text-xs rounded font-medium whitespace-nowrap transition-all duration-200 ${
+                          loadingStations.has(station.id)
+                            ? 'bg-muted text-muted-foreground cursor-not-allowed'
+                            : 'bg-primary text-primary-foreground hover:bg-primary/90'
+                        }`}
+                      >
+                        {loadingStations.has(station.id) ? (
+                          <div className="flex items-center gap-1">
+                            <svg className="w-2.5 h-2.5 animate-spin" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                            </svg>
+                            <span>Save...</span>
+                          </div>
+                        ) : (
+                          station.inspection68 === 'ยังไม่ตรวจ' ? 'Inspect' : 'Inspected'
+                        )}
+                      </button>
+                    )}
+                  </div>
+                )}
+
+                {station.dateInspected && (
+                  <div className="flex items-center gap-2 text-xs text-muted-foreground bg-muted/30 p-2 rounded border border-border/50 mt-2">
+                    <svg className="w-3 h-3 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                    </svg>
+                    <span>Inspected: {formatInspectionDate(station.dateInspected)}</span>
+                  </div>
+                )}
+
+                {onUpdateStation && (
+                  <div className="mt-2 pt-2 border-t border-border/30">
+                    <div className="mb-1.5">
+                      <label className="text-xs font-medium text-foreground">Details:</label>
+                    </div>
+                    <div className="flex flex-wrap gap-1.5">
+                      <button
+                        onClick={(e) => {
+                          e.preventDefault();
+                          e.stopPropagation();
+                          const newDetails = station.details === '#deviation' ? '' : '#deviation';
+                          handleStationToggle(e, station.id, 'details' as 'onAir' | 'inspection68' | 'details', newDetails);
+                        }}
+                        disabled={loadingStations.has(station.id)}
+                        className={`px-1.5 py-0.5 text-xs rounded font-medium transition-all duration-200 ${
+                          station.details === '#deviation'
+                            ? 'bg-red-100 text-red-700 border border-red-300 dark:bg-red-900/30 dark:text-red-400 dark:border-red-700'
+                            : 'bg-muted text-muted-foreground border border-border hover:bg-accent hover:text-accent-foreground'
+                        } ${loadingStations.has(station.id) ? 'opacity-50 cursor-not-allowed' : ''}`}
+                      >
+                        #deviation
+                      </button>
+                      <button
+                        onClick={(e) => {
+                          e.preventDefault();
+                          e.stopPropagation();
+                          const newDetails = station.details === '#intermod' ? '' : '#intermod';
+                          handleStationToggle(e, station.id, 'details' as 'onAir' | 'inspection68' | 'details', newDetails);
+                        }}
+                        disabled={loadingStations.has(station.id)}
+                        className={`px-1.5 py-0.5 text-xs rounded font-medium transition-all duration-200 ${
+                          station.details === '#intermod'
+                            ? 'bg-orange-100 text-orange-700 border border-orange-300 dark:bg-orange-900/30 dark:text-orange-400 dark:border-orange-700'
+                            : 'bg-muted text-muted-foreground border border-border hover:bg-accent hover:text-accent-foreground'
+                        } ${loadingStations.has(station.id) ? 'opacity-50 cursor-not-allowed' : ''}`}
+                      >
+                        #intermod
+                      </button>
+                    </div>
+                  </div>
+                )}
+
+              </div>
+            ))}
+          </div>
+        )}
 
         <div className="mt-2 pt-2 border-t border-border/30 flex justify-center">
           <button
@@ -956,8 +1193,8 @@ export default function Map({ stations, selectedStation, onStationSelect, onUpda
                 autoPan={false}
                 keepInView={true}
                 closeOnEscapeKey={true}
-                maxWidth={isMobile ? 320 : 380}
-                minWidth={isMobile ? 280 : 300}
+                maxWidth={isMobile ? 350 : 380}
+                minWidth={isMobile ? 320 : 300}
                 className={isMobile ? 'mobile-stable-popup' : ''}
               >
                 {isMultiple ? (
