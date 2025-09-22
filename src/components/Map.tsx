@@ -567,6 +567,17 @@ export default function Map({ stations, selectedStation, onStationSelect, onUpda
       ? [stationGroup[currentPage]]
       : stationGroup.slice(currentPage * itemsPerPage, (currentPage + 1) * itemsPerPage);
 
+    // Debug state changes
+    useEffect(() => {
+      console.log('MultipleStationsPopup state:', {
+        currentPage,
+        totalPages,
+        stationGroupLength: stationGroup.length,
+        isMobile,
+        currentStationId: currentStations[0]?.id
+      });
+    }, [currentPage, totalPages, stationGroup.length, isMobile, currentStations]);
+
     // iOS Safari minimal scroll prevention - only block container scrolling, not button clicks
     useEffect(() => {
       if (!isMobile || !containerRef.current) return;
@@ -672,15 +683,40 @@ export default function Map({ stations, selectedStation, onStationSelect, onUpda
           >
             {/* Pagination controls for mobile */}
             {totalPages > 1 && (
-              <div className="flex items-center justify-between mb-3 p-2 bg-primary/10 rounded-lg">
+              <div
+                className="flex items-center justify-between mb-3 p-2 bg-primary/10 rounded-lg"
+                style={{
+                  isolation: 'isolate',
+                  position: 'relative',
+                  zIndex: 9999
+                }}
+              >
                 <button
-                  onClick={() => setCurrentPage(Math.max(0, currentPage - 1))}
+                  onMouseDown={(e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    const newPage = Math.max(0, currentPage - 1);
+                    console.log('Previous clicked:', currentPage, '->', newPage);
+                    setCurrentPage(newPage);
+                  }}
+                  onTouchStart={(e) => {
+                    // Don't preventDefault on touch to avoid passive event warning
+                    e.stopPropagation();
+                    const newPage = Math.max(0, currentPage - 1);
+                    console.log('Previous touched:', currentPage, '->', newPage);
+                    setCurrentPage(newPage);
+                  }}
                   disabled={currentPage === 0}
                   className={`px-3 py-1 text-xs rounded-lg font-medium transition-all ${
                     currentPage === 0
                       ? 'bg-muted text-muted-foreground cursor-not-allowed'
                       : 'bg-primary text-primary-foreground hover:bg-primary/90'
                   }`}
+                  style={{
+                    isolation: 'isolate',
+                    position: 'relative',
+                    zIndex: 10000
+                  }}
                 >
                   ← Previous
                 </button>
@@ -688,13 +724,31 @@ export default function Map({ stations, selectedStation, onStationSelect, onUpda
                   Station {currentPage + 1} of {stationGroup.length}
                 </span>
                 <button
-                  onClick={() => setCurrentPage(Math.min(totalPages - 1, currentPage + 1))}
+                  onMouseDown={(e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    const newPage = Math.min(totalPages - 1, currentPage + 1);
+                    console.log('Next clicked:', currentPage, '->', newPage);
+                    setCurrentPage(newPage);
+                  }}
+                  onTouchStart={(e) => {
+                    // Don't preventDefault on touch to avoid passive event warning
+                    e.stopPropagation();
+                    const newPage = Math.min(totalPages - 1, currentPage + 1);
+                    console.log('Next touched:', currentPage, '->', newPage);
+                    setCurrentPage(newPage);
+                  }}
                   disabled={currentPage === totalPages - 1}
                   className={`px-3 py-1 text-xs rounded-lg font-medium transition-all ${
                     currentPage === totalPages - 1
                       ? 'bg-muted text-muted-foreground cursor-not-allowed'
                       : 'bg-primary text-primary-foreground hover:bg-primary/90'
                   }`}
+                  style={{
+                    isolation: 'isolate',
+                    position: 'relative',
+                    zIndex: 10000
+                  }}
                 >
                   Next →
                 </button>
@@ -1175,6 +1229,7 @@ export default function Map({ stations, selectedStation, onStationSelect, onUpda
               >
                 {isMultiple ? (
                   <MultipleStationsPopup
+                    key={`popup-${coordKey}-${stationGroup.length}`}
                     stationGroup={stationGroup}
                     lat={lat}
                     lng={lng}
