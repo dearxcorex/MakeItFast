@@ -172,9 +172,18 @@ function LocationTracker({ onLocationUpdate }: { onLocationUpdate: (location: Us
 export default function Map({ stations, selectedStation, onStationSelect, onUpdateStation }: MapProps) {
   const [userLocation, setUserLocation] = useState<UserLocation | null>(null);
   const [isClient, setIsClient] = useState(false);
+  const [isMobile, setIsMobile] = useState(false);
 
   useEffect(() => {
     setIsClient(true);
+
+    // Detect mobile device
+    const checkMobile = () => {
+      setIsMobile(window.innerWidth <= 768 || /Android|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent));
+    };
+    checkMobile();
+    window.addEventListener('resize', checkMobile);
+    return () => window.removeEventListener('resize', checkMobile);
   }, []);
 
   const mapCenter = useMemo(() => {
@@ -546,116 +555,28 @@ export default function Map({ stations, selectedStation, onStationSelect, onUpda
   const MultipleStationsPopup = ({ stationGroup, lat, lng, distance }: { stationGroup: FMStation[]; lat: number; lng: number; distance: number | null }) => {
     const [loadingStations, setLoadingStations] = useState<Set<string | number>>(new Set());
     const scrollContainerRef = useRef<HTMLDivElement>(null);
-    const [isMobile, setIsMobile] = useState(false);
-    const [isUserScrolling, setIsUserScrolling] = useState(false);
-    const scrollTimeoutRef = useRef<NodeJS.Timeout | null>(null);
-
-    // Detect mobile device
-    useEffect(() => {
-      const checkMobile = () => {
-        setIsMobile(window.innerWidth <= 768 || /Android|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent));
-      };
-      checkMobile();
-      window.addEventListener('resize', checkMobile);
-      return () => window.removeEventListener('resize', checkMobile);
-    }, []);
-
-    // Track when user is actively scrolling on mobile
-    useEffect(() => {
-      if (!isMobile || !scrollContainerRef.current) return;
-
-      const container = scrollContainerRef.current;
-
-      const handleTouchStart = () => {
-        setIsUserScrolling(true);
-        if (scrollTimeoutRef.current) {
-          clearTimeout(scrollTimeoutRef.current);
-        }
-      };
-
-      const handleTouchEnd = () => {
-        // Keep the scrolling flag active for a bit longer to prevent interference
-        scrollTimeoutRef.current = setTimeout(() => {
-          setIsUserScrolling(false);
-        }, 1000);
-      };
-
-      const handleScroll = () => {
-        if (isMobile) {
-          setIsUserScrolling(true);
-          if (scrollTimeoutRef.current) {
-            clearTimeout(scrollTimeoutRef.current);
-          }
-          scrollTimeoutRef.current = setTimeout(() => {
-            setIsUserScrolling(false);
-          }, 1000);
-        }
-      };
-
-      container.addEventListener('touchstart', handleTouchStart, { passive: true });
-      container.addEventListener('touchend', handleTouchEnd, { passive: true });
-      container.addEventListener('scroll', handleScroll, { passive: true });
-
-      return () => {
-        container.removeEventListener('touchstart', handleTouchStart);
-        container.removeEventListener('touchend', handleTouchEnd);
-        container.removeEventListener('scroll', handleScroll);
-        if (scrollTimeoutRef.current) {
-          clearTimeout(scrollTimeoutRef.current);
-        }
-      };
-    }, [isMobile]);
 
     const handleStationToggle = async (e: React.MouseEvent, stationId: string | number, field: 'onAir' | 'inspection68' | 'details', value: boolean | string) => {
       e.preventDefault();
       e.stopPropagation();
       if (!onUpdateStation || loadingStations.has(stationId)) return;
 
-      // On mobile, don't do any scroll position preservation to avoid interference
-      if (isMobile) {
-        setLoadingStations(prev => new Set(prev).add(stationId));
-        try {
-          await onUpdateStation(stationId, { [field]: value });
-          // Shorter delay on mobile for better responsiveness
-          await new Promise(resolve => setTimeout(resolve, 200));
-        } finally {
-          setLoadingStations(prev => {
-            const newSet = new Set(prev);
-            newSet.delete(stationId);
-            return newSet;
-          });
-        }
-        return;
-      }
-
-      // Desktop scroll position preservation (original behavior)
-      const currentScrollTop = scrollContainerRef.current?.scrollTop || 0;
-      const wasScrolled = currentScrollTop > 0;
-
       setLoadingStations(prev => new Set(prev).add(stationId));
       try {
         await onUpdateStation(stationId, { [field]: value });
-        await new Promise(resolve => setTimeout(resolve, 500));
+        // Shorter delay for better responsiveness
+        await new Promise(resolve => setTimeout(resolve, 300));
       } finally {
         setLoadingStations(prev => {
           const newSet = new Set(prev);
           newSet.delete(stationId);
           return newSet;
         });
-
-        // Only restore scroll position on desktop
-        if (wasScrolled && scrollContainerRef.current) {
-          requestAnimationFrame(() => {
-            if (scrollContainerRef.current && Math.abs(scrollContainerRef.current.scrollTop - currentScrollTop) > 10) {
-              scrollContainerRef.current.scrollTop = currentScrollTop;
-            }
-          });
-        }
       }
     };
 
     return (
-    <div className="w-full max-w-[320px] sm:max-w-[380px] p-3">
+    <div className={`w-full p-3 ${isMobile ? 'max-w-[300px]' : 'max-w-[320px] sm:max-w-[380px]'}`}>
       <div className="mb-3">
         <div className="flex items-start gap-2 mb-2">
           <div className="w-6 h-6 sm:w-8 sm:h-8 bg-primary/20 rounded-lg flex items-center justify-center flex-shrink-0">
@@ -684,17 +605,30 @@ export default function Map({ stations, selectedStation, onStationSelect, onUpda
 
         <div
           ref={scrollContainerRef}
-          className="space-y-2 max-h-[280px] overflow-y-auto scrollbar-stable overscroll-contain"
+          className={`space-y-2 overflow-y-auto ${isMobile ? 'max-h-[240px]' : 'max-h-[280px]'}`}
           style={{
             WebkitOverflowScrolling: 'touch',
-            scrollBehavior: 'smooth'
+            transform: 'translateZ(0)', // Force hardware acceleration on mobile
+            willChange: isMobile ? 'scroll-position' : 'auto'
           }}
         >
-          {stationGroup.map((station) => (
-            <div key={station.id} className="border rounded p-2 bg-muted/20">
+          {stationGroup.map((station, index) => (
+            <div key={station.id} className="border rounded-lg p-3 bg-muted/20 hover:bg-muted/30 transition-colors">
+              {stationGroup.length > 1 && (
+                <div className="flex items-center justify-between mb-2">
+                  <span className="text-xs font-medium text-primary bg-primary/10 px-2 py-1 rounded">
+                    Station {index + 1} of {stationGroup.length}
+                  </span>
+                  {station.unwanted && (
+                    <span className="text-xs font-medium text-orange-600 bg-orange-100 dark:bg-orange-900/30 dark:text-orange-400 px-2 py-1 rounded">
+                      ⚠️ Unwanted
+                    </span>
+                  )}
+                </div>
+              )}
               <div className="flex items-start gap-2 mb-2">
                 <div className="min-w-0 flex-1">
-                  <h4 className="font-semibold text-xs text-card-foreground break-words">{station.name}</h4>
+                  <h4 className="font-semibold text-sm text-card-foreground break-words">{station.name}</h4>
                   <div className="flex items-center gap-1 mt-1 flex-wrap">
                     <span className="inline-flex items-center px-1.5 py-0.5 rounded bg-primary/20 text-primary text-xs font-bold">
                       {station.frequency} FM
@@ -958,6 +892,9 @@ export default function Map({ stations, selectedStation, onStationSelect, onUpda
               <Popup
                 autoPan={false}
                 keepInView={true}
+                closeOnEscapeKey={true}
+                maxWidth={isMobile ? 320 : 380}
+                minWidth={isMobile ? 280 : 300}
               >
                 {isMultiple ? (
                   <MultipleStationsPopup
