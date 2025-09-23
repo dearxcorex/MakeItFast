@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState, useMemo, useRef } from 'react';
+import { useEffect, useState, useMemo, useRef, useCallback } from 'react';
 import { MapContainer, TileLayer, Marker, Popup, useMap } from 'react-leaflet';
 import L from 'leaflet';
 import { FMStation, UserLocation } from '@/types/station';
@@ -173,6 +173,11 @@ export default function Map({ stations, selectedStation, onStationSelect, onUpda
   const [userLocation, setUserLocation] = useState<UserLocation | null>(null);
   const [isClient, setIsClient] = useState(false);
   const [isMobile, setIsMobile] = useState(false);
+  const [paginationState, setPaginationState] = useState<Record<string, number>>({});
+
+  const updatePaginationPage = useCallback((coordKey: string, page: number) => {
+    setPaginationState(prev => ({...prev, [coordKey]: page}));
+  }, []);
 
   useEffect(() => {
     setIsClient(true);
@@ -552,13 +557,16 @@ export default function Map({ stations, selectedStation, onStationSelect, onUpda
   };
 
   // Component to render multiple stations popup - iOS Safari aggressive fix
-  const MultipleStationsPopup = ({ stationGroup, lat, lng, distance }: { stationGroup: FMStation[]; lat: number; lng: number; distance: number | null }) => {
+  const MultipleStationsPopup = ({ stationGroup, lat, lng, distance, currentPage, setCurrentPage }: {
+    stationGroup: FMStation[];
+    lat: number;
+    lng: number;
+    distance: number | null;
+    currentPage: number;
+    setCurrentPage: (page: number) => void;
+  }) => {
     const [loadingStations, setLoadingStations] = useState<Set<string | number>>(new Set());
-    const [currentPage, setCurrentPage] = useState(0);
-    const [manualScrollY, setManualScrollY] = useState(0);
     const containerRef = useRef<HTMLDivElement>(null);
-    const isScrollingRef = useRef(false);
-    const touchStartRef = useRef({ y: 0, scrollY: 0 });
 
     // On iOS, use pagination instead of scrolling to completely avoid iOS Safari scroll issues
     const itemsPerPage = isMobile ? 1 : 3; // Show 1 station per page on mobile
@@ -606,7 +614,7 @@ export default function Map({ stations, selectedStation, onStationSelect, onUpda
         container.removeEventListener('scroll', preventScrollOnly);
         container.removeEventListener('wheel', preventScrollOnly);
       };
-    }, []);
+    }, [isMobile]);
 
     const handleStationToggle = async (e: React.MouseEvent, stationId: string | number, field: 'onAir' | 'inspection68' | 'details', value: boolean | string) => {
       e.stopPropagation();
@@ -686,13 +694,32 @@ export default function Map({ stations, selectedStation, onStationSelect, onUpda
                   position: 'relative',
                   zIndex: 9999
                 }}
+                onClick={(e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                }}
+                onPointerDown={(e) => {
+                  e.stopPropagation();
+                }}
+                onTouchStart={(e) => {
+                  e.stopPropagation();
+                }}
               >
                 <button
                   onClick={(e) => {
+                    e.preventDefault();
                     e.stopPropagation();
                     const newPage = Math.max(0, currentPage - 1);
                     console.log('Previous clicked:', currentPage, '->', newPage);
                     setCurrentPage(newPage);
+                  }}
+                  onPointerDown={(e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                  }}
+                  onTouchStart={(e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
                   }}
                   disabled={currentPage === 0}
                   className={`px-3 py-1 text-xs rounded-lg font-medium transition-all ${
@@ -713,10 +740,19 @@ export default function Map({ stations, selectedStation, onStationSelect, onUpda
                 </span>
                 <button
                   onClick={(e) => {
+                    e.preventDefault();
                     e.stopPropagation();
                     const newPage = Math.min(totalPages - 1, currentPage + 1);
                     console.log('Next clicked:', currentPage, '->', newPage);
                     setCurrentPage(newPage);
+                  }}
+                  onPointerDown={(e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                  }}
+                  onTouchStart={(e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
                   }}
                   disabled={currentPage === totalPages - 1}
                   className={`px-3 py-1 text-xs rounded-lg font-medium transition-all ${
@@ -1214,6 +1250,8 @@ export default function Map({ stations, selectedStation, onStationSelect, onUpda
                     lat={lat}
                     lng={lng}
                     distance={distance}
+                    currentPage={paginationState[coordKey] || 0}
+                    setCurrentPage={(page) => updatePaginationPage(coordKey, page)}
                   />
                 ) : (
                   <SingleStationPopup
