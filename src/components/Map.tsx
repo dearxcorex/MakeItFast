@@ -609,18 +609,14 @@ export default function Map({ stations, selectedStation, onStationSelect, onUpda
     }, []);
 
     const handleStationToggle = async (e: React.MouseEvent, stationId: string | number, field: 'onAir' | 'inspection68' | 'details', value: boolean | string) => {
-      // Don't prevent default on mobile to allow touch interactions
-      if (!isMobile) {
-        e.preventDefault();
-        e.stopPropagation();
-      }
+      e.stopPropagation();
       if (!onUpdateStation || loadingStations.has(stationId)) return;
 
       setLoadingStations(prev => new Set(prev).add(stationId));
       try {
         await onUpdateStation(stationId, { [field]: value });
         // Shorter delay for better responsiveness
-        await new Promise(resolve => setTimeout(resolve, 300));
+        await new Promise<void>(resolve => setTimeout(resolve, 300));
       } finally {
         setLoadingStations(prev => {
           const newSet = new Set(prev);
@@ -692,18 +688,10 @@ export default function Map({ stations, selectedStation, onStationSelect, onUpda
                 }}
               >
                 <button
-                  onMouseDown={(e) => {
-                    e.preventDefault();
+                  onClick={(e) => {
                     e.stopPropagation();
                     const newPage = Math.max(0, currentPage - 1);
                     console.log('Previous clicked:', currentPage, '->', newPage);
-                    setCurrentPage(newPage);
-                  }}
-                  onTouchStart={(e) => {
-                    // Don't preventDefault on touch to avoid passive event warning
-                    e.stopPropagation();
-                    const newPage = Math.max(0, currentPage - 1);
-                    console.log('Previous touched:', currentPage, '->', newPage);
                     setCurrentPage(newPage);
                   }}
                   disabled={currentPage === 0}
@@ -724,18 +712,10 @@ export default function Map({ stations, selectedStation, onStationSelect, onUpda
                   Station {currentPage + 1} of {stationGroup.length}
                 </span>
                 <button
-                  onMouseDown={(e) => {
-                    e.preventDefault();
+                  onClick={(e) => {
                     e.stopPropagation();
                     const newPage = Math.min(totalPages - 1, currentPage + 1);
                     console.log('Next clicked:', currentPage, '->', newPage);
-                    setCurrentPage(newPage);
-                  }}
-                  onTouchStart={(e) => {
-                    // Don't preventDefault on touch to avoid passive event warning
-                    e.stopPropagation();
-                    const newPage = Math.min(totalPages - 1, currentPage + 1);
-                    console.log('Next touched:', currentPage, '->', newPage);
                     setCurrentPage(newPage);
                   }}
                   disabled={currentPage === totalPages - 1}
@@ -757,7 +737,7 @@ export default function Map({ stations, selectedStation, onStationSelect, onUpda
 
             {/* Station content - no scrolling on mobile, full height */}
             <div className="space-y-2" style={{ minHeight: 'auto' }}>
-              {currentStations.map((station, index) => (
+              {currentStations.map((station) => (
             <div
               key={station.id}
               className="border rounded-lg p-3 bg-muted/20 hover:bg-muted/30 transition-colors"
@@ -1229,7 +1209,7 @@ export default function Map({ stations, selectedStation, onStationSelect, onUpda
               >
                 {isMultiple ? (
                   <MultipleStationsPopup
-                    key={`popup-${coordKey}-${stationGroup.length}`}
+                    key={`popup-${coordKey}`}
                     stationGroup={stationGroup}
                     lat={lat}
                     lng={lng}
