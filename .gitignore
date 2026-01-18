@@ -85,3 +85,5 @@ pnpm-lock.yaml
 *.bak
 *.backup
 *.old
+
+/src/generated/prisma

@@ -1,0 +1,26 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model fm_station {
+  id_fm            Int      @id @default(autoincrement())
+  name             String?
+  freq             Float?
+  lat              Float?
+  long             Float?
+  district         String?
+  province         String?
+  type             String?
+  permit           String?
+  inspection_67    Boolean? @default(false)
+  inspection_68    Boolean? @default(false)
+  on_air           Boolean? @default(false)
+  unwanted         Boolean? @default(false)
+  submit_a_request Boolean? @default(false)
+  date_inspected   String?
+}

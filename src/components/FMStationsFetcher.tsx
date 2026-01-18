@@ -1,24 +1,59 @@
-import { createClient } from '@supabase/supabase-js';
+import prisma from '@/lib/prisma';
 import OptimizedFMStationClient from './OptimizedFMStationClient';
 
-// Create admin client with service role key (server-side only)
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
-const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY!;
-const adminClient = createClient(supabaseUrl, serviceKey);
-
 export default async function FMStationsFetcher() {
-  // Fetch FM stations and filter data using service role key (bypasses RLS)
-  // Add cache control to ensure fresh data on each request
-  const [stationResult, onAirResult, cityResult, provinceResult, inspectionResult] = await Promise.all([
-    adminClient.from('fm_station').select('*').order('name'),
-    adminClient.from('fm_station').select('on_air').order('on_air'),
-    adminClient.from('fm_station').select('district').order('district'),
-    adminClient.from('fm_station').select('province').order('province'),
-    adminClient.from('fm_station').select('inspection_68').order('inspection_68')
-  ]);
+  try {
+    // Fetch FM stations and filter data using Prisma
+    const [stations, onAirData, cityData, provinceData] = await Promise.all([
+      prisma.fm_station.findMany({ orderBy: { name: 'asc' } }),
+      prisma.fm_station.findMany({ select: { on_air: true }, distinct: ['on_air'] }),
+      prisma.fm_station.findMany({ select: { district: true }, distinct: ['district'], orderBy: { district: 'asc' } }),
+      prisma.fm_station.findMany({ select: { province: true }, distinct: ['province'], orderBy: { province: 'asc' } }),
+    ]);
 
-  if (stationResult.error) {
-    console.error('Error fetching FM stations with service key:', stationResult.error);
+    // Transform stations data to match our interface
+    const transformedStations = stations.map(station => ({
+      id: station.id_fm,
+      name: station.name || '',
+      frequency: station.freq || 0,
+      latitude: station.lat || 0,
+      longitude: station.long || 0,
+      city: station.district || '',
+      state: station.province || '',
+      genre: station.type?.trim() || '',
+      type: station.type?.trim() || '',
+      description: `${station.type?.trim() || ''} radio station in ${station.district || ''}, ${station.province || ''}`,
+      website: undefined,
+      transmitterPower: undefined,
+      permit: station.permit || undefined,
+      inspection67: station.inspection_67 ? 'ตรวจแล้ว' : 'ยังไม่ตรวจ',
+      inspection68: station.inspection_68 ? 'ตรวจแล้ว' : 'ยังไม่ตรวจ',
+      dateInspected: station.date_inspected || undefined,
+      details: undefined,
+      onAir: station.on_air || false,
+      unwanted: station.unwanted || false,
+      submitRequest: station.submit_a_request ? 'ยื่น' : 'ไม่ยื่น',
+      createdAt: undefined,
+      updatedAt: undefined,
+    }));
+
+    // Extract unique filter data
+    const onAirStatuses = onAirData.map(item => item.on_air).filter((item): item is boolean => item !== null);
+    const cities = cityData.map(item => item.district).filter((item): item is string => item !== null);
+    const provinces = provinceData.map(item => item.province).filter((item): item is string => item !== null);
+    const inspectionStatuses = ['ตรวจแล้ว', 'ยังไม่ตรวจ'];
+
+    return (
+      <OptimizedFMStationClient
+        initialStations={transformedStations}
+        initialOnAirStatuses={onAirStatuses}
+        initialCities={cities}
+        initialProvinces={provinces}
+        initialInspectionStatuses={inspectionStatuses}
+      />
+    );
+  } catch (error) {
+    console.error('Error fetching FM stations:', error);
     return (
       <div className="h-screen flex flex-col bg-background">
         <div className="flex-1 flex items-center justify-center">
@@ -30,59 +65,11 @@ export default async function FMStationsFetcher() {
             </div>
             <div>
               <h2 className="text-xl font-semibold text-foreground mb-2">Database Error</h2>
-              <p className="text-muted-foreground mb-4">{stationResult.error.message}</p>
-              <button
-                onClick={() => window.location.reload()}
-                className="px-4 py-2 bg-primary text-primary-foreground rounded-xl hover:bg-primary/90 transition-colors"
-              >
-                Retry Connection
-              </button>
+              <p className="text-muted-foreground mb-4">Failed to connect to database</p>
             </div>
           </div>
         </div>
       </div>
     );
   }
-
-  // Transform stations data to match our interface
-  const transformedStations = stationResult.data?.map(station => ({
-    id: station.id_fm,
-    name: station.name,
-    frequency: station.freq,
-    latitude: station.lat,
-    longitude: station.long,
-    city: station.district,
-    state: station.province,
-    genre: station.type?.trim(),
-    type: station.type?.trim(), // Station type (e.g., "สถานีหลัก", "สถานีสาขา")
-    description: `${station.type?.trim()} radio station in ${station.district}, ${station.province}`,
-    website: undefined,
-    transmitterPower: undefined,
-    permit: station.permit,
-    inspection67: station.inspection_67,
-    inspection68: station.inspection_68,
-    dateInspected: station.date_inspected,
-    details: station.details,
-    onAir: station.on_air,
-    unwanted: station.unwanted === 'true' || station.unwanted === true,
-    submitRequest: station.submit_a_request,
-    createdAt: undefined,
-    updatedAt: undefined,
-  })) || [];
-
-  // Extract unique filter data
-  const onAirStatuses = Array.from(new Set(onAirResult.data?.map(item => item.on_air).filter(item => item !== null && item !== undefined))) || [];
-  const cities = Array.from(new Set(cityResult.data?.map(item => item.district).filter(Boolean))) || [];
-  const provinces = Array.from(new Set(provinceResult.data?.map(item => item.province).filter(Boolean))) || [];
-  const inspectionStatuses = Array.from(new Set(inspectionResult.data?.map(item => item.inspection_68).filter(Boolean))) || [];
-
-  return (
-    <OptimizedFMStationClient 
-      initialStations={transformedStations}
-      initialOnAirStatuses={onAirStatuses}
-      initialCities={cities}
-      initialProvinces={provinces}
-      initialInspectionStatuses={inspectionStatuses}
-    />
-  );
 }

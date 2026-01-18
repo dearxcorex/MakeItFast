@@ -8,7 +8,6 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import dynamic from 'next/dynamic';
 import { FMStation, UserLocation, FilterType } from '@/types/station';
-import { createClient } from '@/utils/supabase/client';
 import { useOptimizedFilters, useOptimizedCityFilter, useMemoryMonitor } from '@/hooks/useOptimizedFilters';
 // Simple replacements for removed debug utilities
 const GeolocationDebugger = {
@@ -67,9 +66,6 @@ export default function OptimizedFMStationClient({
   const geolocationWatcherRef = useRef<number | null>(null);
   const performanceMonitorRef = useRef<NodeJS.Timeout | null>(null);
 
-  // Simplified real-time without aggressive fallbacks
-  const supabaseClient = useRef(createClient()).current;
-
   // Optimized filtering
   const {
     filteredStations,
@@ -94,7 +90,7 @@ export default function OptimizedFMStationClient({
     }
   }, []);
 
-  // Optimized geolocation with proper cleanup
+  // Optimized geolocation with proper cleanup and fallback strategy
   useEffect(() => {
     if (!navigator.geolocation) {
       console.warn('Geolocation not supported');
@@ -103,56 +99,72 @@ export default function OptimizedFMStationClient({
 
     MapPerformanceMonitor.startTimer();
 
-    // Get initial position
-    navigator.geolocation.getCurrentPosition(
-      (position) => {
-        const location: UserLocation = {
-          latitude: position.coords.latitude,
-          longitude: position.coords.longitude,
-          accuracy: position.coords.accuracy
-        };
-        setUserLocation(location);
-        MapPerformanceMonitor.endTimer();
-      },
-      (error) => {
-        console.error('❌ Geolocation failed:', {
-          code: error.code,
-          message: error.message,
-          type: error.constructor.name
-        });
-        console.error('❌ Error code:', error.code);
-        console.error('❌ Error message:', error.message);
+    // Set default location (Thailand center) as fallback
+    const defaultLocation: UserLocation = {
+      latitude: 13.7563,
+      longitude: 100.5018,
+      accuracy: 1000
+    };
 
-        // Show user-friendly error message
-        let errorMessage = '';
-        switch (error.code) {
-          case error.PERMISSION_DENIED:
-            errorMessage = 'Location access denied. Please enable location permissions in your browser.';
-            break;
-          case error.POSITION_UNAVAILABLE:
-            errorMessage = 'Location information is unavailable.';
-            break;
-          case error.TIMEOUT:
-            errorMessage = 'Location request timed out.';
-            break;
-          default:
-            errorMessage = 'Unknown location error occurred.';
+    // Success handler
+    const handleSuccess = (position: GeolocationPosition) => {
+      const location: UserLocation = {
+        latitude: position.coords.latitude,
+        longitude: position.coords.longitude,
+        accuracy: position.coords.accuracy
+      };
+      console.info('📍 Location obtained:', `${location.accuracy?.toFixed(0)}m accuracy`);
+      setUserLocation(location);
+      MapPerformanceMonitor.endTimer();
+    };
+
+    // Try with low accuracy first (faster, works on desktop)
+    // Then try high accuracy for better precision on mobile
+    const tryLowAccuracyFirst = () => {
+      navigator.geolocation.getCurrentPosition(
+        handleSuccess,
+        (error) => {
+          console.info('📍 Low accuracy geolocation failed, trying high accuracy...', error.message);
+          // Try high accuracy as fallback
+          navigator.geolocation.getCurrentPosition(
+            handleSuccess,
+            (highAccError) => {
+              let errorMessage = '';
+              switch (highAccError.code) {
+                case highAccError.PERMISSION_DENIED:
+                  errorMessage = 'Location access denied - using default location';
+                  break;
+                case highAccError.POSITION_UNAVAILABLE:
+                  errorMessage = 'Location unavailable - using default location';
+                  break;
+                case highAccError.TIMEOUT:
+                  errorMessage = 'Location request timed out - using default location';
+                  break;
+                default:
+                  errorMessage = 'Could not get location - using default location';
+              }
+              console.info('📍', errorMessage);
+              setUserLocation(defaultLocation);
+              MapPerformanceMonitor.endTimer();
+            },
+            {
+              enableHighAccuracy: true,
+              timeout: 15000,
+              maximumAge: 60000
+            }
+          );
+        },
+        {
+          enableHighAccuracy: false,
+          timeout: 10000,
+          maximumAge: 60000 // Accept cached location up to 1 minute old
         }
+      );
+    };
 
-        console.warn('⚠️', errorMessage);
+    tryLowAccuracyFirst();
 
-        // Only use default if we can't get real location
-
-        MapPerformanceMonitor.endTimer();
-      },
-      {
-        enableHighAccuracy: true,
-        timeout: 30000, // Give more time for GPS
-        maximumAge: 0 // Always get fresh location, don't use cached
-      }
-    );
-
-    // Set up watching (but don't auto-pan unless requested)
+    // Set up watching with lower accuracy for better compatibility
     const watchId = navigator.geolocation.watchPosition(
       (position) => {
         const location: UserLocation = {
@@ -165,16 +177,15 @@ export default function OptimizedFMStationClient({
         setUserLocation(location);
       },
       (error) => {
-        console.warn('Geolocation watch error:', {
-          code: error.code,
-          message: error.message,
-          type: error.constructor.name
-        });
+        // Only log if it's not a timeout (timeouts are common on desktop)
+        if (error.code !== error.TIMEOUT) {
+          console.info('📍 Geolocation watch:', error.message);
+        }
       },
       {
-        enableHighAccuracy: true,
-        timeout: 20000,
-        maximumAge: 15000 // Update every 15 seconds max
+        enableHighAccuracy: false, // Use low accuracy for better compatibility
+        timeout: 30000,
+        maximumAge: 30000 // Accept cached location up to 30 seconds old
       }
     );
 
@@ -183,92 +194,6 @@ export default function OptimizedFMStationClient({
 
     return cleanupGeolocation;
   }, [cleanupGeolocation]);
-
-  // Simple real-time subscription (no aggressive fallbacks)
-  useEffect(() => {
-    // Only set up real-time if environment supports it
-    if (typeof window === 'undefined') return;
-
-    console.log('🔄 Setting up simple real-time subscription...');
-
-    const channel = supabaseClient
-      .channel('fm_station_updates')
-      .on(
-        'postgres_changes',
-        {
-          event: 'UPDATE',
-          schema: 'public',
-          table: 'fm_station'
-        },
-        (payload) => {
-          console.log('📡 Real-time update received for station:', payload.new?.id_fm);
-
-          if (payload.new && payload.new.id_fm) {
-            const updatedData = payload.new;
-
-            // Only update if the data actually changed (prevent unnecessary re-renders)
-            setStations(prevStations => {
-              const existingStation = prevStations.find(s => s.id === updatedData.id_fm);
-
-              if (existingStation &&
-                  existingStation.onAir === updatedData.on_air &&
-                  existingStation.inspection68 === updatedData.inspection_68 &&
-                  existingStation.dateInspected === updatedData.date_inspected &&
-                  existingStation.details === updatedData.details) {
-                // No change, return original array to prevent re-render
-                return prevStations;
-              }
-
-              return prevStations.map(station =>
-                station.id === updatedData.id_fm
-                  ? {
-                      ...station,
-                      onAir: updatedData.on_air,
-                      inspection68: updatedData.inspection_68,
-                      dateInspected: updatedData.date_inspected,
-                      details: updatedData.details,
-                      unwanted: updatedData.unwanted === 'true' || updatedData.unwanted === true,
-                      submitRequest: updatedData.submit_a_request
-                    }
-                  : station
-              );
-            });
-
-            // Update selected station
-            setSelectedStation(prevSelected =>
-              prevSelected && prevSelected.id === updatedData.id_fm
-                ? {
-                    ...prevSelected,
-                    onAir: updatedData.on_air,
-                    inspection68: updatedData.inspection_68,
-                    dateInspected: updatedData.date_inspected,
-                    details: updatedData.details,
-                    unwanted: updatedData.unwanted === 'true' || updatedData.unwanted === true,
-                    submitRequest: updatedData.submit_a_request
-                  }
-                : prevSelected
-            );
-          }
-        }
-      )
-      .subscribe((status) => {
-        if (status === 'SUBSCRIBED') {
-          console.log('✅ Real-time connected');
-        } else if (status === 'CLOSED' || status === 'CHANNEL_ERROR') {
-          // Just log, don't start aggressive polling
-          console.log('📡 Real-time disconnected, relying on optimistic updates');
-        }
-      });
-
-    // Simple cleanup
-    return () => {
-      try {
-        supabaseClient.removeChannel(channel);
-      } catch (error) {
-        // Silent cleanup
-      }
-    };
-  }, [supabaseClient]);
 
   // Performance monitoring
   useEffect(() => {
