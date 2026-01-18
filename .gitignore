@@ -87,3 +87,6 @@ pnpm-lock.yaml
 *.old
 
 /src/generated/prisma
+
+# Backend folder (separate project)
+/backend/

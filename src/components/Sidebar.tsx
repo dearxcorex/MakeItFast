@@ -456,7 +456,7 @@ export default function Sidebar({
                     role="listitem"
                     tabIndex={0}
                     aria-label={`${station.name}, ${station.frequency} FM, ${station.onAir ? 'On Air' : 'Off Air'}, ${station.city}, ${distance ? `${distance.toFixed(1)} km away` : ''}`}
-                    aria-pressed={isSelected}
+                    aria-current={isSelected ? 'true' : undefined}
                     onKeyDown={(e) => {
                       if (e.key === 'Enter' || e.key === ' ') {
                         e.preventDefault();
