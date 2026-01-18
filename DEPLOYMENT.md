@@ -19,8 +19,9 @@ Go to your Vercel project dashboard → Settings → Environment Variables
 
 **Required Variables:**
 ```bash
-NEXT_PUBLIC_SUPABASE_URL=https://iigbezvfqsfuuucvmopt.supabase.co
-SUPABASE_SERVICE_ROLE_KEY=sb_secret_P2ywGAstEm93Eu0P3IQueQ_bN3XaUbc
+NEXT_PUBLIC_SUPABASE_URL=<your-supabase-url>
+NEXT_PUBLIC_SUPABASE_ANON_KEY=<your-anon-key>
+SUPABASE_SERVICE_ROLE_KEY=<your-service-role-key>
 ```
 
 **CRITICAL:** Make sure `SUPABASE_SERVICE_ROLE_KEY` is added to **Production** environment in Vercel.
