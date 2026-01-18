@@ -54,6 +54,9 @@ export default async function FMStationsFetcher() {
     );
   } catch (error) {
     console.error('Error fetching FM stations:', error);
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+    const hasDbUrl = !!process.env.DATABASE_URL;
+
     return (
       <div className="h-screen flex flex-col bg-background">
         <div className="flex-1 flex items-center justify-center">
@@ -65,7 +68,13 @@ export default async function FMStationsFetcher() {
             </div>
             <div>
               <h2 className="text-xl font-semibold text-foreground mb-2">Database Error</h2>
-              <p className="text-muted-foreground mb-4">Failed to connect to database</p>
+              <p className="text-muted-foreground mb-2">Failed to connect to database</p>
+              <p className="text-xs text-muted-foreground/70">
+                {hasDbUrl ? 'DATABASE_URL is set' : 'DATABASE_URL is missing'}
+              </p>
+              <p className="text-xs text-destructive/70 mt-2 break-all">
+                {errorMessage}
+              </p>
             </div>
           </div>
         </div>
