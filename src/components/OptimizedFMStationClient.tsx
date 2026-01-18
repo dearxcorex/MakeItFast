@@ -309,7 +309,8 @@ export default function OptimizedFMStationClient({
           if (result.data) {
             const serverData = {
               onAir: result.data.on_air,
-              inspection68: result.data.inspection_68,
+              // Convert boolean back to Thai string for UI
+              inspection68: result.data.inspection_68 ? 'ตรวจแล้ว' : 'ยังไม่ตรวจ',
               dateInspected: result.data.date_inspected,
               details: result.data.details,
               unwanted: result.data.unwanted === 'true' || result.data.unwanted === true,
