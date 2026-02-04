@@ -9,6 +9,9 @@ import { useState, useEffect, useCallback, useRef } from 'react';
 import dynamic from 'next/dynamic';
 import { FMStation, UserLocation, FilterType } from '@/types/station';
 import { useOptimizedFilters, useOptimizedCityFilter, useMemoryMonitor } from '@/hooks/useOptimizedFilters';
+
+// Tab type for navigation
+type ActiveTab = 'stations' | 'intermod' | 'settings';
 // Simple replacements for removed debug utilities
 const GeolocationDebugger = {
   cleanupWatchers: () => {},
@@ -20,6 +23,7 @@ const MapPerformanceMonitor = {
   recordMemoryUsage: () => {}
 };
 import Sidebar from '@/components/Sidebar';
+import NavSidebar from '@/components/NavSidebar';
 
 // Lazy load components
 const Map = dynamic(() => import('@/components/Map'), {
@@ -60,6 +64,7 @@ export default function OptimizedFMStationClient({
   const [userLocation, setUserLocation] = useState<UserLocation | undefined>();
   const [stations, setStations] = useState<FMStation[]>(initialStations);
   const [filters, setFilters] = useState<FilterType>({});
+  const [activeTab, setActiveTab] = useState<ActiveTab>('stations');
 
   // Performance monitoring
   const { checkMemoryUsage } = useMemoryMonitor();
@@ -381,74 +386,320 @@ export default function OptimizedFMStationClient({
 
   return (
     <>
-      <div className="h-screen flex flex-col bg-background">
-        {/* Header with debug controls */}
-        <header className="bg-card shadow-sm border-b border-border px-6 py-4 flex items-center justify-between relative z-10">
-          <div className="flex items-center gap-4">
-            <button
-              onClick={() => setSidebarOpen(!sidebarOpen)}
-              className="lg:hidden p-2.5 rounded-xl bg-secondary hover:bg-accent transition-colors text-secondary-foreground"
-              aria-label="Toggle sidebar"
-            >
-              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
-              </svg>
-            </button>
+      <div className="h-screen flex bg-background">
+        {/* Left Navigation Sidebar - Desktop only */}
+        <div className="hidden lg:block p-4 pr-0">
+          <NavSidebar activeTab={activeTab} onTabChange={setActiveTab} />
+        </div>
 
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 bg-gradient-to-br from-primary to-primary/70 rounded-xl flex items-center justify-center">
-                <svg className="w-6 h-6 text-primary-foreground" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8.111 16.404a5.5 5.5 0 017.778 0M12 20h.01m-7.08-7.071c3.904-3.905 10.236-3.905 14.141 0M1.394 9.393c5.857-5.857 15.355-5.857 21.213 0" />
-                </svg>
+        {/* Main Content Area */}
+        <div className="flex-1 flex flex-col min-w-0">
+          {/* Header - Slim version */}
+          <header className="glass-card border-b border-border/50 px-4 lg:px-6 py-3 relative z-10 mx-4 mt-4 rounded-2xl">
+            <div className="flex items-center justify-between gap-4">
+              {/* Left: Menu (mobile) + Title */}
+              <div className="flex items-center gap-3">
+                <button
+                  onClick={() => setSidebarOpen(!sidebarOpen)}
+                  className="lg:hidden p-2.5 rounded-xl bg-secondary hover:bg-accent transition-colors text-secondary-foreground cursor-pointer"
+                  aria-label="Toggle sidebar"
+                >
+                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
+                  </svg>
+                </button>
+
+                <div className="flex items-center gap-3 lg:hidden">
+                  <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-primary to-accent flex items-center justify-center glow-gold">
+                    <svg className="w-5 h-5 text-primary-foreground" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+                    </svg>
+                  </div>
+                  <div className="hidden sm:block">
+                    <h1 className="text-lg font-heading font-bold gradient-text">Task Tracker</h1>
+                    <p className="text-xs text-muted-foreground">
+                      {userLocation ? `Location: ±${userLocation.accuracy?.toFixed(0)}m` : 'NBTC FM Monitoring'}
+                    </p>
+                  </div>
+                </div>
+
+                {/* Desktop: Just show location info */}
+                <div className="hidden lg:flex items-center gap-2 text-sm text-muted-foreground">
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
+                  </svg>
+                  <span>{userLocation ? `±${userLocation.accuracy?.toFixed(0)}m accuracy` : 'NBTC FM Monitoring'}</span>
+                </div>
               </div>
-              <div>
-                <h1 className="text-xl font-bold text-foreground">FM Station Tracker</h1>
-                <p className="text-sm text-muted-foreground">
-                  {filteredStations.length} stations • Database connected ✅
-                  {userLocation && ` • Location: ${userLocation.accuracy?.toFixed(0)}m accuracy`}
-                </p>
+
+              {/* Right: Stats */}
+              <div className="hidden lg:flex items-center gap-3">
+                {/* Filtered Count */}
+                <div className="flex items-center gap-2 px-3 py-2 glass-card rounded-xl">
+                  <div className="text-center">
+                    <div className="text-lg font-bold text-primary">{filteredStations.length}</div>
+                    <div className="text-[10px] text-muted-foreground uppercase tracking-wider">Stations</div>
+                  </div>
+                </div>
+
+                {/* On/Off Air */}
+                <div className="flex items-center gap-2 px-3 py-2 glass-card rounded-xl">
+                  <div className="flex items-center gap-1.5">
+                    <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse" />
+                    <span className="text-sm font-bold text-green-400">{filteredStations.filter(s => s.onAir).length}</span>
+                  </div>
+                  <div className="w-px h-4 bg-border" />
+                  <div className="flex items-center gap-1.5">
+                    <div className="w-2 h-2 bg-red-500 rounded-full" />
+                    <span className="text-sm font-bold text-red-400">{filteredStations.filter(s => !s.onAir).length}</span>
+                  </div>
+                </div>
+
+                {/* Legend */}
+                <div className="flex items-center gap-2 px-3 py-2 glass-card rounded-xl">
+                  <div className="flex items-center gap-2">
+                    <div className="w-2.5 h-2.5 rounded-full bg-green-500" title="Inspected" />
+                    <div className="w-2.5 h-2.5 rounded-full bg-red-500" title="Pending" />
+                    <div className="w-2.5 h-2.5 rounded-full bg-gray-400" title="Off Air" />
+                  </div>
+                </div>
+              </div>
+
+              {/* Mobile Stats */}
+              <div className="flex lg:hidden items-center gap-2">
+                <span className="text-xs font-bold text-primary">{filteredStations.length}</span>
+                <div className="w-px h-3 bg-border" />
+                <div className="flex items-center gap-1">
+                  <div className="w-1.5 h-1.5 bg-green-500 rounded-full" />
+                  <span className="text-xs text-green-400">{filteredStations.filter(s => s.onAir).length}</span>
+                </div>
+                <div className="flex items-center gap-1">
+                  <div className="w-1.5 h-1.5 bg-red-500 rounded-full" />
+                  <span className="text-xs text-red-400">{filteredStations.filter(s => !s.onAir).length}</span>
+                </div>
               </div>
             </div>
-          </div>
+          </header>
 
-        </header>
+          {/* Main content */}
+          <div className="flex-1 flex overflow-hidden p-4 pt-2">
+            {activeTab === 'stations' ? (
+              <>
+                {/* Sidebar */}
+                <Sidebar
+                  stations={filteredStations}
+                  allStations={stations}
+                  onStationSelect={handleStationSelect}
+                  selectedStation={selectedStation}
+                  isOpen={sidebarOpen}
+                  onToggle={() => setSidebarOpen(!sidebarOpen)}
+                  userLocation={userLocation}
+                  initialOnAirStatuses={initialOnAirStatuses}
+                  initialCities={initialCities}
+                  initialProvinces={initialProvinces}
+                  initialInspectionStatuses={initialInspectionStatuses}
+                  filters={filters}
+                  onFiltersChange={setFilters}
+                  onClearFilters={clearFilters}
+                  calculateDistance={calculateDistance}
+                />
 
-        {/* Main content */}
-        <div className="flex-1 flex overflow-hidden">
-          {/* Sidebar */}
-          <Sidebar
-            stations={filteredStations}
-            allStations={stations}
-            onStationSelect={handleStationSelect}
-            selectedStation={selectedStation}
-            isOpen={sidebarOpen}
-            onToggle={() => setSidebarOpen(!sidebarOpen)}
-            userLocation={userLocation}
-            initialOnAirStatuses={initialOnAirStatuses}
-            initialCities={initialCities}
-            initialProvinces={initialProvinces}
-            initialInspectionStatuses={initialInspectionStatuses}
-            filters={filters}
-            onFiltersChange={setFilters}
-            onClearFilters={clearFilters}
-            calculateDistance={calculateDistance}
-          />
+                {/* Map container */}
+                <div className="flex-1 relative">
+                  <div className="absolute inset-0 rounded-2xl overflow-hidden glass-card">
+                    <Map
+                      stations={filteredStations}
+                      selectedStation={selectedStation}
+                      onStationSelect={handleStationSelect}
+                      onUpdateStation={handleUpdateStation}
+                    />
+                  </div>
+                </div>
+              </>
+            ) : activeTab === 'intermod' ? (
+              /* Intermodulation Calculator */
+              <div className="flex-1 flex flex-col lg:flex-row gap-4">
+                {/* Calculator Input Panel */}
+                <div className="lg:w-[400px] glass-card p-6 rounded-2xl">
+                  <div className="flex items-center gap-3 mb-6">
+                    <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-accent to-primary flex items-center justify-center glow-purple">
+                      <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 7h6m0 10v-3m-3 3h.01M9 17h.01M9 14h.01M12 14h.01M15 11h.01M12 11h.01M9 11h.01M7 21h10a2 2 0 002-2V5a2 2 0 00-2-2H7a2 2 0 00-2 2v14a2 2 0 002 2z" />
+                      </svg>
+                    </div>
+                    <div>
+                      <h2 className="text-lg font-heading font-bold text-foreground">Intermodulation Calculator</h2>
+                      <p className="text-xs text-muted-foreground">Calculate IM products for FM frequencies</p>
+                    </div>
+                  </div>
 
-          {/* Map container */}
-          <div className="flex-1 relative bg-muted/30">
-            <div className="absolute inset-4 rounded-2xl overflow-hidden shadow-2xl border border-border/50">
-              <Map
-                stations={filteredStations}
-                selectedStation={selectedStation}
-                onStationSelect={handleStationSelect}
-                onUpdateStation={handleUpdateStation}
-              />
-            </div>
+                  {/* Frequency Inputs */}
+                  <div className="space-y-4">
+                    <div>
+                      <label className="block text-sm font-medium text-foreground mb-2">
+                        Frequency 1 (MHz)
+                      </label>
+                      <input
+                        type="number"
+                        step="0.1"
+                        placeholder="e.g., 88.0"
+                        className="w-full px-4 py-3 rounded-xl bg-secondary/50 border border-border/50 text-foreground placeholder-muted-foreground focus:ring-2 focus:ring-primary focus:border-transparent transition-all"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-sm font-medium text-foreground mb-2">
+                        Frequency 2 (MHz)
+                      </label>
+                      <input
+                        type="number"
+                        step="0.1"
+                        placeholder="e.g., 92.5"
+                        className="w-full px-4 py-3 rounded-xl bg-secondary/50 border border-border/50 text-foreground placeholder-muted-foreground focus:ring-2 focus:ring-primary focus:border-transparent transition-all"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-sm font-medium text-foreground mb-2">
+                        Frequency 3 (MHz) <span className="text-muted-foreground">(Optional)</span>
+                      </label>
+                      <input
+                        type="number"
+                        step="0.1"
+                        placeholder="e.g., 97.0"
+                        className="w-full px-4 py-3 rounded-xl bg-secondary/50 border border-border/50 text-foreground placeholder-muted-foreground focus:ring-2 focus:ring-primary focus:border-transparent transition-all"
+                      />
+                    </div>
+
+                    <div className="pt-2">
+                      <button className="w-full py-3 px-4 rounded-xl bg-gradient-to-r from-primary to-accent text-primary-foreground font-semibold hover:opacity-90 transition-all glow-gold">
+                        Calculate Intermodulation
+                      </button>
+                    </div>
+
+                    <div className="pt-2">
+                      <button className="w-full py-2 px-4 rounded-xl bg-secondary/50 text-muted-foreground font-medium hover:text-foreground hover:bg-secondary transition-all">
+                        Clear All
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* Quick Info */}
+                  <div className="mt-6 p-4 rounded-xl bg-accent/10 border border-accent/20">
+                    <h4 className="text-sm font-semibold text-accent mb-2">About Intermodulation</h4>
+                    <p className="text-xs text-muted-foreground leading-relaxed">
+                      Intermodulation occurs when two or more signals mix in a non-linear device,
+                      creating unwanted frequencies. Common IM products are 2f1-f2, 2f2-f1, and
+                      third-order products.
+                    </p>
+                  </div>
+                </div>
+
+                {/* Results Panel */}
+                <div className="flex-1 glass-card p-6 rounded-2xl">
+                  <div className="flex items-center justify-between mb-6">
+                    <h3 className="text-lg font-heading font-bold text-foreground">Results</h3>
+                    <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                      <div className="w-2 h-2 rounded-full bg-primary animate-pulse" />
+                      Ready to calculate
+                    </div>
+                  </div>
+
+                  {/* Empty State */}
+                  <div className="flex flex-col items-center justify-center h-[400px] text-center">
+                    <div className="w-20 h-20 rounded-2xl bg-secondary/50 flex items-center justify-center mb-4">
+                      <svg className="w-10 h-10 text-muted-foreground" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                      </svg>
+                    </div>
+                    <h4 className="text-lg font-semibold text-foreground mb-2">No Results Yet</h4>
+                    <p className="text-sm text-muted-foreground max-w-md">
+                      Enter at least two frequencies and click &quot;Calculate&quot; to see
+                      intermodulation products and potential interference frequencies.
+                    </p>
+                  </div>
+                </div>
+              </div>
+            ) : (
+              /* Settings Page - Placeholder */
+              <div className="flex-1 glass-card p-6 rounded-2xl">
+                <div className="flex items-center gap-3 mb-6">
+                  <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-muted to-secondary flex items-center justify-center">
+                    <svg className="w-5 h-5 text-foreground" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                    </svg>
+                  </div>
+                  <div>
+                    <h2 className="text-lg font-heading font-bold text-foreground">Settings</h2>
+                    <p className="text-xs text-muted-foreground">Configure application preferences</p>
+                  </div>
+                </div>
+
+                <div className="flex flex-col items-center justify-center h-[400px] text-center">
+                  <div className="w-20 h-20 rounded-2xl bg-secondary/50 flex items-center justify-center mb-4">
+                    <svg className="w-10 h-10 text-muted-foreground" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
+                    </svg>
+                  </div>
+                  <h4 className="text-lg font-semibold text-foreground mb-2">Coming Soon</h4>
+                  <p className="text-sm text-muted-foreground max-w-md">
+                    Settings page is under development. Configure theme, notifications,
+                    and other preferences here.
+                  </p>
+                </div>
+              </div>
+            )}
           </div>
         </div>
       </div>
 
-      {/* Test Suite Modal */}
+      {/* Mobile Bottom Navigation */}
+      <div className="lg:hidden mobile-bottom-nav">
+        <div className="flex items-center justify-around py-2">
+          <button
+            onClick={() => setActiveTab('stations')}
+            className={`flex flex-col items-center gap-1 px-4 py-2 rounded-xl transition-all ${
+              activeTab === 'stations'
+                ? 'text-primary'
+                : 'text-muted-foreground'
+            }`}
+          >
+            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8.111 16.404a5.5 5.5 0 017.778 0M12 20h.01m-7.08-7.071c3.904-3.905 10.236-3.905 14.141 0M1.394 9.393c5.857-5.857 15.355-5.857 21.213 0" />
+            </svg>
+            <span className="text-xs font-medium">Stations</span>
+          </button>
+          <button
+            onClick={() => setActiveTab('intermod')}
+            className={`flex flex-col items-center gap-1 px-4 py-2 rounded-xl transition-all ${
+              activeTab === 'intermod'
+                ? 'text-accent'
+                : 'text-muted-foreground'
+            }`}
+          >
+            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 7h6m0 10v-3m-3 3h.01M9 17h.01M9 14h.01M12 14h.01M15 11h.01M12 11h.01M9 11h.01M7 21h10a2 2 0 002-2V5a2 2 0 00-2-2H7a2 2 0 00-2 2v14a2 2 0 002 2z" />
+            </svg>
+            <span className="text-xs font-medium">Intermod</span>
+          </button>
+          <button
+            onClick={() => setActiveTab('settings')}
+            className={`flex flex-col items-center gap-1 px-4 py-2 rounded-xl transition-all ${
+              activeTab === 'settings'
+                ? 'text-foreground'
+                : 'text-muted-foreground'
+            }`}
+          >
+            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+            </svg>
+            <span className="text-xs font-medium">Settings</span>
+          </button>
+        </div>
+      </div>
     </>
   );
 }

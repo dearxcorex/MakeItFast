@@ -2,58 +2,95 @@
 @import 'leaflet/dist/leaflet.css';
 
 :root {
-  /* Enhanced light theme for better visibility and contrast */
-  --background: #ffffff;
-  --foreground: #1e293b;  /* Darker for better contrast */
-  --card: #ffffff;
-  --card-foreground: #1e293b;
-  --primary: #2563eb;  /* Deeper blue for better visibility */
-  --primary-foreground: #ffffff;
-  --secondary: #e2e8f0;  /* Better contrast than previous light gray */
-  --secondary-foreground: #1e293b;
-  --muted: #f8fafc;
-  --muted-foreground: #475569;  /* Darker for better readability */
-  --accent: #dbeafe;  /* Light blue accent for better visibility */
-  --accent-foreground: #1e293b;
-  --destructive: #dc2626;  /* Deeper red for better contrast */
-  --destructive-foreground: #ffffff;
-  --border: #cbd5e1;  /* More visible borders */
-  --input: #cbd5e1;  /* Clearer input borders */
-  --ring: #2563eb;  /* Match primary color */
-  --sidebar-bg: #ffffff;
-  --sidebar-border: #cbd5e1;  /* Match border color */
-  --header-bg: linear-gradient(135deg, #0ea5e9 0%, #2563eb 30%, #6366f1 60%, #8b5cf6 90%, #a855f7 100%);
+  /* Fintech Crypto Dark Theme */
+  --background: #0F172A;
+  --foreground: #F8FAFC;
+  --card: rgba(30, 41, 59, 0.8);
+  --card-foreground: #F8FAFC;
+  --primary: #F59E0B;
+  --primary-foreground: #0F172A;
+  --secondary: rgba(51, 65, 85, 0.6);
+  --secondary-foreground: #F8FAFC;
+  --muted: rgba(51, 65, 85, 0.4);
+  --muted-foreground: #94A3B8;
+  --accent: #8B5CF6;
+  --accent-foreground: #F8FAFC;
+  --destructive: #EF4444;
+  --destructive-foreground: #F8FAFC;
+  --border: rgba(148, 163, 184, 0.2);
+  --input: rgba(51, 65, 85, 0.6);
+  --ring: #F59E0B;
+  --sidebar-bg: rgba(15, 23, 42, 0.95);
+  --sidebar-border: rgba(148, 163, 184, 0.1);
+  --header-bg: rgba(15, 23, 42, 0.9);
 
-  /* Toggle-specific colors for light theme */
-  --toggle-bg-off: #f1f5f9;
-  --toggle-bg-on: #10b981;
-  --toggle-border: #94a3b8;
-  --toggle-thumb: #ffffff;
-  --toggle-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  /* Syntax highlighting colors */
+  --syntax-green: #22C55E;
+  --syntax-yellow: #F59E0B;
+  --syntax-red: #EF4444;
+  --syntax-blue: #3B82F6;
+  --syntax-purple: #8B5CF6;
+  --syntax-cyan: #06B6D4;
+  --syntax-peach: #FB923C;
+
+  /* Toggle-specific colors */
+  --toggle-bg-off: rgba(51, 65, 85, 0.6);
+  --toggle-bg-on: #22C55E;
+  --toggle-border: rgba(148, 163, 184, 0.3);
+  --toggle-thumb: #F8FAFC;
+  --toggle-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+
+  /* Z-index scale system */
+  --z-base: 1;
+  --z-dropdown: 10;
+  --z-sticky: 20;
+  --z-fixed: 30;
+  --z-modal-backdrop: 40;
+  --z-modal: 50;
+  --z-popover: 60;
+  --z-tooltip: 70;
+
+  /* Glassmorphism */
+  --glass-bg: rgba(30, 41, 59, 0.6);
+  --glass-border: rgba(148, 163, 184, 0.2);
+  --glass-blur: 16px;
+
+  /* Fonts */
+  --font-heading: 'Orbitron', sans-serif;
+  --font-body: 'Exo 2', sans-serif;
 }
 
 .dark {
-  /* Dark theme colors */
-  --background: #020817;
-  --foreground: #f8fafc;
-  --card: #0f172a;
-  --card-foreground: #f8fafc;
-  --primary: #3b82f6;
-  --primary-foreground: #ffffff;
-  --secondary: #1e293b;
-  --secondary-foreground: #f8fafc;
-  --muted: #1e293b;
-  --muted-foreground: #94a3b8;
-  --accent: #1e293b;
-  --accent-foreground: #f8fafc;
-  --destructive: #ef4444;
-  --destructive-foreground: #ffffff;
-  --border: #334155;
-  --input: #334155;
-  --ring: #3b82f6;
-  --sidebar-bg: #0f172a;
-  --sidebar-border: #334155;
-  --header-bg: linear-gradient(135deg, #1e293b 0%, #334155 30%, #475569 60%, #64748b 90%, #94a3b8 100%);
+  /* Dark mode is the default for fintech-crypto */
+  --background: #0F172A;
+  --foreground: #F8FAFC;
+  --card: rgba(30, 41, 59, 0.8);
+  --card-foreground: #F8FAFC;
+  --primary: #F59E0B;
+  --primary-foreground: #0F172A;
+  --secondary: rgba(51, 65, 85, 0.6);
+  --secondary-foreground: #F8FAFC;
+  --muted: rgba(51, 65, 85, 0.4);
+  --muted-foreground: #94A3B8;
+  --accent: #8B5CF6;
+  --accent-foreground: #F8FAFC;
+  --destructive: #EF4444;
+  --destructive-foreground: #F8FAFC;
+  --border: rgba(148, 163, 184, 0.2);
+  --input: rgba(51, 65, 85, 0.6);
+  --ring: #F59E0B;
+  --sidebar-bg: rgba(15, 23, 42, 0.95);
+  --sidebar-border: rgba(148, 163, 184, 0.1);
+  --header-bg: rgba(15, 23, 42, 0.9);
+
+  /* Syntax highlighting colors - dark mode */
+  --syntax-green: #22C55E;
+  --syntax-yellow: #FBBF24;
+  --syntax-red: #F87171;
+  --syntax-blue: #60A5FA;
+  --syntax-purple: #A78BFA;
+  --syntax-cyan: #22D3EE;
+  --syntax-peach: #FB923C;
 }
 
 @theme inline {
@@ -72,12 +109,29 @@
   --color-border: var(--border);
   --color-input: var(--input);
   --color-ring: var(--ring);
-  --font-sans: ui-sans-serif, system-ui, sans-serif;
+  --font-sans: var(--font-body), ui-sans-serif, system-ui, sans-serif;
+  --font-heading: var(--font-heading), sans-serif;
   --font-mono: ui-monospace, SFMono-Regular, "SF Mono", Consolas, "Liberation Mono", Menlo, monospace;
 }
 
 * {
   border-color: var(--border);
+}
+
+/* Ensure cursor-pointer on all interactive elements */
+button,
+[role="button"],
+a,
+select,
+input[type="checkbox"],
+input[type="radio"],
+.cursor-pointer {
+  cursor: pointer;
+}
+
+button:disabled,
+[aria-disabled="true"] {
+  cursor: not-allowed;
 }
 
 body {
@@ -87,6 +141,65 @@ body {
   line-height: 1.6;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+}
+
+/* Fintech Crypto Heading Font */
+h1, h2, h3, .font-heading {
+  font-family: var(--font-heading), 'Orbitron', sans-serif;
+  letter-spacing: 0.05em;
+}
+
+.font-sans {
+  font-family: var(--font-body), 'Exo 2', ui-sans-serif, system-ui, sans-serif;
+}
+
+/* Glassmorphism Card */
+.glass-card {
+  background: var(--glass-bg);
+  backdrop-filter: blur(var(--glass-blur));
+  -webkit-backdrop-filter: blur(var(--glass-blur));
+  border: 1px solid var(--glass-border);
+  border-radius: 16px;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+}
+
+/* Gold Glow Effect */
+.glow-gold {
+  box-shadow: 0 0 20px rgba(245, 158, 11, 0.3);
+}
+
+/* Purple Glow Effect */
+.glow-purple {
+  box-shadow: 0 0 20px rgba(139, 92, 246, 0.3);
+}
+
+/* Gradient Text */
+.gradient-text {
+  background: linear-gradient(135deg, var(--primary) 0%, var(--accent) 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+/* Gradient Border */
+.gradient-border {
+  position: relative;
+  background: var(--glass-bg);
+  border-radius: 16px;
+}
+
+.gradient-border::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: 16px;
+  padding: 1px;
+  background: linear-gradient(135deg, var(--primary), var(--accent));
+  -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+  mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+  -webkit-mask-composite: xor;
+  mask-composite: exclude;
+  pointer-events: none;
 }
 
 /* Modern scrollbar */
@@ -122,7 +235,7 @@ body {
 }
 
 .leaflet-control-container {
-  z-index: 800;
+  z-index: var(--z-dropdown);
 }
 
 /* Ensure popup content and navigation buttons are clickable */
@@ -216,7 +329,7 @@ body {
     right: 0;
     bottom: 0;
     background: rgba(0, 0, 0, 0.4);
-    z-index: 1000;
+    z-index: var(--z-modal-backdrop);
     backdrop-filter: blur(4px);
   }
 
@@ -230,7 +343,7 @@ body {
     background: var(--background);
     border-radius: 20px 20px 0 0;
     box-shadow: 0 -10px 25px rgba(0, 0, 0, 0.3);
-    z-index: 1001;
+    z-index: var(--z-modal);
     transform: translateY(100%);
     transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 
@@ -262,13 +375,22 @@ body {
     -webkit-overflow-scrolling: touch;
   }
 
-  /* Minimum touch targets for mobile */
+  /* Minimum touch targets for mobile - WCAG 2.5.5 AAA */
   .touch-target {
-    min-width: 48px;
-    min-height: 48px;
+    min-width: 44px;
+    min-height: 44px;
+    padding: 10px 16px;
     display: flex;
     align-items: center;
     justify-content: center;
+  }
+
+  /* Ensure all buttons meet touch target size */
+  button,
+  [role="button"],
+  a.btn,
+  select {
+    min-height: 44px;
   }
 
   /* Enhanced visual hierarchy */
@@ -322,124 +444,43 @@ body {
   }
 }
 
-/* Ensure navigation buttons and links are always clickable - comprehensive fix */
-.leaflet-popup-content button[aria-label*="Navigate"],
-.leaflet-popup-content a[aria-label*="Navigate"],
-.leaflet-popup-content [title*="Navigate"] {
-  z-index: 2147483647 !important; /* Maximum z-index */
-  position: relative !important;
-  pointer-events: auto !important;
-  isolation: isolate !important;
-  transform: translateZ(0) !important; /* Create new stacking context */
-  will-change: transform !important;
-  backface-visibility: hidden !important;
+/* Popup z-index layering - ensure clickability */
+.leaflet-popup-pane {
+  z-index: 700;
 }
 
-/* Force all navigation elements to the top layer */
-button[aria-label*="Navigate"],
-a[aria-label*="Navigate"],
-[title*="Navigate"] {
-  z-index: 9999 !important;
-  position: relative !important;
+.leaflet-popup {
+  z-index: 701;
   pointer-events: auto !important;
-  isolation: isolate !important;
 }
 
-/* Specific fix for sidebar navigation buttons */
-.sidebar button[aria-label*="Navigate"],
-.sidebar a[aria-label*="Navigate"],
-[class*="sidebar"] button[aria-label*="Navigate"],
-[class*="sidebar"] a[aria-label*="Navigate"] {
-  z-index: 10000 !important;
-  position: relative !important;
+.leaflet-popup-content-wrapper {
+  z-index: 702;
+  position: relative;
+  overflow: visible;
   pointer-events: auto !important;
-  isolation: isolate !important;
 }
 
-/* Nuclear option: Force ALL navigation buttons to be unblocked */
-button[aria-label*="Navigate"]:not([disabled]),
-a[aria-label*="Navigate"]:not([disabled]),
-[title*="Navigate"]:not([disabled]) {
-  z-index: 2147483647 !important; /* Maximum z-index value */
-  position: relative !important;
+.leaflet-popup-content {
+  z-index: 703;
+  position: relative;
   pointer-events: auto !important;
-  isolation: isolate !important;
-  transform: translateZ(0) !important; /* Force hardware acceleration and new stacking context */
-  will-change: transform !important;
-  backface-visibility: hidden !important;
 }
 
-/* Additional fix for all interactive elements in popups */
+/* Interactive elements in popups - ensure clickability */
 .leaflet-popup-content button,
 .leaflet-popup-content a {
   pointer-events: auto !important;
-  position: relative !important;
-  z-index: 2147483646 !important; /* One less than navigation buttons */
+  position: relative;
+  z-index: 704;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
 }
 
-/* Proper fix for popup navigation buttons - keep in document flow */
-.leaflet-popup-content a[aria-label*="Navigate"],
-.leaflet-popup-content button[aria-label*="Navigate"] {
-  z-index: 2147483647 !important; /* Absolute maximum */
-  position: relative !important; /* Keep in document flow */
-  pointer-events: auto !important;
-  isolation: isolate !important;
-  transform: translateZ(0) !important; /* Create stacking context without breaking layout */
-  will-change: auto !important;
-  backface-visibility: hidden !important;
-  /* Ensure no interference from parent elements */
-  margin: 0 !important;
-  display: block !important;
-  width: 100% !important;
-  box-sizing: border-box !important;
-  /* Prevent event propagation issues */
-  -webkit-tap-highlight-color: transparent !important;
-}
-
-/* Ensure popup content wrapper doesn't interfere */
-.leaflet-popup-content-wrapper {
-  z-index: 1000 !important;
-  position: relative !important;
-  overflow: visible !important;
-  pointer-events: auto !important;
-}
-
-/* Prevent popup from interfering with button clicks */
-.leaflet-popup {
-  pointer-events: auto !important;
-}
-
-.leaflet-popup-content {
-  pointer-events: auto !important;
-}
-
-/* Ensure no invisible overlays block the navigation buttons */
-.leaflet-popup-content a[aria-label*="Navigate"]:before,
-.leaflet-popup-content button[aria-label*="Navigate"]:before,
-.leaflet-popup-content a[aria-label*="Navigate"]:after,
-.leaflet-popup-content button[aria-label*="Navigate"]:after {
-  content: none !important;
-  display: none !important;
-}
-
-/* Remove any potential blocking pseudo-elements or overlays */
-.leaflet-popup-content *:not(a[aria-label*="Navigate"]):not(button[aria-label*="Navigate"]) {
-  pointer-events: auto !important;
-}
-
-/* Fix for leaflet popup pane layering */
-.leaflet-popup-pane {
-  z-index: 9998 !important;
-}
-
-.leaflet-popup {
-  z-index: 9999 !important;
-}
-
-/* Ensure popup content has proper layering */
-.leaflet-popup-content {
-  z-index: 10000 !important;
-  position: relative !important;
+/* Ensure all popup interactive elements are clickable */
+.leaflet-popup-content button:not([disabled]),
+.leaflet-popup-content a:not([disabled]) {
+  isolation: isolate;
 }
 
 .leaflet-popup-tip {
@@ -472,25 +513,19 @@ a[aria-label*="Navigate"]:not([disabled]),
   box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.25);
 }
 
-/* Header gradient overlay for extra depth */
+/* Minimal header with solid color and subtle border */
 .header-gradient {
   position: relative;
   background: var(--header-bg);
+  border-bottom: 1px solid var(--border);
 }
 
 .header-gradient::before {
-  content: '';
-  position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  background: linear-gradient(135deg, rgba(255, 255, 255, 0.1) 0%, rgba(255, 255, 255, 0.05) 50%, rgba(0, 0, 0, 0.05) 100%);
-  pointer-events: none;
+  display: none;
 }
 
 .dark .header-gradient::before {
-  background: linear-gradient(135deg, rgba(255, 255, 255, 0.08) 0%, rgba(255, 255, 255, 0.03) 50%, rgba(0, 0, 0, 0.1) 100%);
+  display: none;
 }
 
 /* Modern animations */
@@ -711,11 +746,81 @@ input[type="checkbox"][role="switch"]:focus {
 
 /* Dark theme toggle overrides */
 .dark input[type="checkbox"][role="switch"] {
-  --toggle-bg-off: #374151;
-  --toggle-bg-on: #10b981;
-  --toggle-border: #6b7280;
-  --toggle-thumb: #ffffff;
+  --toggle-bg-off: #313244;
+  --toggle-bg-on: var(--syntax-green);
+  --toggle-border: #45475a;
+  --toggle-thumb: #cdd6f4;
   --toggle-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+}
+
+/* Status Badge Utility Classes - Syntax Highlighting Colors */
+.badge-success {
+  background: color-mix(in srgb, var(--syntax-green) 15%, transparent);
+  color: var(--syntax-green);
+  border: 1px solid color-mix(in srgb, var(--syntax-green) 30%, transparent);
+}
+
+.badge-warning {
+  background: color-mix(in srgb, var(--syntax-yellow) 15%, transparent);
+  color: var(--syntax-yellow);
+  border: 1px solid color-mix(in srgb, var(--syntax-yellow) 30%, transparent);
+}
+
+.badge-error {
+  background: color-mix(in srgb, var(--syntax-red) 15%, transparent);
+  color: var(--syntax-red);
+  border: 1px solid color-mix(in srgb, var(--syntax-red) 30%, transparent);
+}
+
+.badge-info {
+  background: color-mix(in srgb, var(--syntax-blue) 15%, transparent);
+  color: var(--syntax-blue);
+  border: 1px solid color-mix(in srgb, var(--syntax-blue) 30%, transparent);
+}
+
+.badge-purple {
+  background: color-mix(in srgb, var(--syntax-purple) 15%, transparent);
+  color: var(--syntax-purple);
+  border: 1px solid color-mix(in srgb, var(--syntax-purple) 30%, transparent);
+}
+
+.badge-peach {
+  background: color-mix(in srgb, var(--syntax-peach) 15%, transparent);
+  color: var(--syntax-peach);
+  border: 1px solid color-mix(in srgb, var(--syntax-peach) 30%, transparent);
+}
+
+/* Navigation Sidebar */
+.nav-sidebar {
+  background: var(--glass-bg);
+  backdrop-filter: blur(var(--glass-blur));
+  -webkit-backdrop-filter: blur(var(--glass-blur));
+  border-right: 1px solid var(--glass-border);
+  border-radius: 16px;
+  margin: 0;
+  overflow: hidden;
+}
+
+.nav-sidebar button {
+  cursor: pointer;
+}
+
+/* Mobile Bottom Navigation */
+.mobile-bottom-nav {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  background: var(--glass-bg);
+  backdrop-filter: blur(var(--glass-blur));
+  -webkit-backdrop-filter: blur(var(--glass-blur));
+  border-top: 1px solid var(--glass-border);
+  z-index: var(--z-fixed);
+  padding-bottom: env(safe-area-inset-bottom, 0);
+}
+
+.mobile-bottom-nav button {
+  cursor: pointer;
 }
 
 /* High contrast mode for accessibility */
@@ -727,5 +832,29 @@ input[type="checkbox"][role="switch"]:focus {
 
   .dark input[type="checkbox"][role="switch"] {
     --toggle-border: #ffffff;
+  }
+}
+
+/* Reduced motion for accessibility */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+
+  .animate-fade-in,
+  .animate-slide-in,
+  .animate-scale-in,
+  .animate-spin,
+  .animate-pulse {
+    animation: none !important;
+  }
+
+  .bottom-sheet {
+    transition: none !important;
   }
 }
