@@ -601,6 +601,74 @@ export default function IntermodCalculator({
           </div>
         ) : (
           <>
+            {/* Specific Frequency Mode Results */}
+            {mode === 'specific-frequency' && calculationResult && calculationResult.dangerousPairs.length > 0 && (
+              <div className="mb-4">
+                <div className="p-4 rounded-xl bg-secondary/30 border border-border/30">
+                  <h4 className="text-sm font-semibold text-foreground mb-3">3rd Order Intermodulation Products</h4>
+
+                  {calculationResult.dangerousPairs[0].products.map((product, idx) => {
+                    const f1 = parseFloat(freq1);
+                    const f2 = parseFloat(freq2);
+                    const isInAviation = product.inAviationBand;
+
+                    return (
+                      <div
+                        key={idx}
+                        className={`p-3 rounded-lg mb-2 ${
+                          isInAviation
+                            ? 'bg-red-500/10 border border-red-500/30'
+                            : 'bg-secondary/50 border border-border/30'
+                        }`}
+                      >
+                        <div className="flex items-center justify-between mb-2">
+                          <span className="font-mono text-sm font-semibold text-foreground">
+                            {product.type}
+                          </span>
+                          {isInAviation && (
+                            <span className="text-xs font-bold px-2 py-0.5 rounded bg-red-500/20 text-red-500">
+                              AVIATION BAND
+                            </span>
+                          )}
+                        </div>
+
+                        <div className="font-mono text-sm text-muted-foreground mb-1">
+                          {product.type === '2f1-f2'
+                            ? `2 × ${f1} - ${f2}`
+                            : `2 × ${f2} - ${f1}`}
+                        </div>
+
+                        <div className="flex items-center gap-2">
+                          <span className="text-lg font-bold text-primary">
+                            = {product.frequency.toFixed(3)} MHz
+                          </span>
+                          {product.affectedService && (
+                            <span className="text-xs text-accent px-2 py-0.5 rounded bg-accent/10">
+                              {product.affectedService}
+                            </span>
+                          )}
+                        </div>
+                      </div>
+                    );
+                  })}
+
+                  {calculationResult.dangerousPairs[0].aviationProducts.length > 0 ? (
+                    <div className="mt-3 p-2 rounded-lg bg-red-500/10 border border-red-500/30 text-center">
+                      <span className="text-sm font-semibold text-red-500">
+                        ⚠️ {calculationResult.dangerousPairs[0].aviationProducts.length} product(s) fall within Aviation Band (108-137 MHz)
+                      </span>
+                    </div>
+                  ) : (
+                    <div className="mt-3 p-2 rounded-lg bg-green-500/10 border border-green-500/30 text-center">
+                      <span className="text-sm font-semibold text-green-500">
+                        ✓ No products fall within Aviation Band
+                      </span>
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
+
             {/* Target frequency display for aircraft mode */}
             {mode === 'aircraft-check' && targetAircraftFrequency && (
               <div className="mb-4 p-3 rounded-xl bg-primary/20 border border-primary/30">
@@ -690,58 +758,96 @@ export default function IntermodCalculator({
                   <p className="text-muted-foreground">No results match the current filter.</p>
                 </div>
               ) : (
-                filteredResults.map((risk, index) => (
-                  <div
-                    key={`${risk.pair.station1.id}-${risk.pair.station2.id}-${index}`}
-                    onClick={() => handleResultClick(risk)}
-                    className={`p-4 rounded-xl border cursor-pointer transition-all hover:scale-[1.01] ${getRiskLevelBgColor(
-                      risk.riskLevel
-                    )}`}
-                  >
-                    <div className="flex items-start justify-between mb-2">
-                      <span
-                        className={`text-xs font-bold px-2 py-0.5 rounded ${getRiskLevelColor(
-                          risk.riskLevel
-                        )}`}
-                      >
-                        {risk.riskLevel}
-                      </span>
-                      <span className="text-xs text-muted-foreground font-mono">
-                        {risk.pair.aviationProducts[0]?.type}
-                      </span>
-                    </div>
+                filteredResults.map((risk, index) => {
+                  const product = risk.pair.aviationProducts[0];
+                  const f1 = risk.pair.station1.frequency;
+                  const f2 = risk.pair.station2.frequency;
 
-                    <div className="space-y-1 text-sm">
-                      <div className="flex items-center gap-2">
-                        <span className="text-muted-foreground">f1:</span>
-                        <span className="text-foreground font-medium">
-                          {risk.pair.station1.name} ({risk.pair.station1.frequency} MHz)
-                        </span>
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <span className="text-muted-foreground">f2:</span>
-                        <span className="text-foreground font-medium">
-                          {risk.pair.station2.name} ({risk.pair.station2.frequency} MHz)
-                        </span>
-                      </div>
-                      <div className="flex items-center gap-2 pt-1 text-xs text-muted-foreground">
-                        <span>
-                          {risk.pair.station1.city}, {risk.pair.station1.state}
-                        </span>
-                      </div>
-                    </div>
+                  // Calculate the formula display
+                  const formulaDisplay = product?.type === '2f1-f2'
+                    ? `2 × ${f1} - ${f2} = ${(2 * f1 - f2).toFixed(2)} MHz`
+                    : `2 × ${f2} - ${f1} = ${(2 * f2 - f1).toFixed(2)} MHz`;
 
-                    <div className="flex items-center justify-between mt-3 pt-2 border-t border-border/30 text-xs text-muted-foreground">
-                      <span>Station distance: {formatDistance(risk.pair.distance)}</span>
-                      {risk.distanceToAircraft !== undefined && (
-                        <span>To aircraft: {formatDistance(risk.distanceToAircraft)}</span>
-                      )}
-                      {onHighlightStations && (
-                        <span className="text-primary">Click to view on map</span>
-                      )}
+                  return (
+                    <div
+                      key={`${risk.pair.station1.id}-${risk.pair.station2.id}-${index}`}
+                      onClick={() => handleResultClick(risk)}
+                      className={`p-4 rounded-xl border cursor-pointer transition-all hover:scale-[1.01] ${getRiskLevelBgColor(
+                        risk.riskLevel
+                      )}`}
+                    >
+                      <div className="flex items-start justify-between mb-3">
+                        <span
+                          className={`text-xs font-bold px-2 py-0.5 rounded ${getRiskLevelColor(
+                            risk.riskLevel
+                          )}`}
+                        >
+                          {risk.riskLevel}
+                        </span>
+                        {product?.affectedService && (
+                          <span className="text-xs text-accent font-medium px-2 py-0.5 rounded bg-accent/10">
+                            {product.affectedService}
+                          </span>
+                        )}
+                      </div>
+
+                      {/* Calculation Result - Main Display */}
+                      <div className="mb-3 p-3 rounded-lg bg-background/50 border border-border/50">
+                        <div className="text-xs text-muted-foreground mb-1">Intermod Calculation</div>
+                        <div className="font-mono text-sm text-foreground font-semibold">
+                          {formulaDisplay}
+                        </div>
+                        <div className="flex items-center gap-2 mt-2">
+                          <span className="text-xs text-muted-foreground">Formula:</span>
+                          <span className="text-xs font-mono text-primary">{product?.type}</span>
+                        </div>
+                        {product?.frequency && (
+                          <div className="flex items-center gap-2 mt-1">
+                            <span className="text-xs text-muted-foreground">Result:</span>
+                            <span className="text-sm font-bold text-primary">{product.frequency.toFixed(3)} MHz</span>
+                            <span className="text-xs text-green-500">(matches target)</span>
+                          </div>
+                        )}
+                      </div>
+
+                      {/* Station Details */}
+                      <div className="space-y-2 text-sm">
+                        <div className="flex items-start gap-2 p-2 rounded-lg bg-secondary/30">
+                          <span className="text-xs text-muted-foreground font-mono w-6">f1:</span>
+                          <div className="flex-1">
+                            <div className="text-foreground font-medium">{risk.pair.station1.name}</div>
+                            <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                              <span className="font-mono text-primary">{f1} MHz</span>
+                              <span>•</span>
+                              <span>{risk.pair.station1.city}, {risk.pair.station1.state}</span>
+                            </div>
+                          </div>
+                        </div>
+                        <div className="flex items-start gap-2 p-2 rounded-lg bg-secondary/30">
+                          <span className="text-xs text-muted-foreground font-mono w-6">f2:</span>
+                          <div className="flex-1">
+                            <div className="text-foreground font-medium">{risk.pair.station2.name}</div>
+                            <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                              <span className="font-mono text-primary">{f2} MHz</span>
+                              <span>•</span>
+                              <span>{risk.pair.station2.city}, {risk.pair.station2.state}</span>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+
+                      <div className="flex items-center justify-between mt-3 pt-2 border-t border-border/30 text-xs text-muted-foreground">
+                        <span>Station distance: {formatDistance(risk.pair.distance)}</span>
+                        {risk.distanceToAircraft !== undefined && (
+                          <span>To aircraft: {formatDistance(risk.distanceToAircraft)}</span>
+                        )}
+                        {onHighlightStations && (
+                          <span className="text-primary">Click to view on map →</span>
+                        )}
+                      </div>
                     </div>
-                  </div>
-                ))
+                  );
+                })
               )}
             </div>
           </>
