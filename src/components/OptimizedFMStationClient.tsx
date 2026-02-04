@@ -22,7 +22,6 @@ const MapPerformanceMonitor = {
   endTimer: () => {},
   recordMemoryUsage: () => {}
 };
-import Sidebar from '@/components/Sidebar';
 import NavSidebar from '@/components/NavSidebar';
 
 // Lazy load components
@@ -42,6 +41,8 @@ const Map = dynamic(() => import('@/components/Map'), {
   )
 });
 
+import IntermodCalculator from '@/components/IntermodCalculator';
+
 
 interface OptimizedFMStationClientProps {
   initialStations: FMStation[];
@@ -60,11 +61,12 @@ export default function OptimizedFMStationClient({
 }: OptimizedFMStationClientProps) {
   // State management
   const [selectedStation, setSelectedStation] = useState<FMStation | undefined>();
-  const [sidebarOpen, setSidebarOpen] = useState(false);
   const [userLocation, setUserLocation] = useState<UserLocation | undefined>();
   const [stations, setStations] = useState<FMStation[]>(initialStations);
   const [filters, setFilters] = useState<FilterType>({});
   const [activeTab, setActiveTab] = useState<ActiveTab>('stations');
+  const [highlightedStationIds, setHighlightedStationIds] = useState<(string | number)[]>([]);
+  const [flyToStations, setFlyToStations] = useState<{ lat1: number; lng1: number; lat2: number; lng2: number; timestamp: number } | null>(null);
 
   // Performance monitoring
   const { checkMemoryUsage } = useMemoryMonitor();
@@ -256,10 +258,37 @@ export default function OptimizedFMStationClient({
   // Optimized station selection
   const handleStationSelect = useCallback((station: FMStation) => {
     setSelectedStation(station);
-    // Close sidebar on mobile after selection
-    if (typeof window !== 'undefined' && window.innerWidth < 1024) {
-      setSidebarOpen(false);
+  }, []);
+
+  // Highlight stations from intermod calculator results and fly to them
+  const handleHighlightStations = useCallback((station1Id: string | number, station2Id: string | number) => {
+    setHighlightedStationIds([station1Id, station2Id]);
+
+    // Find the stations to get their coordinates
+    const station1 = stations.find(s => s.id === station1Id);
+    const station2 = stations.find(s => s.id === station2Id);
+
+    if (station1 && station2) {
+      // Set coordinates for map to fly to (timestamp ensures useEffect triggers)
+      setFlyToStations({
+        lat1: station1.latitude,
+        lng1: station1.longitude,
+        lat2: station2.latitude,
+        lng2: station2.longitude,
+        timestamp: Date.now()
+      });
     }
+
+    // Clear highlight and fly target after 10 seconds
+    setTimeout(() => {
+      setHighlightedStationIds([]);
+      setFlyToStations(null);
+    }, 10000);
+  }, [stations]);
+
+  // Switch to stations tab (used by intermod calculator)
+  const handleSwitchToStations = useCallback(() => {
+    setActiveTab('stations');
   }, []);
 
   // Stable optimistic updates without blinking
@@ -397,18 +426,8 @@ export default function OptimizedFMStationClient({
           {/* Header - Slim version */}
           <header className="glass-card border-b border-border/50 px-4 lg:px-6 py-3 relative z-10 mx-4 mt-4 rounded-2xl">
             <div className="flex items-center justify-between gap-4">
-              {/* Left: Menu (mobile) + Title */}
+              {/* Left: Title */}
               <div className="flex items-center gap-3">
-                <button
-                  onClick={() => setSidebarOpen(!sidebarOpen)}
-                  className="lg:hidden p-2.5 rounded-xl bg-secondary hover:bg-accent transition-colors text-secondary-foreground cursor-pointer"
-                  aria-label="Toggle sidebar"
-                >
-                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
-                  </svg>
-                </button>
-
                 <div className="flex items-center gap-3 lg:hidden">
                   <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-primary to-accent flex items-center justify-center glow-gold">
                     <svg className="w-5 h-5 text-primary-foreground" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -483,144 +502,139 @@ export default function OptimizedFMStationClient({
           </header>
 
           {/* Main content */}
-          <div className="flex-1 flex overflow-hidden p-4 pt-2">
+          <div className="flex-1 flex flex-col lg:flex-row overflow-y-auto p-4 pt-2 gap-4">
             {activeTab === 'stations' ? (
-              <>
-                {/* Sidebar */}
-                <Sidebar
-                  stations={filteredStations}
-                  allStations={stations}
-                  onStationSelect={handleStationSelect}
-                  selectedStation={selectedStation}
-                  isOpen={sidebarOpen}
-                  onToggle={() => setSidebarOpen(!sidebarOpen)}
-                  userLocation={userLocation}
-                  initialOnAirStatuses={initialOnAirStatuses}
-                  initialCities={initialCities}
-                  initialProvinces={initialProvinces}
-                  initialInspectionStatuses={initialInspectionStatuses}
-                  filters={filters}
-                  onFiltersChange={setFilters}
-                  onClearFilters={clearFilters}
-                  calculateDistance={calculateDistance}
-                />
+              /* Map with Filter Bar */
+              <div className="flex-1 flex flex-col gap-2">
+                {/* Filter Bar */}
+                <div className="glass-card rounded-xl p-3">
+                  <div className="flex flex-wrap items-center gap-2">
+                    {/* Search Input */}
+                    <div className="relative flex-1 min-w-[180px]">
+                      <svg className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-muted-foreground" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                      </svg>
+                      <input
+                        type="text"
+                        placeholder="Search stations..."
+                        value={filters.search || ''}
+                        onChange={(e) => setFilters({ ...filters, search: e.target.value || undefined })}
+                        className="w-full pl-9 pr-8 py-2 text-sm border border-border rounded-lg bg-background focus:ring-2 focus:ring-primary focus:border-transparent"
+                      />
+                      {filters.search && (
+                        <button
+                          onClick={() => setFilters({ ...filters, search: undefined })}
+                          className="absolute right-2 top-1/2 transform -translate-y-1/2 text-muted-foreground hover:text-foreground p-1"
+                        >
+                          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                          </svg>
+                        </button>
+                      )}
+                    </div>
+
+                    {/* Province Select */}
+                    <select
+                      value={filters.province || ''}
+                      onChange={(e) => setFilters({ ...filters, province: e.target.value || undefined, city: undefined })}
+                      className="px-3 py-2 text-sm border border-border rounded-lg bg-background focus:ring-2 focus:ring-primary focus:border-transparent min-w-[140px]"
+                    >
+                      <option value="">All Provinces</option>
+                      {initialProvinces.map(province => (
+                        <option key={province} value={province}>{province}</option>
+                      ))}
+                    </select>
+
+                    {/* City Select */}
+                    <select
+                      value={filters.city || ''}
+                      onChange={(e) => setFilters({ ...filters, city: e.target.value || undefined })}
+                      className={`px-3 py-2 text-sm border border-border rounded-lg bg-background focus:ring-2 focus:ring-primary focus:border-transparent min-w-[140px] ${!filters.province ? 'opacity-50' : ''}`}
+                      disabled={!filters.province}
+                    >
+                      <option value="">{filters.province ? 'All Cities' : 'Select province'}</option>
+                      {filters.province && initialCities
+                        .filter(city => stations.some(s => s.state === filters.province && s.city === city))
+                        .map(city => (
+                          <option key={city} value={city}>{city}</option>
+                        ))
+                      }
+                    </select>
+
+                    {/* On Air Toggle */}
+                    <div className="flex gap-1">
+                      <button
+                        onClick={() => setFilters({ ...filters, onAir: filters.onAir === true ? undefined : true })}
+                        className={`flex items-center gap-1.5 px-3 py-2 text-xs font-medium rounded-lg border transition-all cursor-pointer ${
+                          filters.onAir === true
+                            ? 'bg-green-500 text-white border-green-500'
+                            : 'bg-background border-border hover:border-green-500/50'
+                        }`}
+                      >
+                        <div className={`w-2 h-2 rounded-full ${filters.onAir === true ? 'bg-white' : 'bg-green-500'}`} />
+                        On Air
+                      </button>
+                      <button
+                        onClick={() => setFilters({ ...filters, onAir: filters.onAir === false ? undefined : false })}
+                        className={`flex items-center gap-1.5 px-3 py-2 text-xs font-medium rounded-lg border transition-all cursor-pointer ${
+                          filters.onAir === false
+                            ? 'bg-red-500 text-white border-red-500'
+                            : 'bg-background border-border hover:border-red-500/50'
+                        }`}
+                      >
+                        <div className={`w-2 h-2 rounded-full ${filters.onAir === false ? 'bg-white' : 'bg-red-500'}`} />
+                        Off Air
+                      </button>
+                    </div>
+
+                    {/* Inspection Status */}
+                    <select
+                      value={filters.inspection68 || ''}
+                      onChange={(e) => setFilters({ ...filters, inspection68: e.target.value || undefined })}
+                      className="px-3 py-2 text-sm border border-border rounded-lg bg-background focus:ring-2 focus:ring-primary focus:border-transparent min-w-[140px]"
+                    >
+                      <option value="">All Inspection</option>
+                      {initialInspectionStatuses.map(status => (
+                        <option key={status} value={status}>{status}</option>
+                      ))}
+                    </select>
+
+                    {/* Clear Filters */}
+                    {(filters.search || filters.province || filters.city || filters.onAir !== undefined || filters.inspection68) && (
+                      <button
+                        onClick={clearFilters}
+                        className="flex items-center gap-1.5 px-3 py-2 text-xs font-medium bg-destructive/10 text-destructive hover:bg-destructive/20 rounded-lg border border-destructive/20 cursor-pointer"
+                      >
+                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                        </svg>
+                        Clear
+                      </button>
+                    )}
+                  </div>
+                </div>
 
                 {/* Map container */}
-                <div className="flex-1 relative">
+                <div className="flex-1 relative min-h-[400px]">
                   <div className="absolute inset-0 rounded-2xl overflow-hidden glass-card">
                     <Map
                       stations={filteredStations}
                       selectedStation={selectedStation}
                       onStationSelect={handleStationSelect}
                       onUpdateStation={handleUpdateStation}
+                      highlightedStationIds={highlightedStationIds}
+                      flyToStations={flyToStations}
                     />
                   </div>
                 </div>
-              </>
+              </div>
             ) : activeTab === 'intermod' ? (
               /* Intermodulation Calculator */
-              <div className="flex-1 flex flex-col lg:flex-row gap-4">
-                {/* Calculator Input Panel */}
-                <div className="lg:w-[400px] glass-card p-6 rounded-2xl">
-                  <div className="flex items-center gap-3 mb-6">
-                    <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-accent to-primary flex items-center justify-center glow-purple">
-                      <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 7h6m0 10v-3m-3 3h.01M9 17h.01M9 14h.01M12 14h.01M15 11h.01M12 11h.01M9 11h.01M7 21h10a2 2 0 002-2V5a2 2 0 00-2-2H7a2 2 0 00-2 2v14a2 2 0 002 2z" />
-                      </svg>
-                    </div>
-                    <div>
-                      <h2 className="text-lg font-heading font-bold text-foreground">Intermodulation Calculator</h2>
-                      <p className="text-xs text-muted-foreground">Calculate IM products for FM frequencies</p>
-                    </div>
-                  </div>
-
-                  {/* Frequency Inputs */}
-                  <div className="space-y-4">
-                    <div>
-                      <label className="block text-sm font-medium text-foreground mb-2">
-                        Frequency 1 (MHz)
-                      </label>
-                      <input
-                        type="number"
-                        step="0.1"
-                        placeholder="e.g., 88.0"
-                        className="w-full px-4 py-3 rounded-xl bg-secondary/50 border border-border/50 text-foreground placeholder-muted-foreground focus:ring-2 focus:ring-primary focus:border-transparent transition-all"
-                      />
-                    </div>
-
-                    <div>
-                      <label className="block text-sm font-medium text-foreground mb-2">
-                        Frequency 2 (MHz)
-                      </label>
-                      <input
-                        type="number"
-                        step="0.1"
-                        placeholder="e.g., 92.5"
-                        className="w-full px-4 py-3 rounded-xl bg-secondary/50 border border-border/50 text-foreground placeholder-muted-foreground focus:ring-2 focus:ring-primary focus:border-transparent transition-all"
-                      />
-                    </div>
-
-                    <div>
-                      <label className="block text-sm font-medium text-foreground mb-2">
-                        Frequency 3 (MHz) <span className="text-muted-foreground">(Optional)</span>
-                      </label>
-                      <input
-                        type="number"
-                        step="0.1"
-                        placeholder="e.g., 97.0"
-                        className="w-full px-4 py-3 rounded-xl bg-secondary/50 border border-border/50 text-foreground placeholder-muted-foreground focus:ring-2 focus:ring-primary focus:border-transparent transition-all"
-                      />
-                    </div>
-
-                    <div className="pt-2">
-                      <button className="w-full py-3 px-4 rounded-xl bg-gradient-to-r from-primary to-accent text-primary-foreground font-semibold hover:opacity-90 transition-all glow-gold">
-                        Calculate Intermodulation
-                      </button>
-                    </div>
-
-                    <div className="pt-2">
-                      <button className="w-full py-2 px-4 rounded-xl bg-secondary/50 text-muted-foreground font-medium hover:text-foreground hover:bg-secondary transition-all">
-                        Clear All
-                      </button>
-                    </div>
-                  </div>
-
-                  {/* Quick Info */}
-                  <div className="mt-6 p-4 rounded-xl bg-accent/10 border border-accent/20">
-                    <h4 className="text-sm font-semibold text-accent mb-2">About Intermodulation</h4>
-                    <p className="text-xs text-muted-foreground leading-relaxed">
-                      Intermodulation occurs when two or more signals mix in a non-linear device,
-                      creating unwanted frequencies. Common IM products are 2f1-f2, 2f2-f1, and
-                      third-order products.
-                    </p>
-                  </div>
-                </div>
-
-                {/* Results Panel */}
-                <div className="flex-1 glass-card p-6 rounded-2xl">
-                  <div className="flex items-center justify-between mb-6">
-                    <h3 className="text-lg font-heading font-bold text-foreground">Results</h3>
-                    <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                      <div className="w-2 h-2 rounded-full bg-primary animate-pulse" />
-                      Ready to calculate
-                    </div>
-                  </div>
-
-                  {/* Empty State */}
-                  <div className="flex flex-col items-center justify-center h-[400px] text-center">
-                    <div className="w-20 h-20 rounded-2xl bg-secondary/50 flex items-center justify-center mb-4">
-                      <svg className="w-10 h-10 text-muted-foreground" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                      </svg>
-                    </div>
-                    <h4 className="text-lg font-semibold text-foreground mb-2">No Results Yet</h4>
-                    <p className="text-sm text-muted-foreground max-w-md">
-                      Enter at least two frequencies and click &quot;Calculate&quot; to see
-                      intermodulation products and potential interference frequencies.
-                    </p>
-                  </div>
-                </div>
-              </div>
+              <IntermodCalculator
+                stations={stations}
+                onHighlightStations={handleHighlightStations}
+                onSwitchToStations={handleSwitchToStations}
+              />
             ) : (
               /* Settings Page - Placeholder */
               <div className="flex-1 glass-card p-6 rounded-2xl">

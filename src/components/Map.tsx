@@ -95,11 +95,31 @@ const createLocationIcon = () => {
   });
 };
 
+// Highlighted station icon (orange/gold for intermod results)
+const highlightedStationIcon = new L.Icon({
+  iconUrl: 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-2x-gold.png',
+  shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-shadow.png',
+  iconSize: [30, 49], // Slightly larger for emphasis
+  iconAnchor: [15, 49],
+  popupAnchor: [1, -40],
+  shadowSize: [49, 49]
+});
+
+interface FlyToTarget {
+  lat1: number;
+  lng1: number;
+  lat2: number;
+  lng2: number;
+  timestamp: number; // Unique timestamp to force useEffect trigger
+}
+
 interface MapProps {
   stations: FMStation[];
   selectedStation?: FMStation;
   onStationSelect: (station: FMStation) => void;
   onUpdateStation?: (stationId: string | number, updates: Partial<FMStation>) => void;
+  highlightedStationIds?: (string | number)[];
+  flyToStations?: FlyToTarget | null;
 }
 
 function LocationTracker({ onLocationUpdate }: { onLocationUpdate: (location: UserLocation) => void }) {
@@ -169,7 +189,36 @@ function LocationTracker({ onLocationUpdate }: { onLocationUpdate: (location: Us
   return null;
 }
 
-export default function Map({ stations, selectedStation, onStationSelect, onUpdateStation }: MapProps) {
+// Component to fly map to highlighted stations
+function FlyToHighlightedStations({ target }: { target: FlyToTarget | null }) {
+  const map = useMap();
+
+  useEffect(() => {
+    if (target) {
+      // Small delay to ensure map is ready after tab switch
+      const timer = setTimeout(() => {
+        // Calculate bounds that include both stations with padding
+        const bounds = L.latLngBounds(
+          [target.lat1, target.lng1],
+          [target.lat2, target.lng2]
+        );
+
+        // Fly to bounds with animation and padding
+        map.flyToBounds(bounds, {
+          padding: [80, 80],
+          maxZoom: 12,
+          duration: 1.5
+        });
+      }, 100);
+
+      return () => clearTimeout(timer);
+    }
+  }, [map, target?.timestamp]); // Use timestamp as dependency to always trigger
+
+  return null;
+}
+
+export default function Map({ stations, selectedStation, onStationSelect, onUpdateStation, highlightedStationIds = [], flyToStations }: MapProps) {
   const [userLocation, setUserLocation] = useState<UserLocation | null>(null);
   const [isClient, setIsClient] = useState(false);
   const [isMobile, setIsMobile] = useState(false);
@@ -221,12 +270,18 @@ export default function Map({ stations, selectedStation, onStationSelect, onUpda
   const getStationIcon = (stationOrGroup: FMStation | FMStation[], count?: number) => {
     // If it's an array (multiple stations), use the first station's status
     const station = Array.isArray(stationOrGroup) ? stationOrGroup[0] : stationOrGroup;
+    const stationsToCheck = Array.isArray(stationOrGroup) ? stationOrGroup : [stationOrGroup];
     const isMultiple = count && count > 1;
     const isMainStation = station.type === 'สถานีหลัก' || station.genre === 'สถานีหลัก';
 
-    // Get base icon based on station status
+    // Check if any station in this group is highlighted
+    const isHighlighted = stationsToCheck.some(s => highlightedStationIds.includes(s.id));
+
+    // Get base icon based on station status (or highlighted status)
     let baseIcon;
-    if (station.submitRequest === 'ไม่ยื่น') {
+    if (isHighlighted) {
+      baseIcon = highlightedStationIcon;
+    } else if (station.submitRequest === 'ไม่ยื่น') {
       baseIcon = blackStationIcon;
     } else if (!station.onAir) {
       baseIcon = greyStationIcon;
@@ -238,14 +293,35 @@ export default function Map({ stations, selectedStation, onStationSelect, onUpda
       baseIcon = redStationIcon;
     }
 
-    // Create custom icon with main station symbol or count badge
-    if (isMainStation || isMultiple) {
+    // Create custom icon with main station symbol, count badge, or highlight effect
+    if (isMainStation || isMultiple || isHighlighted) {
+      const iconWidth = isHighlighted ? 30 : 25;
+      const iconHeight = isHighlighted ? 49 : 41;
       return L.divIcon({
-        className: 'custom-station-icon',
+        className: `custom-station-icon ${isHighlighted ? 'highlighted-station' : ''}`,
         html: `
           <div style="position: relative;">
+            ${isHighlighted ? `
+              <div style="
+                position: absolute;
+                top: 50%;
+                left: 50%;
+                transform: translate(-50%, -50%);
+                width: 50px;
+                height: 50px;
+                background: rgba(255, 193, 7, 0.3);
+                border-radius: 50%;
+                animation: highlightPulse 1.5s ease-in-out infinite;
+              "></div>
+              <style>
+                @keyframes highlightPulse {
+                  0%, 100% { transform: translate(-50%, -50%) scale(1); opacity: 1; }
+                  50% { transform: translate(-50%, -50%) scale(1.5); opacity: 0.5; }
+                }
+              </style>
+            ` : ''}
             <img src="${baseIcon.options.iconUrl}"
-                 style="width: 25px; height: 41px;"
+                 style="width: ${iconWidth}px; height: ${iconHeight}px; position: relative; z-index: 1;"
                  alt="Station marker" />
             ${isMainStation ? `
               <div style="
@@ -264,6 +340,7 @@ export default function Map({ stations, selectedStation, onStationSelect, onUpda
                 font-weight: bold;
                 border: 2px solid white;
                 box-shadow: 0 1px 3px rgba(0,0,0,0.3);
+                z-index: 2;
               ">★</div>
             ` : ''}
             ${isMultiple && !isMainStation ? `
@@ -283,6 +360,7 @@ export default function Map({ stations, selectedStation, onStationSelect, onUpda
                 font-weight: bold;
                 border: 2px solid white;
                 box-shadow: 0 1px 3px rgba(0,0,0,0.3);
+                z-index: 2;
               ">${count}</div>
             ` : ''}
             ${isMultiple && isMainStation ? `
@@ -302,12 +380,33 @@ export default function Map({ stations, selectedStation, onStationSelect, onUpda
                 font-weight: bold;
                 border: 2px solid white;
                 box-shadow: 0 1px 3px rgba(0,0,0,0.3);
+                z-index: 2;
               ">★${count}</div>
+            ` : ''}
+            ${isHighlighted && !isMultiple && !isMainStation ? `
+              <div style="
+                position: absolute;
+                top: -8px;
+                right: -8px;
+                background: #f97316;
+                color: white;
+                border-radius: 50%;
+                width: 18px;
+                height: 18px;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                font-size: 10px;
+                font-weight: bold;
+                border: 2px solid white;
+                box-shadow: 0 1px 3px rgba(0,0,0,0.3);
+                z-index: 2;
+              ">⚠</div>
             ` : ''}
           </div>
         `,
-        iconSize: [25, 41],
-        iconAnchor: [12, 41],
+        iconSize: [iconWidth, iconHeight],
+        iconAnchor: [iconWidth / 2, iconHeight],
         popupAnchor: [1, -34]
       });
     }
@@ -384,7 +483,7 @@ export default function Map({ stations, selectedStation, onStationSelect, onUpda
                 {station.genre}
               </span>
               {(station.type === 'สถานีหลัก' || station.genre === 'สถานีหลัก') && (
-                <span className="inline-flex items-center gap-1 px-2 py-1 rounded-lg bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400 text-xs font-medium">
+                <span className="inline-flex items-center gap-1 px-2 py-1 rounded-lg badge-info text-xs font-medium">
                   <span>★</span>
                   <span>Main</span>
                 </span>
@@ -395,11 +494,9 @@ export default function Map({ stations, selectedStation, onStationSelect, onUpda
 
         <div className="flex items-center justify-between gap-2 p-2 bg-muted/20 rounded-lg border border-border/50">
           <span className={`inline-flex items-center gap-2 px-2 py-1 rounded-md text-xs font-medium ${
-            station.onAir
-              ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400'
-              : 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400'
+            station.onAir ? 'badge-success' : 'badge-error'
           }`}>
-            <div className={`w-2 h-2 rounded-full ${station.onAir ? 'bg-green-500' : 'bg-red-500'}`} />
+            <div className={`w-2 h-2 rounded-full`} style={{ background: station.onAir ? 'var(--syntax-green)' : 'var(--syntax-red)' }} />
             {station.onAir ? 'On Air' : 'Off Air'}
           </span>
           {onUpdateStation && (
@@ -432,10 +529,10 @@ export default function Map({ stations, selectedStation, onStationSelect, onUpda
         <div className="flex items-center justify-between gap-2 p-2 bg-muted/20 rounded-lg border border-border/50 mb-3">
           <span className={`inline-flex items-center gap-2 px-2 py-1 rounded-md text-xs font-medium ${
             station.inspection68 === 'ตรวจแล้ว'
-              ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400'
+              ? 'badge-success'
               : station.inspection68 === 'ยังไม่ตรวจ'
-              ? 'bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400'
-              : 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400'
+              ? 'badge-warning'
+              : 'badge-info'
           }`}>
             {station.inspection68 === 'ตรวจแล้ว' && '✅'}
             {station.inspection68 === 'ยังไม่ตรวจ' && '⏳'}
@@ -512,7 +609,7 @@ export default function Map({ stations, selectedStation, onStationSelect, onUpda
               }}
               className={`px-2 py-1 text-xs rounded-md font-medium transition-all duration-200 ${
                 station.details === '#deviation'
-                  ? 'bg-red-100 text-red-700 border border-red-300 dark:bg-red-900/30 dark:text-red-400 dark:border-red-700'
+                  ? 'badge-error'
                   : 'bg-muted text-muted-foreground border border-border hover:bg-accent hover:text-accent-foreground'
               }`}
             >
@@ -527,7 +624,7 @@ export default function Map({ stations, selectedStation, onStationSelect, onUpda
               }}
               className={`px-2 py-1 text-xs rounded-md font-medium transition-all duration-200 ${
                 station.details === '#intermod'
-                  ? 'bg-orange-100 text-orange-700 border border-orange-300 dark:bg-orange-900/30 dark:text-orange-400 dark:border-orange-700'
+                  ? 'badge-peach'
                   : 'bg-muted text-muted-foreground border border-border hover:bg-accent hover:text-accent-foreground'
               }`}
             >
@@ -806,7 +903,7 @@ export default function Map({ stations, selectedStation, onStationSelect, onUpda
                       {station.genre}
                     </span>
                     {(station.type === 'สถานีหลัก' || station.genre === 'สถานีหลัก') && (
-                      <span className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400 text-xs font-medium">
+                      <span className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded badge-info text-xs font-medium">
                         <span>★</span>
                         <span>Main</span>
                       </span>
@@ -817,11 +914,9 @@ export default function Map({ stations, selectedStation, onStationSelect, onUpda
 
               <div className="flex items-center justify-between gap-2 p-2 bg-muted/30 rounded border border-border/50 mb-2">
                 <span className={`inline-flex items-center gap-2 px-2 py-1 rounded-md text-xs font-medium ${
-                  station.onAir
-                    ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400'
-                    : 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400'
+                  station.onAir ? 'badge-success' : 'badge-error'
                 }`}>
-                  <div className={`w-1.5 h-1.5 rounded-full ${station.onAir ? 'bg-green-500' : 'bg-red-500'}`} />
+                  <div className={`w-1.5 h-1.5 rounded-full`} style={{ background: station.onAir ? 'var(--syntax-green)' : 'var(--syntax-red)' }} />
                   {station.onAir ? 'On Air' : 'Off Air'}
                 </span>
                 {onUpdateStation && (
@@ -852,10 +947,10 @@ export default function Map({ stations, selectedStation, onStationSelect, onUpda
                 <div className="flex items-center justify-between gap-2 p-2 bg-muted/30 rounded border border-border/50 mb-2">
                   <span className={`inline-flex items-center gap-1 px-2 py-1 rounded-md text-xs font-medium ${
                     station.inspection68 === 'ตรวจแล้ว'
-                      ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400'
+                      ? 'badge-success'
                       : station.inspection68 === 'ยังไม่ตรวจ'
-                      ? 'bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400'
-                      : 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400'
+                      ? 'badge-warning'
+                      : 'badge-info'
                   }`}>
                     {station.inspection68 === 'ตรวจแล้ว' && '✅'}
                     {station.inspection68 === 'ยังไม่ตรวจ' && '⏳'}
@@ -917,7 +1012,7 @@ export default function Map({ stations, selectedStation, onStationSelect, onUpda
                       disabled={loadingStations.has(station.id)}
                       className={`px-1.5 py-0.5 text-xs rounded font-medium transition-all duration-200 ${
                         station.details === '#deviation'
-                          ? 'bg-red-100 text-red-700 border border-red-300 dark:bg-red-900/30 dark:text-red-400 dark:border-red-700'
+                          ? 'badge-error'
                           : 'bg-muted text-muted-foreground border border-border hover:bg-accent hover:text-accent-foreground'
                       } ${loadingStations.has(station.id) ? 'opacity-50 cursor-not-allowed' : ''}`}
                     >
@@ -933,7 +1028,7 @@ export default function Map({ stations, selectedStation, onStationSelect, onUpda
                       disabled={loadingStations.has(station.id)}
                       className={`px-1.5 py-0.5 text-xs rounded font-medium transition-all duration-200 ${
                         station.details === '#intermod'
-                          ? 'bg-orange-100 text-orange-700 border border-orange-300 dark:bg-orange-900/30 dark:text-orange-400 dark:border-orange-700'
+                          ? 'badge-peach'
                           : 'bg-muted text-muted-foreground border border-border hover:bg-accent hover:text-accent-foreground'
                       } ${loadingStations.has(station.id) ? 'opacity-50 cursor-not-allowed' : ''}`}
                     >
@@ -984,7 +1079,7 @@ export default function Map({ stations, selectedStation, onStationSelect, onUpda
                         {station.genre}
                       </span>
                       {(station.type === 'สถานีหลัก' || station.genre === 'สถานีหลัก') && (
-                        <span className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400 text-xs font-medium">
+                        <span className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded badge-info text-xs font-medium">
                           <span>★</span>
                           <span>Main</span>
                         </span>
@@ -995,11 +1090,9 @@ export default function Map({ stations, selectedStation, onStationSelect, onUpda
 
                 <div className="flex items-center justify-between gap-2 p-2 bg-muted/30 rounded border border-border/50 mb-2">
                   <span className={`inline-flex items-center gap-2 px-2 py-1 rounded-md text-xs font-medium ${
-                    station.onAir
-                      ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400'
-                      : 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400'
+                    station.onAir ? 'badge-success' : 'badge-error'
                   }`}>
-                    <div className={`w-1.5 h-1.5 rounded-full ${station.onAir ? 'bg-green-500' : 'bg-red-500'}`} />
+                    <div className={`w-1.5 h-1.5 rounded-full`} style={{ background: station.onAir ? 'var(--syntax-green)' : 'var(--syntax-red)' }} />
                     {station.onAir ? 'On Air' : 'Off Air'}
                   </span>
                   {onUpdateStation && (
@@ -1030,10 +1123,10 @@ export default function Map({ stations, selectedStation, onStationSelect, onUpda
                   <div className="flex items-center justify-between gap-2 p-2 bg-muted/30 rounded border border-border/50 mb-2">
                     <span className={`inline-flex items-center gap-1 px-2 py-1 rounded-md text-xs font-medium ${
                       station.inspection68 === 'ตรวจแล้ว'
-                        ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400'
+                        ? 'badge-success'
                         : station.inspection68 === 'ยังไม่ตรวจ'
-                        ? 'bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400'
-                        : 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400'
+                        ? 'badge-warning'
+                        : 'badge-info'
                     }`}>
                       {station.inspection68 === 'ตรวจแล้ว' && '✅'}
                       {station.inspection68 === 'ยังไม่ตรวจ' && '⏳'}
@@ -1093,7 +1186,7 @@ export default function Map({ stations, selectedStation, onStationSelect, onUpda
                         disabled={loadingStations.has(station.id)}
                         className={`px-1.5 py-0.5 text-xs rounded font-medium transition-all duration-200 ${
                           station.details === '#deviation'
-                            ? 'bg-red-100 text-red-700 border border-red-300 dark:bg-red-900/30 dark:text-red-400 dark:border-red-700'
+                            ? 'badge-error'
                             : 'bg-muted text-muted-foreground border border-border hover:bg-accent hover:text-accent-foreground'
                         } ${loadingStations.has(station.id) ? 'opacity-50 cursor-not-allowed' : ''}`}
                       >
@@ -1109,7 +1202,7 @@ export default function Map({ stations, selectedStation, onStationSelect, onUpda
                         disabled={loadingStations.has(station.id)}
                         className={`px-1.5 py-0.5 text-xs rounded font-medium transition-all duration-200 ${
                           station.details === '#intermod'
-                            ? 'bg-orange-100 text-orange-700 border border-orange-300 dark:bg-orange-900/30 dark:text-orange-400 dark:border-orange-700'
+                            ? 'badge-peach'
                             : 'bg-muted text-muted-foreground border border-border hover:bg-accent hover:text-accent-foreground'
                         } ${loadingStations.has(station.id) ? 'opacity-50 cursor-not-allowed' : ''}`}
                       >
@@ -1173,6 +1266,7 @@ export default function Map({ stations, selectedStation, onStationSelect, onUpda
         />
 
         <LocationTracker onLocationUpdate={setUserLocation} />
+        {flyToStations && <FlyToHighlightedStations target={flyToStations} />}
 
         {userLocation && (
           <Marker
