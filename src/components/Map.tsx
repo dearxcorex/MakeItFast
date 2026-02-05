@@ -273,6 +273,7 @@ export default function Map({ stations, selectedStation, onStationSelect, onUpda
     const stationsToCheck = Array.isArray(stationOrGroup) ? stationOrGroup : [stationOrGroup];
     const isMultiple = count && count > 1;
     const isMainStation = station.type === 'สถานีหลัก' || station.genre === 'สถานีหลัก';
+    const hasNoRequest = station.submitRequest === 'ไม่ยื่น';
 
     // Check if any station in this group is highlighted
     const isHighlighted = stationsToCheck.some(s => highlightedStationIds.includes(s.id));
@@ -281,20 +282,20 @@ export default function Map({ stations, selectedStation, onStationSelect, onUpda
     let baseIcon;
     if (isHighlighted) {
       baseIcon = highlightedStationIcon;
-    } else if (station.submitRequest === 'ไม่ยื่น') {
+    } else if (hasNoRequest) {
       baseIcon = blackStationIcon;
     } else if (!station.onAir) {
       baseIcon = greyStationIcon;
-    } else if (station.inspection68 === 'ตรวจแล้ว') {
+    } else if (station.inspection69 === 'ตรวจแล้ว') {
       baseIcon = greenStationIcon;
-    } else if (station.inspection68 === 'ยังไม่ตรวจ') {
+    } else if (station.inspection69 === 'ยังไม่ตรวจ') {
       baseIcon = redStationIcon;
     } else {
       baseIcon = redStationIcon;
     }
 
-    // Create custom icon with main station symbol, count badge, or highlight effect
-    if (isMainStation || isMultiple || isHighlighted) {
+    // Create custom icon with main station symbol, count badge, warning badge, or highlight effect
+    if (isMainStation || isMultiple || isHighlighted || hasNoRequest) {
       const iconWidth = isHighlighted ? 30 : 25;
       const iconHeight = isHighlighted ? 49 : 41;
       return L.divIcon({
@@ -323,7 +324,27 @@ export default function Map({ stations, selectedStation, onStationSelect, onUpda
             <img src="${baseIcon.options.iconUrl}"
                  style="width: ${iconWidth}px; height: ${iconHeight}px; position: relative; z-index: 1;"
                  alt="Station marker" />
-            ${isMainStation ? `
+            ${hasNoRequest && !isMultiple && !isMainStation && !isHighlighted ? `
+              <div style="
+                position: absolute;
+                top: -8px;
+                right: -8px;
+                background: #ef4444;
+                color: white;
+                border-radius: 50%;
+                width: 18px;
+                height: 18px;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                font-size: 12px;
+                font-weight: bold;
+                border: 2px solid white;
+                box-shadow: 0 1px 3px rgba(0,0,0,0.3);
+                z-index: 2;
+              ">!</div>
+            ` : ''}
+            ${isMainStation && !isMultiple ? `
               <div style="
                 position: absolute;
                 top: -6px;
@@ -348,7 +369,7 @@ export default function Map({ stations, selectedStation, onStationSelect, onUpda
                 position: absolute;
                 top: -8px;
                 right: -8px;
-                background: #ff4444;
+                background: ${hasNoRequest ? '#ef4444' : '#ff4444'};
                 color: white;
                 border-radius: 50%;
                 width: 18px;
@@ -361,7 +382,7 @@ export default function Map({ stations, selectedStation, onStationSelect, onUpda
                 border: 2px solid white;
                 box-shadow: 0 1px 3px rgba(0,0,0,0.3);
                 z-index: 2;
-              ">${count}</div>
+              ">${hasNoRequest ? '!' + count : count}</div>
             ` : ''}
             ${isMultiple && isMainStation ? `
               <div style="
@@ -383,7 +404,7 @@ export default function Map({ stations, selectedStation, onStationSelect, onUpda
                 z-index: 2;
               ">★${count}</div>
             ` : ''}
-            ${isHighlighted && !isMultiple && !isMainStation ? `
+            ${isHighlighted && !isMultiple && !isMainStation && !hasNoRequest ? `
               <div style="
                 position: absolute;
                 top: -8px;
@@ -433,7 +454,7 @@ export default function Map({ stations, selectedStation, onStationSelect, onUpda
   // Component to render single station popup
   const SingleStationPopup = ({ station, distance }: { station: FMStation; distance: number | null }) => {
     const [loadingOnAir, setLoadingOnAir] = useState(false);
-    const [loadingInspection, setLoadingInspection] = useState(false);
+    const [loadingInspection69, setLoadingInspection69] = useState(false);
 
     const handleOnAirToggle = async (e: React.MouseEvent) => {
       e.preventDefault();
@@ -449,18 +470,19 @@ export default function Map({ stations, selectedStation, onStationSelect, onUpda
       }
     };
 
-    const handleInspectionToggle = async (e: React.MouseEvent) => {
+    const handleInspection69Toggle = async (e: React.MouseEvent) => {
       e.preventDefault();
       e.stopPropagation();
-      if (!onUpdateStation || loadingInspection) return;
-      setLoadingInspection(true);
+      if (!onUpdateStation || loadingInspection69) return;
+      setLoadingInspection69(true);
       try {
-        const newStatus = station.inspection68 === 'ตรวจแล้ว' ? 'ยังไม่ตรวจ' : 'ตรวจแล้ว';
-        await onUpdateStation(station.id, { inspection68: newStatus });
+        // If current status is 'ตรวจแล้ว', toggle to 'ยังไม่ตรวจ', otherwise toggle to 'ตรวจแล้ว'
+        const newStatus = station.inspection69 === 'ตรวจแล้ว' ? 'ยังไม่ตรวจ' : 'ตรวจแล้ว';
+        await onUpdateStation(station.id, { inspection69: newStatus });
         // Small delay to show success state
         await new Promise(resolve => setTimeout(resolve, 500));
       } finally {
-        setLoadingInspection(false);
+        setLoadingInspection69(false);
       }
     };
 
@@ -500,57 +522,58 @@ export default function Map({ stations, selectedStation, onStationSelect, onUpda
             {station.onAir ? 'On Air' : 'Off Air'}
           </span>
           {onUpdateStation && (
-            <button
-              onClick={handleOnAirToggle}
-              disabled={loadingOnAir}
-              className={`px-2 sm:px-3 py-1 text-xs rounded-md font-medium whitespace-nowrap transition-all duration-200 ${
-                loadingOnAir
-                  ? 'bg-muted text-muted-foreground cursor-not-allowed'
-                  : 'bg-secondary text-secondary-foreground hover:bg-accent'
-              }`}
-              aria-label={`Toggle ${station.name} broadcast status - currently ${station.onAir ? 'on air' : 'off air'}`}
-            >
-              {loadingOnAir ? (
-                <div className="flex items-center gap-1">
-                  <svg className="w-3 h-3 animate-spin" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
-                  </svg>
-                  <span>Saving...</span>
-                </div>
-              ) : (
-                station.onAir ? 'Set Off' : 'Set On'
-              )}
-            </button>
+            station.submitRequest === 'ไม่ยื่น' && !station.onAir ? (
+              <span className="px-2 sm:px-3 py-1 text-xs rounded-md font-medium text-muted-foreground bg-muted">
+                ไม่ยื่นคำขอ
+              </span>
+            ) : (
+              <button
+                onClick={handleOnAirToggle}
+                disabled={loadingOnAir}
+                className={`px-2 sm:px-3 py-1 text-xs rounded-md font-medium whitespace-nowrap transition-all duration-200 ${
+                  loadingOnAir
+                    ? 'bg-muted text-muted-foreground cursor-not-allowed'
+                    : 'bg-secondary text-secondary-foreground hover:bg-accent'
+                }`}
+                aria-label={`Toggle ${station.name} broadcast status - currently ${station.onAir ? 'on air' : 'off air'}`}
+              >
+                {loadingOnAir ? (
+                  <div className="flex items-center gap-1">
+                    <svg className="w-3 h-3 animate-spin" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                    </svg>
+                    <span>Saving...</span>
+                  </div>
+                ) : (
+                  station.onAir ? 'Set Off' : 'Set On'
+                )}
+              </button>
+            )
           )}
         </div>
       </div>
 
-      {station.inspection68 && (
-        <div className="flex items-center justify-between gap-2 p-2 bg-muted/20 rounded-lg border border-border/50 mb-3">
-          <span className={`inline-flex items-center gap-2 px-2 py-1 rounded-md text-xs font-medium ${
-            station.inspection68 === 'ตรวจแล้ว'
-              ? 'badge-success'
-              : station.inspection68 === 'ยังไม่ตรวจ'
-              ? 'badge-warning'
-              : 'badge-info'
-          }`}>
-            {station.inspection68 === 'ตรวจแล้ว' && '✅'}
-            {station.inspection68 === 'ยังไม่ตรวจ' && '⏳'}
-            {station.inspection68 === 'ตรงตามมาตรฐาน' && '🎯'}
-            <span className="break-words">{station.inspection68}</span>
-          </span>
+      <div className="flex items-center justify-between gap-2 p-2 bg-muted/20 rounded-lg border border-border/50 mb-3">
+        <span className={`inline-flex items-center gap-2 px-2 py-1 rounded-md text-xs font-medium ${
+          station.inspection69 === 'ตรวจแล้ว'
+            ? 'badge-success'
+            : 'badge-warning'
+        }`}>
+          {station.inspection69 === 'ตรวจแล้ว' ? '✅' : '⏳'}
+          <span className="break-words">{station.inspection69 || 'ยังไม่ตรวจ'}</span>
+        </span>
           {onUpdateStation && (
             <button
-              onClick={handleInspectionToggle}
-              disabled={loadingInspection}
+              onClick={handleInspection69Toggle}
+              disabled={loadingInspection69}
               className={`px-2 sm:px-3 py-1 text-xs rounded-md font-medium whitespace-nowrap transition-all duration-200 ${
-                loadingInspection
+                loadingInspection69
                   ? 'bg-muted text-muted-foreground cursor-not-allowed'
                   : 'bg-primary text-primary-foreground hover:bg-primary/90'
               }`}
-              aria-label={`Toggle ${station.name} inspection status - currently ${station.inspection68 || 'not inspected'}`}
+              aria-label={`Toggle ${station.name} inspection status - currently ${station.inspection69 || 'not inspected'}`}
             >
-              {loadingInspection ? (
+              {loadingInspection69 ? (
                 <div className="flex items-center gap-1">
                   <svg className="w-3 h-3 animate-spin" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
@@ -558,14 +581,13 @@ export default function Map({ stations, selectedStation, onStationSelect, onUpda
                   <span>Saving...</span>
                 </div>
               ) : (
-                station.inspection68 === 'ยังไม่ตรวจ' ? 'Inspect' : 'Inspected'
+                station.inspection69 === 'ตรวจแล้ว' ? 'Inspected' : 'Inspect'
               )}
             </button>
           )}
         </div>
-      )}
 
-      {/* Inspection Date Only */}
+      {/* Inspection Date for 69 */}
       {station.dateInspected && (
         <div className="flex items-center gap-2 text-xs sm:text-sm text-muted-foreground bg-muted/20 p-2 rounded-lg border border-border/50 mb-3">
           <svg className="w-3 h-3 sm:w-4 sm:h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -713,7 +735,7 @@ export default function Map({ stations, selectedStation, onStationSelect, onUpda
       };
     }, [isMobile]);
 
-    const handleStationToggle = async (e: React.MouseEvent, stationId: string | number, field: 'onAir' | 'inspection68' | 'details', value: boolean | string) => {
+    const handleStationToggle = async (e: React.MouseEvent, stationId: string | number, field: 'onAir' | 'inspection68' | 'inspection69' | 'details', value: boolean | string) => {
       e.stopPropagation();
       if (!onUpdateStation || loadingStations.has(stationId)) return;
 
@@ -885,13 +907,6 @@ export default function Map({ stations, selectedStation, onStationSelect, onUpda
                 pointerEvents: 'auto' // Ensure all interactions work
               }}
             >
-              {station.unwanted && (
-                <div className="flex justify-end mb-2">
-                  <span className="text-xs font-medium text-orange-600 bg-orange-100 dark:bg-orange-900/30 dark:text-orange-400 px-2 py-1 rounded">
-                    ⚠️ Unwanted
-                  </span>
-                </div>
-              )}
               <div className="flex items-start gap-2 mb-2">
                 <div className="min-w-0 flex-1">
                   <h4 className="font-semibold text-sm text-card-foreground break-words">{station.name}</h4>
@@ -920,54 +935,18 @@ export default function Map({ stations, selectedStation, onStationSelect, onUpda
                   {station.onAir ? 'On Air' : 'Off Air'}
                 </span>
                 {onUpdateStation && (
-                  <button
-                    onClick={(e) => handleStationToggle(e, station.id, 'onAir', !station.onAir)}
-                    disabled={loadingStations.has(station.id)}
-                    className={`px-2 py-1 text-xs rounded font-medium whitespace-nowrap transition-all duration-200 ${
-                      loadingStations.has(station.id)
-                        ? 'bg-muted text-muted-foreground cursor-not-allowed'
-                        : 'bg-secondary text-secondary-foreground hover:bg-accent'
-                    }`}
-                  >
-                    {loadingStations.has(station.id) ? (
-                      <div className="flex items-center gap-1">
-                        <svg className="w-2.5 h-2.5 animate-spin" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
-                        </svg>
-                        <span>Save...</span>
-                      </div>
-                    ) : (
-                      station.onAir ? 'Set Off' : 'Set On'
-                    )}
-                  </button>
-                )}
-              </div>
-
-              {station.inspection68 && (
-                <div className="flex items-center justify-between gap-2 p-2 bg-muted/30 rounded border border-border/50 mb-2">
-                  <span className={`inline-flex items-center gap-1 px-2 py-1 rounded-md text-xs font-medium ${
-                    station.inspection68 === 'ตรวจแล้ว'
-                      ? 'badge-success'
-                      : station.inspection68 === 'ยังไม่ตรวจ'
-                      ? 'badge-warning'
-                      : 'badge-info'
-                  }`}>
-                    {station.inspection68 === 'ตรวจแล้ว' && '✅'}
-                    {station.inspection68 === 'ยังไม่ตรวจ' && '⏳'}
-                    {station.inspection68 === 'ตรงตามมาตรฐาน' && '🎯'}
-                    <span className="break-words text-xs">{station.inspection68}</span>
-                  </span>
-                  {onUpdateStation && (
+                  station.submitRequest === 'ไม่ยื่น' && !station.onAir ? (
+                    <span className="px-2 py-1 text-xs rounded font-medium text-muted-foreground bg-muted">
+                      ไม่ยื่นคำขอ
+                    </span>
+                  ) : (
                     <button
-                      onClick={(e) => {
-                        const newStatus = station.inspection68 === 'ตรวจแล้ว' ? 'ยังไม่ตรวจ' : 'ตรวจแล้ว';
-                        handleStationToggle(e, station.id, 'inspection68', newStatus);
-                      }}
+                      onClick={(e) => handleStationToggle(e, station.id, 'onAir', !station.onAir)}
                       disabled={loadingStations.has(station.id)}
                       className={`px-2 py-1 text-xs rounded font-medium whitespace-nowrap transition-all duration-200 ${
                         loadingStations.has(station.id)
                           ? 'bg-muted text-muted-foreground cursor-not-allowed'
-                          : 'bg-primary text-primary-foreground hover:bg-primary/90'
+                          : 'bg-secondary text-secondary-foreground hover:bg-accent'
                       }`}
                     >
                       {loadingStations.has(station.id) ? (
@@ -978,14 +957,50 @@ export default function Map({ stations, selectedStation, onStationSelect, onUpda
                           <span>Save...</span>
                         </div>
                       ) : (
-                        station.inspection68 === 'ยังไม่ตรวจ' ? 'Inspect' : 'Inspected'
+                        station.onAir ? 'Set Off' : 'Set On'
                       )}
                     </button>
-                  )}
-                </div>
-              )}
+                  )
+                )}
+              </div>
 
-              {/* Inspection Date Only for Multiple Stations */}
+              <div className="flex items-center justify-between gap-2 p-2 bg-muted/30 rounded border border-border/50 mb-2">
+                <span className={`inline-flex items-center gap-1 px-2 py-1 rounded-md text-xs font-medium ${
+                  station.inspection69 === 'ตรวจแล้ว'
+                    ? 'badge-success'
+                    : 'badge-warning'
+                }`}>
+                  {station.inspection69 === 'ตรวจแล้ว' ? '✅' : '⏳'}
+                  <span className="break-words text-xs">{station.inspection69 || 'ยังไม่ตรวจ'}</span>
+                </span>
+                {onUpdateStation && (
+                  <button
+                    onClick={(e) => {
+                      const newStatus = station.inspection69 === 'ตรวจแล้ว' ? 'ยังไม่ตรวจ' : 'ตรวจแล้ว';
+                      handleStationToggle(e, station.id, 'inspection69', newStatus);
+                    }}
+                    disabled={loadingStations.has(station.id)}
+                    className={`px-2 py-1 text-xs rounded font-medium whitespace-nowrap transition-all duration-200 ${
+                      loadingStations.has(station.id)
+                        ? 'bg-muted text-muted-foreground cursor-not-allowed'
+                        : 'bg-primary text-primary-foreground hover:bg-primary/90'
+                    }`}
+                  >
+                    {loadingStations.has(station.id) ? (
+                      <div className="flex items-center gap-1">
+                        <svg className="w-2.5 h-2.5 animate-spin" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                        </svg>
+                        <span>Save...</span>
+                      </div>
+                    ) : (
+                      station.inspection69 === 'ตรวจแล้ว' ? 'Inspected' : 'Inspect'
+                    )}
+                  </button>
+                )}
+              </div>
+
+              {/* Inspection Date for 69 - Multiple Stations */}
               {station.dateInspected && (
                 <div className="flex items-center gap-2 text-xs text-muted-foreground bg-muted/30 p-2 rounded border border-border/50 mt-2">
                   <svg className="w-3 h-3 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -1007,7 +1022,7 @@ export default function Map({ stations, selectedStation, onStationSelect, onUpda
                         e.preventDefault();
                         e.stopPropagation();
                         const newDetails = station.details === '#deviation' ? '' : '#deviation';
-                        handleStationToggle(e, station.id, 'details' as 'onAir' | 'inspection68' | 'details', newDetails);
+                        handleStationToggle(e, station.id, 'details', newDetails);
                       }}
                       disabled={loadingStations.has(station.id)}
                       className={`px-1.5 py-0.5 text-xs rounded font-medium transition-all duration-200 ${
@@ -1023,7 +1038,7 @@ export default function Map({ stations, selectedStation, onStationSelect, onUpda
                         e.preventDefault();
                         e.stopPropagation();
                         const newDetails = station.details === '#intermod' ? '' : '#intermod';
-                        handleStationToggle(e, station.id, 'details' as 'onAir' | 'inspection68' | 'details', newDetails);
+                        handleStationToggle(e, station.id, 'details', newDetails);
                       }}
                       disabled={loadingStations.has(station.id)}
                       className={`px-1.5 py-0.5 text-xs rounded font-medium transition-all duration-200 ${
@@ -1061,11 +1076,6 @@ export default function Map({ stations, selectedStation, onStationSelect, onUpda
                     <span className="text-xs font-medium text-primary bg-primary/10 px-2 py-1 rounded">
                       Station {index + 1} of {stationGroup.length}
                     </span>
-                    {station.unwanted && (
-                      <span className="text-xs font-medium text-orange-600 bg-orange-100 dark:bg-orange-900/30 dark:text-orange-400 px-2 py-1 rounded">
-                        ⚠️ Unwanted
-                      </span>
-                    )}
                   </div>
                 )}
                 <div className="flex items-start gap-2 mb-2">
@@ -1096,54 +1106,18 @@ export default function Map({ stations, selectedStation, onStationSelect, onUpda
                     {station.onAir ? 'On Air' : 'Off Air'}
                   </span>
                   {onUpdateStation && (
-                    <button
-                      onClick={(e) => handleStationToggle(e, station.id, 'onAir', !station.onAir)}
-                      disabled={loadingStations.has(station.id)}
-                      className={`px-2 py-1 text-xs rounded font-medium whitespace-nowrap transition-all duration-200 ${
-                        loadingStations.has(station.id)
-                          ? 'bg-muted text-muted-foreground cursor-not-allowed'
-                          : 'bg-secondary text-secondary-foreground hover:bg-accent'
-                      }`}
-                    >
-                      {loadingStations.has(station.id) ? (
-                        <div className="flex items-center gap-1">
-                          <svg className="w-2.5 h-2.5 animate-spin" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
-                          </svg>
-                          <span>Save...</span>
-                        </div>
-                      ) : (
-                        station.onAir ? 'Set Off' : 'Set On'
-                      )}
-                    </button>
-                  )}
-                </div>
-
-                {station.inspection68 && (
-                  <div className="flex items-center justify-between gap-2 p-2 bg-muted/30 rounded border border-border/50 mb-2">
-                    <span className={`inline-flex items-center gap-1 px-2 py-1 rounded-md text-xs font-medium ${
-                      station.inspection68 === 'ตรวจแล้ว'
-                        ? 'badge-success'
-                        : station.inspection68 === 'ยังไม่ตรวจ'
-                        ? 'badge-warning'
-                        : 'badge-info'
-                    }`}>
-                      {station.inspection68 === 'ตรวจแล้ว' && '✅'}
-                      {station.inspection68 === 'ยังไม่ตรวจ' && '⏳'}
-                      {station.inspection68 === 'ตรงตามมาตรฐาน' && '🎯'}
-                      <span className="break-words text-xs">{station.inspection68}</span>
-                    </span>
-                    {onUpdateStation && (
+                    station.submitRequest === 'ไม่ยื่น' && !station.onAir ? (
+                      <span className="px-2 py-1 text-xs rounded font-medium text-muted-foreground bg-muted">
+                        ไม่ยื่นคำขอ
+                      </span>
+                    ) : (
                       <button
-                        onClick={(e) => {
-                          const newStatus = station.inspection68 === 'ตรวจแล้ว' ? 'ยังไม่ตรวจ' : 'ตรวจแล้ว';
-                          handleStationToggle(e, station.id, 'inspection68', newStatus);
-                        }}
+                        onClick={(e) => handleStationToggle(e, station.id, 'onAir', !station.onAir)}
                         disabled={loadingStations.has(station.id)}
                         className={`px-2 py-1 text-xs rounded font-medium whitespace-nowrap transition-all duration-200 ${
                           loadingStations.has(station.id)
                             ? 'bg-muted text-muted-foreground cursor-not-allowed'
-                            : 'bg-primary text-primary-foreground hover:bg-primary/90'
+                            : 'bg-secondary text-secondary-foreground hover:bg-accent'
                         }`}
                       >
                         {loadingStations.has(station.id) ? (
@@ -1154,12 +1128,48 @@ export default function Map({ stations, selectedStation, onStationSelect, onUpda
                             <span>Save...</span>
                           </div>
                         ) : (
-                          station.inspection68 === 'ยังไม่ตรวจ' ? 'Inspect' : 'Inspected'
+                          station.onAir ? 'Set Off' : 'Set On'
                         )}
                       </button>
-                    )}
-                  </div>
-                )}
+                    )
+                  )}
+                </div>
+
+                <div className="flex items-center justify-between gap-2 p-2 bg-muted/30 rounded border border-border/50 mb-2">
+                  <span className={`inline-flex items-center gap-1 px-2 py-1 rounded-md text-xs font-medium ${
+                    station.inspection69 === 'ตรวจแล้ว'
+                      ? 'badge-success'
+                      : 'badge-warning'
+                  }`}>
+                    {station.inspection69 === 'ตรวจแล้ว' ? '✅' : '⏳'}
+                    <span className="break-words text-xs">{station.inspection69 || 'ยังไม่ตรวจ'}</span>
+                  </span>
+                  {onUpdateStation && (
+                    <button
+                      onClick={(e) => {
+                        const newStatus = station.inspection69 === 'ตรวจแล้ว' ? 'ยังไม่ตรวจ' : 'ตรวจแล้ว';
+                        handleStationToggle(e, station.id, 'inspection69', newStatus);
+                      }}
+                      disabled={loadingStations.has(station.id)}
+                      className={`px-2 py-1 text-xs rounded font-medium whitespace-nowrap transition-all duration-200 ${
+                        loadingStations.has(station.id)
+                          ? 'bg-muted text-muted-foreground cursor-not-allowed'
+                          : 'bg-primary text-primary-foreground hover:bg-primary/90'
+                      }`}
+                    >
+                      {loadingStations.has(station.id) ? (
+                        <div className="flex items-center gap-1">
+                          <svg className="w-2.5 h-2.5 animate-spin" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                          </svg>
+                          <span>Save...</span>
+                        </div>
+                      ) : (
+                        station.inspection69 === 'ตรวจแล้ว' ? 'Inspected' : 'Inspect'
+                      )}
+                    </button>
+                  )}
+                </div>
 
                 {station.dateInspected && (
                   <div className="flex items-center gap-2 text-xs text-muted-foreground bg-muted/30 p-2 rounded border border-border/50 mt-2">
@@ -1181,7 +1191,7 @@ export default function Map({ stations, selectedStation, onStationSelect, onUpda
                           e.preventDefault();
                           e.stopPropagation();
                           const newDetails = station.details === '#deviation' ? '' : '#deviation';
-                          handleStationToggle(e, station.id, 'details' as 'onAir' | 'inspection68' | 'details', newDetails);
+                          handleStationToggle(e, station.id, 'details', newDetails);
                         }}
                         disabled={loadingStations.has(station.id)}
                         className={`px-1.5 py-0.5 text-xs rounded font-medium transition-all duration-200 ${
@@ -1197,7 +1207,7 @@ export default function Map({ stations, selectedStation, onStationSelect, onUpda
                           e.preventDefault();
                           e.stopPropagation();
                           const newDetails = station.details === '#intermod' ? '' : '#intermod';
-                          handleStationToggle(e, station.id, 'details' as 'onAir' | 'inspection68' | 'details', newDetails);
+                          handleStationToggle(e, station.id, 'details', newDetails);
                         }}
                         disabled={loadingStations.has(station.id)}
                         className={`px-1.5 py-0.5 text-xs rounded font-medium transition-all duration-200 ${

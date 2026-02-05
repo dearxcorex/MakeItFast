@@ -325,6 +325,9 @@ export default function OptimizedFMStationClient({
       if ('inspection68' in updates && updates.inspection68 !== undefined) {
         apiUpdates.inspection68 = updates.inspection68;
       }
+      if ('inspection69' in updates && updates.inspection69 !== undefined) {
+        apiUpdates.inspection69 = updates.inspection69;
+      }
       if ('details' in updates && updates.details !== undefined) {
         apiUpdates.details = updates.details;
       }
@@ -345,10 +348,10 @@ export default function OptimizedFMStationClient({
               onAir: result.data.on_air,
               // Convert boolean back to Thai string for UI
               inspection68: result.data.inspection_68 ? 'ตรวจแล้ว' : 'ยังไม่ตรวจ',
+              inspection69: result.data.inspection_69 ? 'ตรวจแล้ว' : 'ยังไม่ตรวจ',
               dateInspected: result.data.date_inspected,
               details: result.data.details,
-              unwanted: result.data.unwanted === 'true' || result.data.unwanted === true,
-              submitRequest: result.data.submit_a_request
+              submitRequest: result.data.submit_a_request ? 'ยื่น' : 'ไม่ยื่น'
             };
 
             // Update stations with server data

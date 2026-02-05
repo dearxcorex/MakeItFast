@@ -13,11 +13,28 @@ export async function PATCH(
     }
 
     const body = await request.json();
-    const { onAir, inspection68, details } = body;
+    const { onAir, inspection68, inspection69, details } = body;
 
     // Build update object with only provided fields
     const updates: Record<string, boolean | string | null> = {};
-    if (onAir !== undefined) updates.on_air = onAir;
+
+    // If trying to set on_air, check if station has submitted a request
+    if (onAir !== undefined) {
+      if (onAir === true) {
+        // Check if station has submitted a request before allowing on_air
+        const station = await prisma.fm_station.findUnique({
+          where: { id_fm: stationId },
+          select: { submit_a_request: true }
+        });
+
+        if (!station?.submit_a_request) {
+          return NextResponse.json({
+            error: 'Cannot set on_air to true: station has not submitted a request'
+          }, { status: 400 });
+        }
+      }
+      updates.on_air = onAir;
+    }
     if (details !== undefined) updates.details = details;
     if (inspection68 !== undefined) {
       // Convert string status to boolean
@@ -25,6 +42,18 @@ export async function PATCH(
 
       // Auto-set current date when inspection status changes to true
       if (updates.inspection_68) {
+        const currentDate = new Date().toISOString().split('T')[0];
+        updates.date_inspected = currentDate;
+      } else {
+        updates.date_inspected = null;
+      }
+    }
+    if (inspection69 !== undefined) {
+      // Convert string status to boolean
+      updates.inspection_69 = inspection69 === 'ตรวจแล้ว' || inspection69 === true;
+
+      // Auto-set current date when inspection_69 status changes to true
+      if (updates.inspection_69) {
         const currentDate = new Date().toISOString().split('T')[0];
         updates.date_inspected = currentDate;
       } else {

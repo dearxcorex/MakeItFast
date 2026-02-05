@@ -16,11 +16,10 @@ model fm_station {
   district         String?
   province         String?
   type             String?
-  permit           String?
-  inspection_67    Boolean? @default(false)
   inspection_68    Boolean? @default(false)
+  inspection_69    Boolean? @default(false)
   on_air           Boolean? @default(false)
-  unwanted         Boolean? @default(false)
   submit_a_request Boolean? @default(false)
   date_inspected   String?
+  note             String?
 }
