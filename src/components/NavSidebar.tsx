@@ -7,15 +7,17 @@
 
 import { useState } from 'react';
 
+type ActiveTab = 'stations' | 'intermod' | 'settings';
+
 type NavItem = {
-  id: string;
+  id: ActiveTab;
   label: string;
   icon: React.ReactNode;
 };
 
 interface NavSidebarProps {
-  activeTab: string;
-  onTabChange: (tab: string) => void;
+  activeTab: ActiveTab;
+  onTabChange: (tab: ActiveTab) => void;
 }
 
 const navItems: NavItem[] = [
