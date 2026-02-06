@@ -29,7 +29,7 @@ export default async function FMStationsFetcher() {
       inspection68: station.inspection_68 ? 'ตรวจแล้ว' : 'ยังไม่ตรวจ',
       inspection69: station.inspection_69 ? 'ตรวจแล้ว' : 'ยังไม่ตรวจ',
       dateInspected: station.date_inspected || undefined,
-      details: undefined,
+      details: station.note || undefined,
       onAir: station.on_air || false,
       submitRequest: station.submit_a_request ? 'ยื่น' : 'ไม่ยื่น',
       createdAt: undefined,

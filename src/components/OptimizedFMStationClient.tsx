@@ -9,6 +9,7 @@ import { useState, useEffect, useCallback, useRef } from 'react';
 import dynamic from 'next/dynamic';
 import { FMStation, UserLocation, FilterType } from '@/types/station';
 import { useOptimizedFilters, useOptimizedCityFilter, useMemoryMonitor } from '@/hooks/useOptimizedFilters';
+import { useTheme } from '@/contexts/ThemeContext';
 
 // Tab type for navigation
 type ActiveTab = 'stations' | 'intermod' | 'settings';
@@ -59,14 +60,20 @@ export default function OptimizedFMStationClient({
   initialProvinces,
   initialInspectionStatuses
 }: OptimizedFMStationClientProps) {
+  // Theme
+  const { theme, toggleTheme } = useTheme();
+
   // State management
   const [selectedStation, setSelectedStation] = useState<FMStation | undefined>();
   const [userLocation, setUserLocation] = useState<UserLocation | undefined>();
   const [stations, setStations] = useState<FMStation[]>(initialStations);
+  const stationsRef = useRef(stations);
+  stationsRef.current = stations;
   const [filters, setFilters] = useState<FilterType>({});
   const [activeTab, setActiveTab] = useState<ActiveTab>('stations');
   const [highlightedStationIds, setHighlightedStationIds] = useState<(string | number)[]>([]);
   const [flyToStations, setFlyToStations] = useState<{ lat1: number; lng1: number; lat2: number; lng2: number; timestamp: number } | null>(null);
+  const [showFilters, setShowFilters] = useState(false);
 
   // Performance monitoring
   const { checkMemoryUsage } = useMemoryMonitor();
@@ -292,9 +299,14 @@ export default function OptimizedFMStationClient({
   }, []);
 
   // Stable optimistic updates without blinking
+  // Uses stationsRef to avoid stale closures - Leaflet popups hold callback references
+  // that don't update when stations changes, so we read from the ref instead.
   const handleUpdateStation = useCallback(async (stationId: string | number, updates: Partial<FMStation>) => {
-    const originalStation = stations.find(station => station.id === stationId);
-    if (!originalStation) return;
+    const originalStation = stationsRef.current.find(station => station.id === stationId);
+    if (!originalStation) {
+      console.error(`Station ${stationId} not found in ${stationsRef.current.length} stations`);
+      return;
+    }
 
     console.log(`🔄 Updating station ${stationId}:`, updates);
 
@@ -332,58 +344,53 @@ export default function OptimizedFMStationClient({
         apiUpdates.details = updates.details;
       }
 
-      // Send to server and wait for response to get auto-generated fields like dateInspected
-      fetch(`/api/stations/${numericId}`, {
+      // Send to server and await response to get auto-generated fields like dateInspected
+      const response = await fetch(`/api/stations/${numericId}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(apiUpdates),
-      }).then(async response => {
-        if (response.ok) {
-          const result = await response.json();
-          console.log(`✅ Station ${stationId} successfully updated on server`, result);
-
-          // Update with server response data (includes auto-generated dateInspected)
-          if (result.data) {
-            const serverData = {
-              onAir: result.data.on_air,
-              // Convert boolean back to Thai string for UI
-              inspection68: result.data.inspection_68 ? 'ตรวจแล้ว' : 'ยังไม่ตรวจ',
-              inspection69: result.data.inspection_69 ? 'ตรวจแล้ว' : 'ยังไม่ตรวจ',
-              dateInspected: result.data.date_inspected,
-              details: result.data.details,
-              submitRequest: result.data.submit_a_request ? 'ยื่น' : 'ไม่ยื่น'
-            };
-
-            // Update stations with server data
-            setStations(prevStations =>
-              prevStations.map(station =>
-                station.id === stationId
-                  ? { ...station, ...serverData }
-                  : station
-              )
-            );
-
-            // Update selected station with server data
-            setSelectedStation(prevSelected =>
-              prevSelected && prevSelected.id === stationId
-                ? { ...prevSelected, ...serverData }
-                : prevSelected
-            );
-          }
-        } else {
-          console.warn(`⚠️ Server update failed for station ${stationId}, but UI remains optimistic`);
-        }
-      }).catch(error => {
-        console.warn(`⚠️ Network error for station ${stationId}:`, error);
-        // Don't revert optimistic update to prevent blinking
-        // Real-time will sync when connection is restored
       });
 
+      if (response.ok) {
+        const result = await response.json();
+        console.log(`✅ Station ${stationId} successfully updated on server`, result);
+
+        // Update with server response data (includes auto-generated dateInspected)
+        if (result.data) {
+          const serverData = {
+            onAir: result.data.on_air,
+            // Convert boolean back to Thai string for UI
+            inspection68: result.data.inspection_68 ? 'ตรวจแล้ว' : 'ยังไม่ตรวจ',
+            inspection69: result.data.inspection_69 ? 'ตรวจแล้ว' : 'ยังไม่ตรวจ',
+            dateInspected: result.data.date_inspected,
+            details: result.data.note,
+            submitRequest: result.data.submit_a_request ? 'ยื่น' : 'ไม่ยื่น'
+          };
+
+          // Update stations with server data
+          setStations(prevStations =>
+            prevStations.map(station =>
+              station.id === stationId
+                ? { ...station, ...serverData }
+                : station
+            )
+          );
+
+          // Update selected station with server data
+          setSelectedStation(prevSelected =>
+            prevSelected && prevSelected.id === stationId
+              ? { ...prevSelected, ...serverData }
+              : prevSelected
+          );
+        }
+      } else {
+        console.warn(`Server update failed for station ${stationId}: ${response.status}`);
+      }
     } catch (error) {
-      console.error('❌ Error in optimistic update:', error);
-      // Even on error, keep optimistic update to prevent blinking
+      console.warn(`Network error for station ${stationId}:`, error);
+      // Don't revert optimistic update to prevent blinking
     }
-  }, [stations]);
+  }, []);
 
 
   // Performance warning for large datasets
@@ -486,6 +493,23 @@ export default function OptimizedFMStationClient({
                     <div className="w-2.5 h-2.5 rounded-full bg-gray-400" title="Off Air" />
                   </div>
                 </div>
+
+                {/* Theme Toggle */}
+                <button
+                  onClick={toggleTheme}
+                  className="flex items-center justify-center w-10 h-10 glass-card rounded-xl hover:bg-secondary/50 transition-all"
+                  aria-label={`Switch to ${theme === 'dark' ? 'light' : 'dark'} mode`}
+                >
+                  {theme === 'dark' ? (
+                    <svg className="w-5 h-5 text-yellow-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z" />
+                    </svg>
+                  ) : (
+                    <svg className="w-5 h-5 text-muted-foreground" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z" />
+                    </svg>
+                  )}
+                </button>
               </div>
 
               {/* Mobile Stats */}
@@ -500,6 +524,22 @@ export default function OptimizedFMStationClient({
                   <div className="w-1.5 h-1.5 bg-red-500 rounded-full" />
                   <span className="text-xs text-red-400">{filteredStations.filter(s => !s.onAir).length}</span>
                 </div>
+                <div className="w-px h-3 bg-border" />
+                <button
+                  onClick={toggleTheme}
+                  className="flex items-center justify-center w-8 h-8 rounded-lg hover:bg-secondary/50 transition-all"
+                  aria-label={`Switch to ${theme === 'dark' ? 'light' : 'dark'} mode`}
+                >
+                  {theme === 'dark' ? (
+                    <svg className="w-4 h-4 text-yellow-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z" />
+                    </svg>
+                  ) : (
+                    <svg className="w-4 h-4 text-muted-foreground" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z" />
+                    </svg>
+                  )}
+                </button>
               </div>
             </div>
           </header>
@@ -511,9 +551,9 @@ export default function OptimizedFMStationClient({
               <div className="flex-1 flex flex-col gap-2">
                 {/* Filter Bar */}
                 <div className="glass-card rounded-xl p-3">
-                  <div className="flex flex-wrap items-center gap-2">
-                    {/* Search Input */}
-                    <div className="relative flex-1 min-w-[180px]">
+                  <div className="flex items-center gap-2">
+                    {/* Search Input - always visible */}
+                    <div className="relative flex-1 min-w-0">
                       <svg className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-muted-foreground" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
                       </svg>
@@ -536,84 +576,108 @@ export default function OptimizedFMStationClient({
                       )}
                     </div>
 
-                    {/* Province Select */}
-                    <select
-                      value={filters.province || ''}
-                      onChange={(e) => setFilters({ ...filters, province: e.target.value || undefined, city: undefined })}
-                      className="px-3 py-2 text-sm border border-border rounded-lg bg-background focus:ring-2 focus:ring-primary focus:border-transparent min-w-[140px]"
+                    {/* Filter toggle button - mobile only */}
+                    <button
+                      onClick={() => setShowFilters(!showFilters)}
+                      className="lg:hidden relative flex items-center justify-center w-10 h-10 rounded-lg border border-border bg-background hover:bg-muted transition-all flex-shrink-0"
+                      aria-label="Toggle filters"
                     >
-                      <option value="">All Provinces</option>
-                      {initialProvinces.map(province => (
-                        <option key={province} value={province}>{province}</option>
-                      ))}
-                    </select>
+                      <svg className="w-4 h-4 text-muted-foreground" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z" />
+                      </svg>
+                      {(() => {
+                        const activeFilterCount = [filters.province, filters.city, filters.onAir !== undefined ? 'set' : undefined, filters.inspection68].filter(Boolean).length;
+                        return activeFilterCount > 0 ? (
+                          <span className="absolute -top-1 -right-1 w-4 h-4 bg-primary text-primary-foreground text-[10px] font-bold rounded-full flex items-center justify-center">
+                            {activeFilterCount}
+                          </span>
+                        ) : null;
+                      })()}
+                    </button>
+                  </div>
 
-                    {/* City Select */}
-                    <select
-                      value={filters.city || ''}
-                      onChange={(e) => setFilters({ ...filters, city: e.target.value || undefined })}
-                      className={`px-3 py-2 text-sm border border-border rounded-lg bg-background focus:ring-2 focus:ring-primary focus:border-transparent min-w-[140px] ${!filters.province ? 'opacity-50' : ''}`}
-                      disabled={!filters.province}
-                    >
-                      <option value="">{filters.province ? 'All Cities' : 'Select province'}</option>
-                      {filters.province && initialCities
-                        .filter(city => stations.some(s => s.state === filters.province && s.city === city))
-                        .map(city => (
-                          <option key={city} value={city}>{city}</option>
-                        ))
-                      }
-                    </select>
+                  {/* Collapsible filters - mobile: toggle, desktop: always show */}
+                  <div className={`${showFilters ? 'max-h-[200px] opacity-100 mt-2' : 'max-h-0 opacity-0'} lg:max-h-none lg:opacity-100 lg:mt-2 overflow-hidden transition-all duration-200 ease-in-out`}>
+                    <div className="flex flex-wrap items-center gap-2">
+                      {/* Province Select */}
+                      <select
+                        value={filters.province || ''}
+                        onChange={(e) => setFilters({ ...filters, province: e.target.value || undefined, city: undefined })}
+                        className="px-3 py-2 text-sm border border-border rounded-lg bg-background focus:ring-2 focus:ring-primary focus:border-transparent min-w-[140px]"
+                      >
+                        <option value="">All Provinces</option>
+                        {initialProvinces.map(province => (
+                          <option key={province} value={province}>{province}</option>
+                        ))}
+                      </select>
 
-                    {/* On Air Toggle */}
-                    <div className="flex gap-1">
-                      <button
-                        onClick={() => setFilters({ ...filters, onAir: filters.onAir === true ? undefined : true })}
-                        className={`flex items-center gap-1.5 px-3 py-2 text-xs font-medium rounded-lg border transition-all cursor-pointer ${
-                          filters.onAir === true
-                            ? 'bg-green-500 text-white border-green-500'
-                            : 'bg-background border-border hover:border-green-500/50'
-                        }`}
+                      {/* City Select */}
+                      <select
+                        value={filters.city || ''}
+                        onChange={(e) => setFilters({ ...filters, city: e.target.value || undefined })}
+                        className={`px-3 py-2 text-sm border border-border rounded-lg bg-background focus:ring-2 focus:ring-primary focus:border-transparent min-w-[140px] ${!filters.province ? 'opacity-50' : ''}`}
+                        disabled={!filters.province}
                       >
-                        <div className={`w-2 h-2 rounded-full ${filters.onAir === true ? 'bg-white' : 'bg-green-500'}`} />
-                        On Air
-                      </button>
-                      <button
-                        onClick={() => setFilters({ ...filters, onAir: filters.onAir === false ? undefined : false })}
-                        className={`flex items-center gap-1.5 px-3 py-2 text-xs font-medium rounded-lg border transition-all cursor-pointer ${
-                          filters.onAir === false
-                            ? 'bg-red-500 text-white border-red-500'
-                            : 'bg-background border-border hover:border-red-500/50'
-                        }`}
+                        <option value="">{filters.province ? 'All Cities' : 'Select province'}</option>
+                        {filters.province && initialCities
+                          .filter(city => stations.some(s => s.state === filters.province && s.city === city))
+                          .map(city => (
+                            <option key={city} value={city}>{city}</option>
+                          ))
+                        }
+                      </select>
+
+                      {/* On Air Toggle */}
+                      <div className="flex gap-1">
+                        <button
+                          onClick={() => setFilters({ ...filters, onAir: filters.onAir === true ? undefined : true })}
+                          className={`flex items-center gap-1.5 px-3 py-2 text-xs font-medium rounded-lg border transition-all cursor-pointer ${
+                            filters.onAir === true
+                              ? 'bg-green-500 text-white border-green-500'
+                              : 'bg-background border-border hover:border-green-500/50'
+                          }`}
+                        >
+                          <div className={`w-2 h-2 rounded-full ${filters.onAir === true ? 'bg-white' : 'bg-green-500'}`} />
+                          On Air
+                        </button>
+                        <button
+                          onClick={() => setFilters({ ...filters, onAir: filters.onAir === false ? undefined : false })}
+                          className={`flex items-center gap-1.5 px-3 py-2 text-xs font-medium rounded-lg border transition-all cursor-pointer ${
+                            filters.onAir === false
+                              ? 'bg-red-500 text-white border-red-500'
+                              : 'bg-background border-border hover:border-red-500/50'
+                          }`}
+                        >
+                          <div className={`w-2 h-2 rounded-full ${filters.onAir === false ? 'bg-white' : 'bg-red-500'}`} />
+                          Off Air
+                        </button>
+                      </div>
+
+                      {/* Inspection Status */}
+                      <select
+                        value={filters.inspection68 || ''}
+                        onChange={(e) => setFilters({ ...filters, inspection68: e.target.value || undefined })}
+                        className="px-3 py-2 text-sm border border-border rounded-lg bg-background focus:ring-2 focus:ring-primary focus:border-transparent min-w-[140px]"
                       >
-                        <div className={`w-2 h-2 rounded-full ${filters.onAir === false ? 'bg-white' : 'bg-red-500'}`} />
-                        Off Air
-                      </button>
+                        <option value="">All Inspection</option>
+                        {initialInspectionStatuses.map(status => (
+                          <option key={status} value={status}>{status}</option>
+                        ))}
+                      </select>
+
+                      {/* Clear Filters */}
+                      {(filters.search || filters.province || filters.city || filters.onAir !== undefined || filters.inspection68) && (
+                        <button
+                          onClick={clearFilters}
+                          className="flex items-center gap-1.5 px-3 py-2 text-xs font-medium bg-destructive/10 text-destructive hover:bg-destructive/20 rounded-lg border border-destructive/20 cursor-pointer"
+                        >
+                          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                          </svg>
+                          Clear
+                        </button>
+                      )}
                     </div>
-
-                    {/* Inspection Status */}
-                    <select
-                      value={filters.inspection68 || ''}
-                      onChange={(e) => setFilters({ ...filters, inspection68: e.target.value || undefined })}
-                      className="px-3 py-2 text-sm border border-border rounded-lg bg-background focus:ring-2 focus:ring-primary focus:border-transparent min-w-[140px]"
-                    >
-                      <option value="">All Inspection</option>
-                      {initialInspectionStatuses.map(status => (
-                        <option key={status} value={status}>{status}</option>
-                      ))}
-                    </select>
-
-                    {/* Clear Filters */}
-                    {(filters.search || filters.province || filters.city || filters.onAir !== undefined || filters.inspection68) && (
-                      <button
-                        onClick={clearFilters}
-                        className="flex items-center gap-1.5 px-3 py-2 text-xs font-medium bg-destructive/10 text-destructive hover:bg-destructive/20 rounded-lg border border-destructive/20 cursor-pointer"
-                      >
-                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                        </svg>
-                        Clear
-                      </button>
-                    )}
                   </div>
                 </div>
 

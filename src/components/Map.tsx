@@ -308,6 +308,7 @@ export default function Map({ stations, selectedStation, onStationSelect, onUpda
   const SingleStationPopup = ({ station, distance }: { station: FMStation; distance: number | null }) => {
     const [loadingOnAir, setLoadingOnAir] = useState(false);
     const [loadingInspection69, setLoadingInspection69] = useState(false);
+    const [loadingDetails, setLoadingDetails] = useState(false);
 
     const handleOnAirToggle = async (e: React.MouseEvent) => {
       e.preventDefault();
@@ -376,14 +377,14 @@ export default function Map({ stations, selectedStation, onStationSelect, onUpda
           </span>
           {onUpdateStation && (
             station.submitRequest === 'ไม่ยื่น' && !station.onAir ? (
-              <span className="px-2 sm:px-3 py-1 text-xs rounded-md font-medium text-muted-foreground bg-muted">
+              <span className="px-3 py-1.5 text-xs rounded-md font-medium text-muted-foreground bg-muted">
                 ไม่ยื่นคำขอ
               </span>
             ) : (
               <button
                 onClick={handleOnAirToggle}
                 disabled={loadingOnAir}
-                className={`px-2 sm:px-3 py-1 text-xs rounded-md font-medium whitespace-nowrap transition-all duration-200 ${
+                className={`px-3 py-1.5 text-xs rounded-md font-medium whitespace-nowrap transition-all duration-200 ${
                   loadingOnAir
                     ? 'bg-muted text-muted-foreground cursor-not-allowed'
                     : 'bg-secondary text-secondary-foreground hover:bg-accent'
@@ -419,7 +420,7 @@ export default function Map({ stations, selectedStation, onStationSelect, onUpda
             <button
               onClick={handleInspection69Toggle}
               disabled={loadingInspection69}
-              className={`px-2 sm:px-3 py-1 text-xs rounded-md font-medium whitespace-nowrap transition-all duration-200 ${
+              className={`px-3 py-1.5 text-xs rounded-md font-medium whitespace-nowrap transition-all duration-200 ${
                 loadingInspection69
                   ? 'bg-muted text-muted-foreground cursor-not-allowed'
                   : 'bg-primary text-primary-foreground hover:bg-primary/90'
@@ -476,34 +477,48 @@ export default function Map({ stations, selectedStation, onStationSelect, onUpda
           </div>
           <div className="flex flex-wrap gap-2">
             <button
-              onClick={(e) => {
+              onClick={async (e) => {
                 e.preventDefault();
                 e.stopPropagation();
-                const newDetails = station.details === '#deviation' ? '' : '#deviation';
-                onUpdateStation(station.id, { details: newDetails });
+                if (loadingDetails) return;
+                setLoadingDetails(true);
+                try {
+                  const newDetails = station.details === '#deviation' ? '' : '#deviation';
+                  await onUpdateStation(station.id, { details: newDetails });
+                } finally {
+                  setLoadingDetails(false);
+                }
               }}
-              className={`px-2 py-1 text-xs rounded-md font-medium transition-all duration-200 ${
+              disabled={loadingDetails}
+              className={`px-3 py-1.5 text-xs rounded-md font-medium transition-all duration-200 ${
                 station.details === '#deviation'
                   ? 'badge-error'
                   : 'bg-muted text-muted-foreground border border-border hover:bg-accent hover:text-accent-foreground'
-              }`}
+              } ${loadingDetails ? 'opacity-50 cursor-not-allowed' : ''}`}
             >
-              #deviation
+              {loadingDetails ? '...' : '#deviation'}
             </button>
             <button
-              onClick={(e) => {
+              onClick={async (e) => {
                 e.preventDefault();
                 e.stopPropagation();
-                const newDetails = station.details === '#intermod' ? '' : '#intermod';
-                onUpdateStation(station.id, { details: newDetails });
+                if (loadingDetails) return;
+                setLoadingDetails(true);
+                try {
+                  const newDetails = station.details === '#intermod' ? '' : '#intermod';
+                  await onUpdateStation(station.id, { details: newDetails });
+                } finally {
+                  setLoadingDetails(false);
+                }
               }}
-              className={`px-2 py-1 text-xs rounded-md font-medium transition-all duration-200 ${
+              disabled={loadingDetails}
+              className={`px-3 py-1.5 text-xs rounded-md font-medium transition-all duration-200 ${
                 station.details === '#intermod'
                   ? 'badge-peach'
                   : 'bg-muted text-muted-foreground border border-border hover:bg-accent hover:text-accent-foreground'
-              }`}
+              } ${loadingDetails ? 'opacity-50 cursor-not-allowed' : ''}`}
             >
-              #intermod
+              {loadingDetails ? '...' : '#intermod'}
             </button>
           </div>
         </div>
@@ -793,14 +808,14 @@ export default function Map({ stations, selectedStation, onStationSelect, onUpda
                 </span>
                 {onUpdateStation && (
                   station.submitRequest === 'ไม่ยื่น' && !station.onAir ? (
-                    <span className="px-2 py-1 text-xs rounded font-medium text-muted-foreground bg-muted">
+                    <span className="px-3 py-1.5 text-xs rounded font-medium text-muted-foreground bg-muted">
                       ไม่ยื่นคำขอ
                     </span>
                   ) : (
                     <button
                       onClick={(e) => handleStationToggle(e, station.id, 'onAir', !station.onAir)}
                       disabled={loadingStations.has(station.id)}
-                      className={`px-2 py-1 text-xs rounded font-medium whitespace-nowrap transition-all duration-200 ${
+                      className={`px-3 py-1.5 text-xs rounded font-medium whitespace-nowrap transition-all duration-200 ${
                         loadingStations.has(station.id)
                           ? 'bg-muted text-muted-foreground cursor-not-allowed'
                           : 'bg-secondary text-secondary-foreground hover:bg-accent'
@@ -837,7 +852,7 @@ export default function Map({ stations, selectedStation, onStationSelect, onUpda
                       handleStationToggle(e, station.id, 'inspection69', newStatus);
                     }}
                     disabled={loadingStations.has(station.id)}
-                    className={`px-2 py-1 text-xs rounded font-medium whitespace-nowrap transition-all duration-200 ${
+                    className={`px-3 py-1.5 text-xs rounded font-medium whitespace-nowrap transition-all duration-200 ${
                       loadingStations.has(station.id)
                         ? 'bg-muted text-muted-foreground cursor-not-allowed'
                         : 'bg-primary text-primary-foreground hover:bg-primary/90'
@@ -882,7 +897,7 @@ export default function Map({ stations, selectedStation, onStationSelect, onUpda
                         handleStationToggle(e, station.id, 'details', newDetails);
                       }}
                       disabled={loadingStations.has(station.id)}
-                      className={`px-1.5 py-0.5 text-xs rounded font-medium transition-all duration-200 ${
+                      className={`px-3 py-1.5 text-xs rounded font-medium transition-all duration-200 ${
                         station.details === '#deviation'
                           ? 'badge-error'
                           : 'bg-muted text-muted-foreground border border-border hover:bg-accent hover:text-accent-foreground'
@@ -898,7 +913,7 @@ export default function Map({ stations, selectedStation, onStationSelect, onUpda
                         handleStationToggle(e, station.id, 'details', newDetails);
                       }}
                       disabled={loadingStations.has(station.id)}
-                      className={`px-1.5 py-0.5 text-xs rounded font-medium transition-all duration-200 ${
+                      className={`px-3 py-1.5 text-xs rounded font-medium transition-all duration-200 ${
                         station.details === '#intermod'
                           ? 'badge-peach'
                           : 'bg-muted text-muted-foreground border border-border hover:bg-accent hover:text-accent-foreground'
@@ -964,14 +979,14 @@ export default function Map({ stations, selectedStation, onStationSelect, onUpda
                   </span>
                   {onUpdateStation && (
                     station.submitRequest === 'ไม่ยื่น' && !station.onAir ? (
-                      <span className="px-2 py-1 text-xs rounded font-medium text-muted-foreground bg-muted">
+                      <span className="px-3 py-1.5 text-xs rounded font-medium text-muted-foreground bg-muted">
                         ไม่ยื่นคำขอ
                       </span>
                     ) : (
                       <button
                         onClick={(e) => handleStationToggle(e, station.id, 'onAir', !station.onAir)}
                         disabled={loadingStations.has(station.id)}
-                        className={`px-2 py-1 text-xs rounded font-medium whitespace-nowrap transition-all duration-200 ${
+                        className={`px-3 py-1.5 text-xs rounded font-medium whitespace-nowrap transition-all duration-200 ${
                           loadingStations.has(station.id)
                             ? 'bg-muted text-muted-foreground cursor-not-allowed'
                             : 'bg-secondary text-secondary-foreground hover:bg-accent'
@@ -1008,7 +1023,7 @@ export default function Map({ stations, selectedStation, onStationSelect, onUpda
                         handleStationToggle(e, station.id, 'inspection69', newStatus);
                       }}
                       disabled={loadingStations.has(station.id)}
-                      className={`px-2 py-1 text-xs rounded font-medium whitespace-nowrap transition-all duration-200 ${
+                      className={`px-3 py-1.5 text-xs rounded font-medium whitespace-nowrap transition-all duration-200 ${
                         loadingStations.has(station.id)
                           ? 'bg-muted text-muted-foreground cursor-not-allowed'
                           : 'bg-primary text-primary-foreground hover:bg-primary/90'
@@ -1051,7 +1066,7 @@ export default function Map({ stations, selectedStation, onStationSelect, onUpda
                           handleStationToggle(e, station.id, 'details', newDetails);
                         }}
                         disabled={loadingStations.has(station.id)}
-                        className={`px-1.5 py-0.5 text-xs rounded font-medium transition-all duration-200 ${
+                        className={`px-3 py-1.5 text-xs rounded font-medium transition-all duration-200 ${
                           station.details === '#deviation'
                             ? 'badge-error'
                             : 'bg-muted text-muted-foreground border border-border hover:bg-accent hover:text-accent-foreground'
@@ -1067,7 +1082,7 @@ export default function Map({ stations, selectedStation, onStationSelect, onUpda
                           handleStationToggle(e, station.id, 'details', newDetails);
                         }}
                         disabled={loadingStations.has(station.id)}
-                        className={`px-1.5 py-0.5 text-xs rounded font-medium transition-all duration-200 ${
+                        className={`px-3 py-1.5 text-xs rounded font-medium transition-all duration-200 ${
                           station.details === '#intermod'
                             ? 'badge-peach'
                             : 'bg-muted text-muted-foreground border border-border hover:bg-accent hover:text-accent-foreground'
