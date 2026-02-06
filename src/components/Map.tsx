@@ -14,80 +14,97 @@ L.Icon.Default.mergeOptions({
   shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-shadow.png',
 });
 
-// Custom icons for different markers
-const greenStationIcon = new L.Icon({
-  iconUrl: 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-2x-green.png',
-  shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-shadow.png',
-  iconSize: [25, 41],
-  iconAnchor: [12, 41],
-  popupAnchor: [1, -34],
-  shadowSize: [41, 41]
-});
+// SVG icons for station markers (inline to avoid external dependencies)
+const radioOnSvg = `<svg class="station-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+  <circle cx="12" cy="12" r="3"/>
+  <path d="M4.93 4.93a10 10 0 0 1 14.14 0"/>
+  <path d="M7.76 7.76a6 6 0 0 1 8.48 0"/>
+</svg>`;
 
-const redStationIcon = new L.Icon({
-  iconUrl: 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-2x-red.png',
-  shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-shadow.png',
-  iconSize: [25, 41],
-  iconAnchor: [12, 41],
-  popupAnchor: [1, -34],
-  shadowSize: [41, 41]
-});
+const radioOffSvg = `<svg class="station-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+  <circle cx="12" cy="12" r="3"/>
+  <path d="M4.93 4.93a10 10 0 0 1 14.14 0" opacity="0.3"/>
+  <path d="M7.76 7.76a6 6 0 0 1 8.48 0" opacity="0.3"/>
+  <line x1="4" y1="4" x2="20" y2="20" stroke-width="2"/>
+</svg>`;
 
-const blackStationIcon = new L.Icon({
-  iconUrl: 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-2x-black.png',
-  shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-shadow.png',
-  iconSize: [25, 41],
-  iconAnchor: [12, 41],
-  popupAnchor: [1, -34],
-  shadowSize: [41, 41]
-});
+// Create custom station icon with status indicators
+const createStationIcon = (
+  station: FMStation,
+  isHighlighted: boolean = false,
+  stationCount: number = 1
+): L.DivIcon => {
+  const hasNoRequest = station.submitRequest === 'ไม่ยื่น';
+  const isOffAir = !station.onAir;
+  const isInspected = station.inspection69 === 'ตรวจแล้ว';
+  const isMainStation = station.type === 'สถานีหลัก' || station.genre === 'สถานีหลัก';
 
-const greyStationIcon = new L.Icon({
-  iconUrl: 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-2x-grey.png',
-  shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-shadow.png',
-  iconSize: [25, 41],
-  iconAnchor: [12, 41],
-  popupAnchor: [1, -34],
-  shadowSize: [41, 41]
-});
+  // Determine color class based on status priority
+  let colorClass = 'station-marker--orange'; // default: not inspected + on air
+  if (isHighlighted) {
+    colorClass = 'station-marker--gold';
+  } else if (hasNoRequest) {
+    colorClass = 'station-marker--black';
+  } else if (isOffAir) {
+    colorClass = 'station-marker--grey';
+  } else if (isInspected) {
+    colorClass = 'station-marker--green';
+  }
+
+  // Determine badge content
+  let badge = '';
+  if (stationCount > 1) {
+    // Multiple stations at location - show count
+    badge = `<div class="station-badge station-badge--danger">${stationCount}</div>`;
+  } else if (isMainStation) {
+    // Main station badge
+    badge = '<div class="station-badge station-badge--info">★</div>';
+  } else if (hasNoRequest) {
+    // No request warning
+    badge = '<div class="station-badge station-badge--danger">!</div>';
+  } else if (isHighlighted) {
+    // Highlighted (intermod) warning
+    badge = '<div class="station-badge station-badge--warning">⚠</div>';
+  } else if (isInspected) {
+    // Inspected checkmark
+    badge = '<div class="station-badge station-badge--success">✓</div>';
+  } else {
+    // Pending inspection
+    badge = '<div class="station-badge station-badge--warning">⏳</div>';
+  }
+
+  // Select radio icon based on on-air status
+  const radioIcon = isOffAir ? radioOffSvg : radioOnSvg;
+
+  // Add pulse ring for highlighted stations
+  const pulseRing = isHighlighted ? '<div class="station-marker-pulse"></div>' : '';
+
+  return L.divIcon({
+    className: 'custom-station-marker',
+    html: `
+      <div class="station-marker ${colorClass}">
+        ${pulseRing}
+        <div class="station-marker-circle">
+          ${radioIcon}
+        </div>
+        <div class="station-marker-pointer"></div>
+        ${badge}
+      </div>
+    `,
+    iconSize: [32, 40],
+    iconAnchor: [16, 40],
+    popupAnchor: [0, -38]
+  });
+};
 
 // Create a custom Google Maps style location icon
 const createLocationIcon = () => {
   return L.divIcon({
     className: 'custom-location-icon',
     html: `
-      <div style="
-        width: 20px;
-        height: 20px;
-        background: #4285F4;
-        border: 3px solid #ffffff;
-        border-radius: 50%;
-        box-shadow: 0 2px 6px rgba(0,0,0,0.3);
-        position: relative;
-      ">
-        <div style="
-          width: 40px;
-          height: 40px;
-          background: rgba(66, 133, 244, 0.2);
-          border-radius: 50%;
-          position: absolute;
-          top: -13px;
-          left: -13px;
-          animation: locationPulse 2s infinite;
-        "></div>
+      <div class="location-marker">
+        <div class="location-pulse"></div>
       </div>
-      <style>
-        @keyframes locationPulse {
-          0% {
-            transform: scale(0.8);
-            opacity: 1;
-          }
-          100% {
-            transform: scale(2);
-            opacity: 0;
-          }
-        }
-      </style>
     `,
     iconSize: [20, 20],
     iconAnchor: [10, 10],
@@ -95,11 +112,22 @@ const createLocationIcon = () => {
   });
 };
 
+
+interface FlyToTarget {
+  lat1: number;
+  lng1: number;
+  lat2: number;
+  lng2: number;
+  timestamp: number; // Unique timestamp to force useEffect trigger
+}
+
 interface MapProps {
   stations: FMStation[];
   selectedStation?: FMStation;
   onStationSelect: (station: FMStation) => void;
   onUpdateStation?: (stationId: string | number, updates: Partial<FMStation>) => void;
+  highlightedStationIds?: (string | number)[];
+  flyToStations?: FlyToTarget | null;
 }
 
 function LocationTracker({ onLocationUpdate }: { onLocationUpdate: (location: UserLocation) => void }) {
@@ -169,7 +197,36 @@ function LocationTracker({ onLocationUpdate }: { onLocationUpdate: (location: Us
   return null;
 }
 
-export default function Map({ stations, selectedStation, onStationSelect, onUpdateStation }: MapProps) {
+// Component to fly map to highlighted stations
+function FlyToHighlightedStations({ target }: { target: FlyToTarget | null }) {
+  const map = useMap();
+
+  useEffect(() => {
+    if (target) {
+      // Small delay to ensure map is ready after tab switch
+      const timer = setTimeout(() => {
+        // Calculate bounds that include both stations with padding
+        const bounds = L.latLngBounds(
+          [target.lat1, target.lng1],
+          [target.lat2, target.lng2]
+        );
+
+        // Fly to bounds with animation and padding
+        map.flyToBounds(bounds, {
+          padding: [80, 80],
+          maxZoom: 12,
+          duration: 1.5
+        });
+      }, 100);
+
+      return () => clearTimeout(timer);
+    }
+  }, [map, target?.timestamp]); // Use timestamp as dependency to always trigger
+
+  return null;
+}
+
+export default function Map({ stations, selectedStation, onStationSelect, onUpdateStation, highlightedStationIds = [], flyToStations }: MapProps) {
   const [userLocation, setUserLocation] = useState<UserLocation | null>(null);
   const [isClient, setIsClient] = useState(false);
   const [isMobile, setIsMobile] = useState(false);
@@ -221,98 +278,14 @@ export default function Map({ stations, selectedStation, onStationSelect, onUpda
   const getStationIcon = (stationOrGroup: FMStation | FMStation[], count?: number) => {
     // If it's an array (multiple stations), use the first station's status
     const station = Array.isArray(stationOrGroup) ? stationOrGroup[0] : stationOrGroup;
-    const isMultiple = count && count > 1;
-    const isMainStation = station.type === 'สถานีหลัก' || station.genre === 'สถานีหลัก';
+    const stationsToCheck = Array.isArray(stationOrGroup) ? stationOrGroup : [stationOrGroup];
+    const stationCount = count || 1;
 
-    // Get base icon based on station status
-    let baseIcon;
-    if (station.submitRequest === 'ไม่ยื่น') {
-      baseIcon = blackStationIcon;
-    } else if (!station.onAir) {
-      baseIcon = greyStationIcon;
-    } else if (station.inspection68 === 'ตรวจแล้ว') {
-      baseIcon = greenStationIcon;
-    } else if (station.inspection68 === 'ยังไม่ตรวจ') {
-      baseIcon = redStationIcon;
-    } else {
-      baseIcon = redStationIcon;
-    }
+    // Check if any station in this group is highlighted
+    const isHighlighted = stationsToCheck.some(s => highlightedStationIds.includes(s.id));
 
-    // Create custom icon with main station symbol or count badge
-    if (isMainStation || isMultiple) {
-      return L.divIcon({
-        className: 'custom-station-icon',
-        html: `
-          <div style="position: relative;">
-            <img src="${baseIcon.options.iconUrl}"
-                 style="width: 25px; height: 41px;"
-                 alt="Station marker" />
-            ${isMainStation ? `
-              <div style="
-                position: absolute;
-                top: -6px;
-                right: -6px;
-                background: #4285F4;
-                color: white;
-                border-radius: 50%;
-                width: 16px;
-                height: 16px;
-                display: flex;
-                align-items: center;
-                justify-content: center;
-                font-size: 10px;
-                font-weight: bold;
-                border: 2px solid white;
-                box-shadow: 0 1px 3px rgba(0,0,0,0.3);
-              ">★</div>
-            ` : ''}
-            ${isMultiple && !isMainStation ? `
-              <div style="
-                position: absolute;
-                top: -8px;
-                right: -8px;
-                background: #ff4444;
-                color: white;
-                border-radius: 50%;
-                width: 18px;
-                height: 18px;
-                display: flex;
-                align-items: center;
-                justify-content: center;
-                font-size: 11px;
-                font-weight: bold;
-                border: 2px solid white;
-                box-shadow: 0 1px 3px rgba(0,0,0,0.3);
-              ">${count}</div>
-            ` : ''}
-            ${isMultiple && isMainStation ? `
-              <div style="
-                position: absolute;
-                top: -8px;
-                right: -8px;
-                background: #4285F4;
-                color: white;
-                border-radius: 50%;
-                width: 18px;
-                height: 18px;
-                display: flex;
-                align-items: center;
-                justify-content: center;
-                font-size: 9px;
-                font-weight: bold;
-                border: 2px solid white;
-                box-shadow: 0 1px 3px rgba(0,0,0,0.3);
-              ">★${count}</div>
-            ` : ''}
-          </div>
-        `,
-        iconSize: [25, 41],
-        iconAnchor: [12, 41],
-        popupAnchor: [1, -34]
-      });
-    }
-
-    return baseIcon;
+    // Use the new createStationIcon function
+    return createStationIcon(station, isHighlighted, stationCount);
   };
 
   // Function to format inspection date
@@ -334,7 +307,7 @@ export default function Map({ stations, selectedStation, onStationSelect, onUpda
   // Component to render single station popup
   const SingleStationPopup = ({ station, distance }: { station: FMStation; distance: number | null }) => {
     const [loadingOnAir, setLoadingOnAir] = useState(false);
-    const [loadingInspection, setLoadingInspection] = useState(false);
+    const [loadingInspection69, setLoadingInspection69] = useState(false);
 
     const handleOnAirToggle = async (e: React.MouseEvent) => {
       e.preventDefault();
@@ -350,18 +323,19 @@ export default function Map({ stations, selectedStation, onStationSelect, onUpda
       }
     };
 
-    const handleInspectionToggle = async (e: React.MouseEvent) => {
+    const handleInspection69Toggle = async (e: React.MouseEvent) => {
       e.preventDefault();
       e.stopPropagation();
-      if (!onUpdateStation || loadingInspection) return;
-      setLoadingInspection(true);
+      if (!onUpdateStation || loadingInspection69) return;
+      setLoadingInspection69(true);
       try {
-        const newStatus = station.inspection68 === 'ตรวจแล้ว' ? 'ยังไม่ตรวจ' : 'ตรวจแล้ว';
-        await onUpdateStation(station.id, { inspection68: newStatus });
+        // If current status is 'ตรวจแล้ว', toggle to 'ยังไม่ตรวจ', otherwise toggle to 'ตรวจแล้ว'
+        const newStatus = station.inspection69 === 'ตรวจแล้ว' ? 'ยังไม่ตรวจ' : 'ตรวจแล้ว';
+        await onUpdateStation(station.id, { inspection69: newStatus });
         // Small delay to show success state
         await new Promise(resolve => setTimeout(resolve, 500));
       } finally {
-        setLoadingInspection(false);
+        setLoadingInspection69(false);
       }
     };
 
@@ -384,7 +358,7 @@ export default function Map({ stations, selectedStation, onStationSelect, onUpda
                 {station.genre}
               </span>
               {(station.type === 'สถานีหลัก' || station.genre === 'สถานีหลัก') && (
-                <span className="inline-flex items-center gap-1 px-2 py-1 rounded-lg bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400 text-xs font-medium">
+                <span className="inline-flex items-center gap-1 px-2 py-1 rounded-lg badge-info text-xs font-medium">
                   <span>★</span>
                   <span>Main</span>
                 </span>
@@ -395,65 +369,64 @@ export default function Map({ stations, selectedStation, onStationSelect, onUpda
 
         <div className="flex items-center justify-between gap-2 p-2 bg-muted/20 rounded-lg border border-border/50">
           <span className={`inline-flex items-center gap-2 px-2 py-1 rounded-md text-xs font-medium ${
-            station.onAir
-              ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400'
-              : 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400'
+            station.onAir ? 'badge-success' : 'badge-error'
           }`}>
-            <div className={`w-2 h-2 rounded-full ${station.onAir ? 'bg-green-500' : 'bg-red-500'}`} />
+            <div className={`w-2 h-2 rounded-full`} style={{ background: station.onAir ? 'var(--syntax-green)' : 'var(--syntax-red)' }} />
             {station.onAir ? 'On Air' : 'Off Air'}
           </span>
           {onUpdateStation && (
-            <button
-              onClick={handleOnAirToggle}
-              disabled={loadingOnAir}
-              className={`px-2 sm:px-3 py-1 text-xs rounded-md font-medium whitespace-nowrap transition-all duration-200 ${
-                loadingOnAir
-                  ? 'bg-muted text-muted-foreground cursor-not-allowed'
-                  : 'bg-secondary text-secondary-foreground hover:bg-accent'
-              }`}
-              aria-label={`Toggle ${station.name} broadcast status - currently ${station.onAir ? 'on air' : 'off air'}`}
-            >
-              {loadingOnAir ? (
-                <div className="flex items-center gap-1">
-                  <svg className="w-3 h-3 animate-spin" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
-                  </svg>
-                  <span>Saving...</span>
-                </div>
-              ) : (
-                station.onAir ? 'Set Off' : 'Set On'
-              )}
-            </button>
+            station.submitRequest === 'ไม่ยื่น' && !station.onAir ? (
+              <span className="px-2 sm:px-3 py-1 text-xs rounded-md font-medium text-muted-foreground bg-muted">
+                ไม่ยื่นคำขอ
+              </span>
+            ) : (
+              <button
+                onClick={handleOnAirToggle}
+                disabled={loadingOnAir}
+                className={`px-2 sm:px-3 py-1 text-xs rounded-md font-medium whitespace-nowrap transition-all duration-200 ${
+                  loadingOnAir
+                    ? 'bg-muted text-muted-foreground cursor-not-allowed'
+                    : 'bg-secondary text-secondary-foreground hover:bg-accent'
+                }`}
+                aria-label={`Toggle ${station.name} broadcast status - currently ${station.onAir ? 'on air' : 'off air'}`}
+              >
+                {loadingOnAir ? (
+                  <div className="flex items-center gap-1">
+                    <svg className="w-3 h-3 animate-spin" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                    </svg>
+                    <span>Saving...</span>
+                  </div>
+                ) : (
+                  station.onAir ? 'Set Off' : 'Set On'
+                )}
+              </button>
+            )
           )}
         </div>
       </div>
 
-      {station.inspection68 && (
-        <div className="flex items-center justify-between gap-2 p-2 bg-muted/20 rounded-lg border border-border/50 mb-3">
-          <span className={`inline-flex items-center gap-2 px-2 py-1 rounded-md text-xs font-medium ${
-            station.inspection68 === 'ตรวจแล้ว'
-              ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400'
-              : station.inspection68 === 'ยังไม่ตรวจ'
-              ? 'bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400'
-              : 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400'
-          }`}>
-            {station.inspection68 === 'ตรวจแล้ว' && '✅'}
-            {station.inspection68 === 'ยังไม่ตรวจ' && '⏳'}
-            {station.inspection68 === 'ตรงตามมาตรฐาน' && '🎯'}
-            <span className="break-words">{station.inspection68}</span>
-          </span>
+      <div className="flex items-center justify-between gap-2 p-2 bg-muted/20 rounded-lg border border-border/50 mb-3">
+        <span className={`inline-flex items-center gap-2 px-2 py-1 rounded-md text-xs font-medium ${
+          station.inspection69 === 'ตรวจแล้ว'
+            ? 'badge-success'
+            : 'badge-warning'
+        }`}>
+          {station.inspection69 === 'ตรวจแล้ว' ? '✅' : '⏳'}
+          <span className="break-words">{station.inspection69 || 'ยังไม่ตรวจ'}</span>
+        </span>
           {onUpdateStation && (
             <button
-              onClick={handleInspectionToggle}
-              disabled={loadingInspection}
+              onClick={handleInspection69Toggle}
+              disabled={loadingInspection69}
               className={`px-2 sm:px-3 py-1 text-xs rounded-md font-medium whitespace-nowrap transition-all duration-200 ${
-                loadingInspection
+                loadingInspection69
                   ? 'bg-muted text-muted-foreground cursor-not-allowed'
                   : 'bg-primary text-primary-foreground hover:bg-primary/90'
               }`}
-              aria-label={`Toggle ${station.name} inspection status - currently ${station.inspection68 || 'not inspected'}`}
+              aria-label={`Toggle ${station.name} inspection status - currently ${station.inspection69 || 'not inspected'}`}
             >
-              {loadingInspection ? (
+              {loadingInspection69 ? (
                 <div className="flex items-center gap-1">
                   <svg className="w-3 h-3 animate-spin" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
@@ -461,14 +434,13 @@ export default function Map({ stations, selectedStation, onStationSelect, onUpda
                   <span>Saving...</span>
                 </div>
               ) : (
-                station.inspection68 === 'ยังไม่ตรวจ' ? 'Inspect' : 'Inspected'
+                station.inspection69 === 'ตรวจแล้ว' ? 'Inspected' : 'Inspect'
               )}
             </button>
           )}
         </div>
-      )}
 
-      {/* Inspection Date Only */}
+      {/* Inspection Date for 69 */}
       {station.dateInspected && (
         <div className="flex items-center gap-2 text-xs sm:text-sm text-muted-foreground bg-muted/20 p-2 rounded-lg border border-border/50 mb-3">
           <svg className="w-3 h-3 sm:w-4 sm:h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -512,7 +484,7 @@ export default function Map({ stations, selectedStation, onStationSelect, onUpda
               }}
               className={`px-2 py-1 text-xs rounded-md font-medium transition-all duration-200 ${
                 station.details === '#deviation'
-                  ? 'bg-red-100 text-red-700 border border-red-300 dark:bg-red-900/30 dark:text-red-400 dark:border-red-700'
+                  ? 'badge-error'
                   : 'bg-muted text-muted-foreground border border-border hover:bg-accent hover:text-accent-foreground'
               }`}
             >
@@ -527,7 +499,7 @@ export default function Map({ stations, selectedStation, onStationSelect, onUpda
               }}
               className={`px-2 py-1 text-xs rounded-md font-medium transition-all duration-200 ${
                 station.details === '#intermod'
-                  ? 'bg-orange-100 text-orange-700 border border-orange-300 dark:bg-orange-900/30 dark:text-orange-400 dark:border-orange-700'
+                  ? 'badge-peach'
                   : 'bg-muted text-muted-foreground border border-border hover:bg-accent hover:text-accent-foreground'
               }`}
             >
@@ -620,7 +592,7 @@ export default function Map({ stations, selectedStation, onStationSelect, onUpda
       };
     }, [isMobile]);
 
-    const handleStationToggle = async (e: React.MouseEvent, stationId: string | number, field: 'onAir' | 'inspection68' | 'details', value: boolean | string) => {
+    const handleStationToggle = async (e: React.MouseEvent, stationId: string | number, field: 'onAir' | 'inspection68' | 'inspection69' | 'details', value: boolean | string) => {
       e.stopPropagation();
       if (!onUpdateStation || loadingStations.has(stationId)) return;
 
@@ -792,13 +764,6 @@ export default function Map({ stations, selectedStation, onStationSelect, onUpda
                 pointerEvents: 'auto' // Ensure all interactions work
               }}
             >
-              {station.unwanted && (
-                <div className="flex justify-end mb-2">
-                  <span className="text-xs font-medium text-orange-600 bg-orange-100 dark:bg-orange-900/30 dark:text-orange-400 px-2 py-1 rounded">
-                    ⚠️ Unwanted
-                  </span>
-                </div>
-              )}
               <div className="flex items-start gap-2 mb-2">
                 <div className="min-w-0 flex-1">
                   <h4 className="font-semibold text-sm text-card-foreground break-words">{station.name}</h4>
@@ -810,7 +775,7 @@ export default function Map({ stations, selectedStation, onStationSelect, onUpda
                       {station.genre}
                     </span>
                     {(station.type === 'สถานีหลัก' || station.genre === 'สถานีหลัก') && (
-                      <span className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400 text-xs font-medium">
+                      <span className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded badge-info text-xs font-medium">
                         <span>★</span>
                         <span>Main</span>
                       </span>
@@ -821,62 +786,24 @@ export default function Map({ stations, selectedStation, onStationSelect, onUpda
 
               <div className="flex items-center justify-between gap-2 p-2 bg-muted/30 rounded border border-border/50 mb-2">
                 <span className={`inline-flex items-center gap-2 px-2 py-1 rounded-md text-xs font-medium ${
-                  station.onAir
-                    ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400'
-                    : 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400'
+                  station.onAir ? 'badge-success' : 'badge-error'
                 }`}>
-                  <div className={`w-1.5 h-1.5 rounded-full ${station.onAir ? 'bg-green-500' : 'bg-red-500'}`} />
+                  <div className={`w-1.5 h-1.5 rounded-full`} style={{ background: station.onAir ? 'var(--syntax-green)' : 'var(--syntax-red)' }} />
                   {station.onAir ? 'On Air' : 'Off Air'}
                 </span>
                 {onUpdateStation && (
-                  <button
-                    onClick={(e) => handleStationToggle(e, station.id, 'onAir', !station.onAir)}
-                    disabled={loadingStations.has(station.id)}
-                    className={`px-2 py-1 text-xs rounded font-medium whitespace-nowrap transition-all duration-200 ${
-                      loadingStations.has(station.id)
-                        ? 'bg-muted text-muted-foreground cursor-not-allowed'
-                        : 'bg-secondary text-secondary-foreground hover:bg-accent'
-                    }`}
-                  >
-                    {loadingStations.has(station.id) ? (
-                      <div className="flex items-center gap-1">
-                        <svg className="w-2.5 h-2.5 animate-spin" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
-                        </svg>
-                        <span>Save...</span>
-                      </div>
-                    ) : (
-                      station.onAir ? 'Set Off' : 'Set On'
-                    )}
-                  </button>
-                )}
-              </div>
-
-              {station.inspection68 && (
-                <div className="flex items-center justify-between gap-2 p-2 bg-muted/30 rounded border border-border/50 mb-2">
-                  <span className={`inline-flex items-center gap-1 px-2 py-1 rounded-md text-xs font-medium ${
-                    station.inspection68 === 'ตรวจแล้ว'
-                      ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400'
-                      : station.inspection68 === 'ยังไม่ตรวจ'
-                      ? 'bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400'
-                      : 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400'
-                  }`}>
-                    {station.inspection68 === 'ตรวจแล้ว' && '✅'}
-                    {station.inspection68 === 'ยังไม่ตรวจ' && '⏳'}
-                    {station.inspection68 === 'ตรงตามมาตรฐาน' && '🎯'}
-                    <span className="break-words text-xs">{station.inspection68}</span>
-                  </span>
-                  {onUpdateStation && (
+                  station.submitRequest === 'ไม่ยื่น' && !station.onAir ? (
+                    <span className="px-2 py-1 text-xs rounded font-medium text-muted-foreground bg-muted">
+                      ไม่ยื่นคำขอ
+                    </span>
+                  ) : (
                     <button
-                      onClick={(e) => {
-                        const newStatus = station.inspection68 === 'ตรวจแล้ว' ? 'ยังไม่ตรวจ' : 'ตรวจแล้ว';
-                        handleStationToggle(e, station.id, 'inspection68', newStatus);
-                      }}
+                      onClick={(e) => handleStationToggle(e, station.id, 'onAir', !station.onAir)}
                       disabled={loadingStations.has(station.id)}
                       className={`px-2 py-1 text-xs rounded font-medium whitespace-nowrap transition-all duration-200 ${
                         loadingStations.has(station.id)
                           ? 'bg-muted text-muted-foreground cursor-not-allowed'
-                          : 'bg-primary text-primary-foreground hover:bg-primary/90'
+                          : 'bg-secondary text-secondary-foreground hover:bg-accent'
                       }`}
                     >
                       {loadingStations.has(station.id) ? (
@@ -887,14 +814,50 @@ export default function Map({ stations, selectedStation, onStationSelect, onUpda
                           <span>Save...</span>
                         </div>
                       ) : (
-                        station.inspection68 === 'ยังไม่ตรวจ' ? 'Inspect' : 'Inspected'
+                        station.onAir ? 'Set Off' : 'Set On'
                       )}
                     </button>
-                  )}
-                </div>
-              )}
+                  )
+                )}
+              </div>
 
-              {/* Inspection Date Only for Multiple Stations */}
+              <div className="flex items-center justify-between gap-2 p-2 bg-muted/30 rounded border border-border/50 mb-2">
+                <span className={`inline-flex items-center gap-1 px-2 py-1 rounded-md text-xs font-medium ${
+                  station.inspection69 === 'ตรวจแล้ว'
+                    ? 'badge-success'
+                    : 'badge-warning'
+                }`}>
+                  {station.inspection69 === 'ตรวจแล้ว' ? '✅' : '⏳'}
+                  <span className="break-words text-xs">{station.inspection69 || 'ยังไม่ตรวจ'}</span>
+                </span>
+                {onUpdateStation && (
+                  <button
+                    onClick={(e) => {
+                      const newStatus = station.inspection69 === 'ตรวจแล้ว' ? 'ยังไม่ตรวจ' : 'ตรวจแล้ว';
+                      handleStationToggle(e, station.id, 'inspection69', newStatus);
+                    }}
+                    disabled={loadingStations.has(station.id)}
+                    className={`px-2 py-1 text-xs rounded font-medium whitespace-nowrap transition-all duration-200 ${
+                      loadingStations.has(station.id)
+                        ? 'bg-muted text-muted-foreground cursor-not-allowed'
+                        : 'bg-primary text-primary-foreground hover:bg-primary/90'
+                    }`}
+                  >
+                    {loadingStations.has(station.id) ? (
+                      <div className="flex items-center gap-1">
+                        <svg className="w-2.5 h-2.5 animate-spin" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                        </svg>
+                        <span>Save...</span>
+                      </div>
+                    ) : (
+                      station.inspection69 === 'ตรวจแล้ว' ? 'Inspected' : 'Inspect'
+                    )}
+                  </button>
+                )}
+              </div>
+
+              {/* Inspection Date for 69 - Multiple Stations */}
               {station.dateInspected && (
                 <div className="flex items-center gap-2 text-xs text-muted-foreground bg-muted/30 p-2 rounded border border-border/50 mt-2">
                   <svg className="w-3 h-3 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -916,12 +879,12 @@ export default function Map({ stations, selectedStation, onStationSelect, onUpda
                         e.preventDefault();
                         e.stopPropagation();
                         const newDetails = station.details === '#deviation' ? '' : '#deviation';
-                        handleStationToggle(e, station.id, 'details' as 'onAir' | 'inspection68' | 'details', newDetails);
+                        handleStationToggle(e, station.id, 'details', newDetails);
                       }}
                       disabled={loadingStations.has(station.id)}
                       className={`px-1.5 py-0.5 text-xs rounded font-medium transition-all duration-200 ${
                         station.details === '#deviation'
-                          ? 'bg-red-100 text-red-700 border border-red-300 dark:bg-red-900/30 dark:text-red-400 dark:border-red-700'
+                          ? 'badge-error'
                           : 'bg-muted text-muted-foreground border border-border hover:bg-accent hover:text-accent-foreground'
                       } ${loadingStations.has(station.id) ? 'opacity-50 cursor-not-allowed' : ''}`}
                     >
@@ -932,12 +895,12 @@ export default function Map({ stations, selectedStation, onStationSelect, onUpda
                         e.preventDefault();
                         e.stopPropagation();
                         const newDetails = station.details === '#intermod' ? '' : '#intermod';
-                        handleStationToggle(e, station.id, 'details' as 'onAir' | 'inspection68' | 'details', newDetails);
+                        handleStationToggle(e, station.id, 'details', newDetails);
                       }}
                       disabled={loadingStations.has(station.id)}
                       className={`px-1.5 py-0.5 text-xs rounded font-medium transition-all duration-200 ${
                         station.details === '#intermod'
-                          ? 'bg-orange-100 text-orange-700 border border-orange-300 dark:bg-orange-900/30 dark:text-orange-400 dark:border-orange-700'
+                          ? 'badge-peach'
                           : 'bg-muted text-muted-foreground border border-border hover:bg-accent hover:text-accent-foreground'
                       } ${loadingStations.has(station.id) ? 'opacity-50 cursor-not-allowed' : ''}`}
                     >
@@ -970,11 +933,6 @@ export default function Map({ stations, selectedStation, onStationSelect, onUpda
                     <span className="text-xs font-medium text-primary bg-primary/10 px-2 py-1 rounded">
                       Station {index + 1} of {stationGroup.length}
                     </span>
-                    {station.unwanted && (
-                      <span className="text-xs font-medium text-orange-600 bg-orange-100 dark:bg-orange-900/30 dark:text-orange-400 px-2 py-1 rounded">
-                        ⚠️ Unwanted
-                      </span>
-                    )}
                   </div>
                 )}
                 <div className="flex items-start gap-2 mb-2">
@@ -988,7 +946,7 @@ export default function Map({ stations, selectedStation, onStationSelect, onUpda
                         {station.genre}
                       </span>
                       {(station.type === 'สถานีหลัก' || station.genre === 'สถานีหลัก') && (
-                        <span className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400 text-xs font-medium">
+                        <span className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded badge-info text-xs font-medium">
                           <span>★</span>
                           <span>Main</span>
                         </span>
@@ -999,62 +957,24 @@ export default function Map({ stations, selectedStation, onStationSelect, onUpda
 
                 <div className="flex items-center justify-between gap-2 p-2 bg-muted/30 rounded border border-border/50 mb-2">
                   <span className={`inline-flex items-center gap-2 px-2 py-1 rounded-md text-xs font-medium ${
-                    station.onAir
-                      ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400'
-                      : 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400'
+                    station.onAir ? 'badge-success' : 'badge-error'
                   }`}>
-                    <div className={`w-1.5 h-1.5 rounded-full ${station.onAir ? 'bg-green-500' : 'bg-red-500'}`} />
+                    <div className={`w-1.5 h-1.5 rounded-full`} style={{ background: station.onAir ? 'var(--syntax-green)' : 'var(--syntax-red)' }} />
                     {station.onAir ? 'On Air' : 'Off Air'}
                   </span>
                   {onUpdateStation && (
-                    <button
-                      onClick={(e) => handleStationToggle(e, station.id, 'onAir', !station.onAir)}
-                      disabled={loadingStations.has(station.id)}
-                      className={`px-2 py-1 text-xs rounded font-medium whitespace-nowrap transition-all duration-200 ${
-                        loadingStations.has(station.id)
-                          ? 'bg-muted text-muted-foreground cursor-not-allowed'
-                          : 'bg-secondary text-secondary-foreground hover:bg-accent'
-                      }`}
-                    >
-                      {loadingStations.has(station.id) ? (
-                        <div className="flex items-center gap-1">
-                          <svg className="w-2.5 h-2.5 animate-spin" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
-                          </svg>
-                          <span>Save...</span>
-                        </div>
-                      ) : (
-                        station.onAir ? 'Set Off' : 'Set On'
-                      )}
-                    </button>
-                  )}
-                </div>
-
-                {station.inspection68 && (
-                  <div className="flex items-center justify-between gap-2 p-2 bg-muted/30 rounded border border-border/50 mb-2">
-                    <span className={`inline-flex items-center gap-1 px-2 py-1 rounded-md text-xs font-medium ${
-                      station.inspection68 === 'ตรวจแล้ว'
-                        ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400'
-                        : station.inspection68 === 'ยังไม่ตรวจ'
-                        ? 'bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400'
-                        : 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400'
-                    }`}>
-                      {station.inspection68 === 'ตรวจแล้ว' && '✅'}
-                      {station.inspection68 === 'ยังไม่ตรวจ' && '⏳'}
-                      {station.inspection68 === 'ตรงตามมาตรฐาน' && '🎯'}
-                      <span className="break-words text-xs">{station.inspection68}</span>
-                    </span>
-                    {onUpdateStation && (
+                    station.submitRequest === 'ไม่ยื่น' && !station.onAir ? (
+                      <span className="px-2 py-1 text-xs rounded font-medium text-muted-foreground bg-muted">
+                        ไม่ยื่นคำขอ
+                      </span>
+                    ) : (
                       <button
-                        onClick={(e) => {
-                          const newStatus = station.inspection68 === 'ตรวจแล้ว' ? 'ยังไม่ตรวจ' : 'ตรวจแล้ว';
-                          handleStationToggle(e, station.id, 'inspection68', newStatus);
-                        }}
+                        onClick={(e) => handleStationToggle(e, station.id, 'onAir', !station.onAir)}
                         disabled={loadingStations.has(station.id)}
                         className={`px-2 py-1 text-xs rounded font-medium whitespace-nowrap transition-all duration-200 ${
                           loadingStations.has(station.id)
                             ? 'bg-muted text-muted-foreground cursor-not-allowed'
-                            : 'bg-primary text-primary-foreground hover:bg-primary/90'
+                            : 'bg-secondary text-secondary-foreground hover:bg-accent'
                         }`}
                       >
                         {loadingStations.has(station.id) ? (
@@ -1065,12 +985,48 @@ export default function Map({ stations, selectedStation, onStationSelect, onUpda
                             <span>Save...</span>
                           </div>
                         ) : (
-                          station.inspection68 === 'ยังไม่ตรวจ' ? 'Inspect' : 'Inspected'
+                          station.onAir ? 'Set Off' : 'Set On'
                         )}
                       </button>
-                    )}
-                  </div>
-                )}
+                    )
+                  )}
+                </div>
+
+                <div className="flex items-center justify-between gap-2 p-2 bg-muted/30 rounded border border-border/50 mb-2">
+                  <span className={`inline-flex items-center gap-1 px-2 py-1 rounded-md text-xs font-medium ${
+                    station.inspection69 === 'ตรวจแล้ว'
+                      ? 'badge-success'
+                      : 'badge-warning'
+                  }`}>
+                    {station.inspection69 === 'ตรวจแล้ว' ? '✅' : '⏳'}
+                    <span className="break-words text-xs">{station.inspection69 || 'ยังไม่ตรวจ'}</span>
+                  </span>
+                  {onUpdateStation && (
+                    <button
+                      onClick={(e) => {
+                        const newStatus = station.inspection69 === 'ตรวจแล้ว' ? 'ยังไม่ตรวจ' : 'ตรวจแล้ว';
+                        handleStationToggle(e, station.id, 'inspection69', newStatus);
+                      }}
+                      disabled={loadingStations.has(station.id)}
+                      className={`px-2 py-1 text-xs rounded font-medium whitespace-nowrap transition-all duration-200 ${
+                        loadingStations.has(station.id)
+                          ? 'bg-muted text-muted-foreground cursor-not-allowed'
+                          : 'bg-primary text-primary-foreground hover:bg-primary/90'
+                      }`}
+                    >
+                      {loadingStations.has(station.id) ? (
+                        <div className="flex items-center gap-1">
+                          <svg className="w-2.5 h-2.5 animate-spin" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                          </svg>
+                          <span>Save...</span>
+                        </div>
+                      ) : (
+                        station.inspection69 === 'ตรวจแล้ว' ? 'Inspected' : 'Inspect'
+                      )}
+                    </button>
+                  )}
+                </div>
 
                 {station.dateInspected && (
                   <div className="flex items-center gap-2 text-xs text-muted-foreground bg-muted/30 p-2 rounded border border-border/50 mt-2">
@@ -1092,12 +1048,12 @@ export default function Map({ stations, selectedStation, onStationSelect, onUpda
                           e.preventDefault();
                           e.stopPropagation();
                           const newDetails = station.details === '#deviation' ? '' : '#deviation';
-                          handleStationToggle(e, station.id, 'details' as 'onAir' | 'inspection68' | 'details', newDetails);
+                          handleStationToggle(e, station.id, 'details', newDetails);
                         }}
                         disabled={loadingStations.has(station.id)}
                         className={`px-1.5 py-0.5 text-xs rounded font-medium transition-all duration-200 ${
                           station.details === '#deviation'
-                            ? 'bg-red-100 text-red-700 border border-red-300 dark:bg-red-900/30 dark:text-red-400 dark:border-red-700'
+                            ? 'badge-error'
                             : 'bg-muted text-muted-foreground border border-border hover:bg-accent hover:text-accent-foreground'
                         } ${loadingStations.has(station.id) ? 'opacity-50 cursor-not-allowed' : ''}`}
                       >
@@ -1108,12 +1064,12 @@ export default function Map({ stations, selectedStation, onStationSelect, onUpda
                           e.preventDefault();
                           e.stopPropagation();
                           const newDetails = station.details === '#intermod' ? '' : '#intermod';
-                          handleStationToggle(e, station.id, 'details' as 'onAir' | 'inspection68' | 'details', newDetails);
+                          handleStationToggle(e, station.id, 'details', newDetails);
                         }}
                         disabled={loadingStations.has(station.id)}
                         className={`px-1.5 py-0.5 text-xs rounded font-medium transition-all duration-200 ${
                           station.details === '#intermod'
-                            ? 'bg-orange-100 text-orange-700 border border-orange-300 dark:bg-orange-900/30 dark:text-orange-400 dark:border-orange-700'
+                            ? 'badge-peach'
                             : 'bg-muted text-muted-foreground border border-border hover:bg-accent hover:text-accent-foreground'
                         } ${loadingStations.has(station.id) ? 'opacity-50 cursor-not-allowed' : ''}`}
                       >
@@ -1177,6 +1133,7 @@ export default function Map({ stations, selectedStation, onStationSelect, onUpda
         />
 
         <LocationTracker onLocationUpdate={setUserLocation} />
+        {flyToStations && <FlyToHighlightedStations target={flyToStations} />}
 
         {userLocation && (
           <Marker

@@ -12,12 +12,11 @@ export interface FMStation {
   website?: string;
   transmitterPower?: number; // in watts
   permit?: string;
-  inspection67?: string;
   inspection68?: string;
-  dateInspected?: string; // Date when the station was inspected (from วันที่ตรวจสอบ column)
+  inspection69?: string;
+  dateInspected?: string; // Date when the station was inspected
   details?: string; // Hashtags like #deviation, #intermod for station details
   onAir?: boolean;
-  unwanted?: boolean;
   submitRequest?: string;
   createdAt?: string;
   updatedAt?: string;

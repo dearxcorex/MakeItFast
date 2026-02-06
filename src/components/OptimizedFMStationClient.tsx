@@ -9,6 +9,9 @@ import { useState, useEffect, useCallback, useRef } from 'react';
 import dynamic from 'next/dynamic';
 import { FMStation, UserLocation, FilterType } from '@/types/station';
 import { useOptimizedFilters, useOptimizedCityFilter, useMemoryMonitor } from '@/hooks/useOptimizedFilters';
+
+// Tab type for navigation
+type ActiveTab = 'stations' | 'intermod' | 'settings';
 // Simple replacements for removed debug utilities
 const GeolocationDebugger = {
   cleanupWatchers: () => {},
@@ -19,7 +22,7 @@ const MapPerformanceMonitor = {
   endTimer: () => {},
   recordMemoryUsage: () => {}
 };
-import Sidebar from '@/components/Sidebar';
+import NavSidebar from '@/components/NavSidebar';
 
 // Lazy load components
 const Map = dynamic(() => import('@/components/Map'), {
@@ -37,6 +40,8 @@ const Map = dynamic(() => import('@/components/Map'), {
     </div>
   )
 });
+
+import IntermodCalculator from '@/components/IntermodCalculator';
 
 
 interface OptimizedFMStationClientProps {
@@ -56,10 +61,12 @@ export default function OptimizedFMStationClient({
 }: OptimizedFMStationClientProps) {
   // State management
   const [selectedStation, setSelectedStation] = useState<FMStation | undefined>();
-  const [sidebarOpen, setSidebarOpen] = useState(false);
   const [userLocation, setUserLocation] = useState<UserLocation | undefined>();
   const [stations, setStations] = useState<FMStation[]>(initialStations);
   const [filters, setFilters] = useState<FilterType>({});
+  const [activeTab, setActiveTab] = useState<ActiveTab>('stations');
+  const [highlightedStationIds, setHighlightedStationIds] = useState<(string | number)[]>([]);
+  const [flyToStations, setFlyToStations] = useState<{ lat1: number; lng1: number; lat2: number; lng2: number; timestamp: number } | null>(null);
 
   // Performance monitoring
   const { checkMemoryUsage } = useMemoryMonitor();
@@ -251,10 +258,37 @@ export default function OptimizedFMStationClient({
   // Optimized station selection
   const handleStationSelect = useCallback((station: FMStation) => {
     setSelectedStation(station);
-    // Close sidebar on mobile after selection
-    if (typeof window !== 'undefined' && window.innerWidth < 1024) {
-      setSidebarOpen(false);
+  }, []);
+
+  // Highlight stations from intermod calculator results and fly to them
+  const handleHighlightStations = useCallback((station1Id: string | number, station2Id: string | number) => {
+    setHighlightedStationIds([station1Id, station2Id]);
+
+    // Find the stations to get their coordinates
+    const station1 = stations.find(s => s.id === station1Id);
+    const station2 = stations.find(s => s.id === station2Id);
+
+    if (station1 && station2) {
+      // Set coordinates for map to fly to (timestamp ensures useEffect triggers)
+      setFlyToStations({
+        lat1: station1.latitude,
+        lng1: station1.longitude,
+        lat2: station2.latitude,
+        lng2: station2.longitude,
+        timestamp: Date.now()
+      });
     }
+
+    // Clear highlight and fly target after 10 seconds
+    setTimeout(() => {
+      setHighlightedStationIds([]);
+      setFlyToStations(null);
+    }, 10000);
+  }, [stations]);
+
+  // Switch to stations tab (used by intermod calculator)
+  const handleSwitchToStations = useCallback(() => {
+    setActiveTab('stations');
   }, []);
 
   // Stable optimistic updates without blinking
@@ -291,6 +325,9 @@ export default function OptimizedFMStationClient({
       if ('inspection68' in updates && updates.inspection68 !== undefined) {
         apiUpdates.inspection68 = updates.inspection68;
       }
+      if ('inspection69' in updates && updates.inspection69 !== undefined) {
+        apiUpdates.inspection69 = updates.inspection69;
+      }
       if ('details' in updates && updates.details !== undefined) {
         apiUpdates.details = updates.details;
       }
@@ -311,10 +348,10 @@ export default function OptimizedFMStationClient({
               onAir: result.data.on_air,
               // Convert boolean back to Thai string for UI
               inspection68: result.data.inspection_68 ? 'ตรวจแล้ว' : 'ยังไม่ตรวจ',
+              inspection69: result.data.inspection_69 ? 'ตรวจแล้ว' : 'ยังไม่ตรวจ',
               dateInspected: result.data.date_inspected,
               details: result.data.details,
-              unwanted: result.data.unwanted === 'true' || result.data.unwanted === true,
-              submitRequest: result.data.submit_a_request
+              submitRequest: result.data.submit_a_request ? 'ยื่น' : 'ไม่ยื่น'
             };
 
             // Update stations with server data
@@ -381,74 +418,305 @@ export default function OptimizedFMStationClient({
 
   return (
     <>
-      <div className="h-screen flex flex-col bg-background">
-        {/* Header with debug controls */}
-        <header className="bg-card shadow-sm border-b border-border px-6 py-4 flex items-center justify-between relative z-10">
-          <div className="flex items-center gap-4">
-            <button
-              onClick={() => setSidebarOpen(!sidebarOpen)}
-              className="lg:hidden p-2.5 rounded-xl bg-secondary hover:bg-accent transition-colors text-secondary-foreground"
-              aria-label="Toggle sidebar"
-            >
-              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
-              </svg>
-            </button>
+      <div className="h-screen flex bg-background">
+        {/* Left Navigation Sidebar - Desktop only */}
+        <div className="hidden lg:block p-4 pr-0">
+          <NavSidebar activeTab={activeTab} onTabChange={setActiveTab} />
+        </div>
 
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 bg-gradient-to-br from-primary to-primary/70 rounded-xl flex items-center justify-center">
-                <svg className="w-6 h-6 text-primary-foreground" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8.111 16.404a5.5 5.5 0 017.778 0M12 20h.01m-7.08-7.071c3.904-3.905 10.236-3.905 14.141 0M1.394 9.393c5.857-5.857 15.355-5.857 21.213 0" />
-                </svg>
+        {/* Main Content Area */}
+        <div className="flex-1 flex flex-col min-w-0">
+          {/* Header - Slim version */}
+          <header className="glass-card border-b border-border/50 px-4 lg:px-6 py-3 relative z-10 mx-4 mt-4 rounded-2xl">
+            <div className="flex items-center justify-between gap-4">
+              {/* Left: Title */}
+              <div className="flex items-center gap-3">
+                <div className="flex items-center gap-3 lg:hidden">
+                  <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-primary to-accent flex items-center justify-center glow-gold">
+                    <svg className="w-5 h-5 text-primary-foreground" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+                    </svg>
+                  </div>
+                  <div className="hidden sm:block">
+                    <h1 className="text-lg font-heading font-bold gradient-text">Task Tracker</h1>
+                    <p className="text-xs text-muted-foreground">
+                      {userLocation ? `Location: ±${userLocation.accuracy?.toFixed(0)}m` : 'NBTC FM Monitoring'}
+                    </p>
+                  </div>
+                </div>
+
+                {/* Desktop: Just show location info */}
+                <div className="hidden lg:flex items-center gap-2 text-sm text-muted-foreground">
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
+                  </svg>
+                  <span>{userLocation ? `±${userLocation.accuracy?.toFixed(0)}m accuracy` : 'NBTC FM Monitoring'}</span>
+                </div>
               </div>
-              <div>
-                <h1 className="text-xl font-bold text-foreground">FM Station Tracker</h1>
-                <p className="text-sm text-muted-foreground">
-                  {filteredStations.length} stations • Database connected ✅
-                  {userLocation && ` • Location: ${userLocation.accuracy?.toFixed(0)}m accuracy`}
-                </p>
+
+              {/* Right: Stats */}
+              <div className="hidden lg:flex items-center gap-3">
+                {/* Filtered Count */}
+                <div className="flex items-center gap-2 px-3 py-2 glass-card rounded-xl">
+                  <div className="text-center">
+                    <div className="text-lg font-bold text-primary">{filteredStations.length}</div>
+                    <div className="text-[10px] text-muted-foreground uppercase tracking-wider">Stations</div>
+                  </div>
+                </div>
+
+                {/* On/Off Air */}
+                <div className="flex items-center gap-2 px-3 py-2 glass-card rounded-xl">
+                  <div className="flex items-center gap-1.5">
+                    <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse" />
+                    <span className="text-sm font-bold text-green-400">{filteredStations.filter(s => s.onAir).length}</span>
+                  </div>
+                  <div className="w-px h-4 bg-border" />
+                  <div className="flex items-center gap-1.5">
+                    <div className="w-2 h-2 bg-red-500 rounded-full" />
+                    <span className="text-sm font-bold text-red-400">{filteredStations.filter(s => !s.onAir).length}</span>
+                  </div>
+                </div>
+
+                {/* Legend */}
+                <div className="flex items-center gap-2 px-3 py-2 glass-card rounded-xl">
+                  <div className="flex items-center gap-2">
+                    <div className="w-2.5 h-2.5 rounded-full bg-green-500" title="Inspected" />
+                    <div className="w-2.5 h-2.5 rounded-full bg-red-500" title="Pending" />
+                    <div className="w-2.5 h-2.5 rounded-full bg-gray-400" title="Off Air" />
+                  </div>
+                </div>
+              </div>
+
+              {/* Mobile Stats */}
+              <div className="flex lg:hidden items-center gap-2">
+                <span className="text-xs font-bold text-primary">{filteredStations.length}</span>
+                <div className="w-px h-3 bg-border" />
+                <div className="flex items-center gap-1">
+                  <div className="w-1.5 h-1.5 bg-green-500 rounded-full" />
+                  <span className="text-xs text-green-400">{filteredStations.filter(s => s.onAir).length}</span>
+                </div>
+                <div className="flex items-center gap-1">
+                  <div className="w-1.5 h-1.5 bg-red-500 rounded-full" />
+                  <span className="text-xs text-red-400">{filteredStations.filter(s => !s.onAir).length}</span>
+                </div>
               </div>
             </div>
-          </div>
+          </header>
 
-        </header>
+          {/* Main content */}
+          <div className="flex-1 flex flex-col lg:flex-row overflow-y-auto p-4 pt-2 gap-4">
+            {activeTab === 'stations' ? (
+              /* Map with Filter Bar */
+              <div className="flex-1 flex flex-col gap-2">
+                {/* Filter Bar */}
+                <div className="glass-card rounded-xl p-3">
+                  <div className="flex flex-wrap items-center gap-2">
+                    {/* Search Input */}
+                    <div className="relative flex-1 min-w-[180px]">
+                      <svg className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-muted-foreground" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                      </svg>
+                      <input
+                        type="text"
+                        placeholder="Search stations..."
+                        value={filters.search || ''}
+                        onChange={(e) => setFilters({ ...filters, search: e.target.value || undefined })}
+                        className="w-full pl-9 pr-8 py-2 text-sm border border-border rounded-lg bg-background focus:ring-2 focus:ring-primary focus:border-transparent"
+                      />
+                      {filters.search && (
+                        <button
+                          onClick={() => setFilters({ ...filters, search: undefined })}
+                          className="absolute right-2 top-1/2 transform -translate-y-1/2 text-muted-foreground hover:text-foreground p-1"
+                        >
+                          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                          </svg>
+                        </button>
+                      )}
+                    </div>
 
-        {/* Main content */}
-        <div className="flex-1 flex overflow-hidden">
-          {/* Sidebar */}
-          <Sidebar
-            stations={filteredStations}
-            allStations={stations}
-            onStationSelect={handleStationSelect}
-            selectedStation={selectedStation}
-            isOpen={sidebarOpen}
-            onToggle={() => setSidebarOpen(!sidebarOpen)}
-            userLocation={userLocation}
-            initialOnAirStatuses={initialOnAirStatuses}
-            initialCities={initialCities}
-            initialProvinces={initialProvinces}
-            initialInspectionStatuses={initialInspectionStatuses}
-            filters={filters}
-            onFiltersChange={setFilters}
-            onClearFilters={clearFilters}
-            calculateDistance={calculateDistance}
-          />
+                    {/* Province Select */}
+                    <select
+                      value={filters.province || ''}
+                      onChange={(e) => setFilters({ ...filters, province: e.target.value || undefined, city: undefined })}
+                      className="px-3 py-2 text-sm border border-border rounded-lg bg-background focus:ring-2 focus:ring-primary focus:border-transparent min-w-[140px]"
+                    >
+                      <option value="">All Provinces</option>
+                      {initialProvinces.map(province => (
+                        <option key={province} value={province}>{province}</option>
+                      ))}
+                    </select>
 
-          {/* Map container */}
-          <div className="flex-1 relative bg-muted/30">
-            <div className="absolute inset-4 rounded-2xl overflow-hidden shadow-2xl border border-border/50">
-              <Map
-                stations={filteredStations}
-                selectedStation={selectedStation}
-                onStationSelect={handleStationSelect}
-                onUpdateStation={handleUpdateStation}
+                    {/* City Select */}
+                    <select
+                      value={filters.city || ''}
+                      onChange={(e) => setFilters({ ...filters, city: e.target.value || undefined })}
+                      className={`px-3 py-2 text-sm border border-border rounded-lg bg-background focus:ring-2 focus:ring-primary focus:border-transparent min-w-[140px] ${!filters.province ? 'opacity-50' : ''}`}
+                      disabled={!filters.province}
+                    >
+                      <option value="">{filters.province ? 'All Cities' : 'Select province'}</option>
+                      {filters.province && initialCities
+                        .filter(city => stations.some(s => s.state === filters.province && s.city === city))
+                        .map(city => (
+                          <option key={city} value={city}>{city}</option>
+                        ))
+                      }
+                    </select>
+
+                    {/* On Air Toggle */}
+                    <div className="flex gap-1">
+                      <button
+                        onClick={() => setFilters({ ...filters, onAir: filters.onAir === true ? undefined : true })}
+                        className={`flex items-center gap-1.5 px-3 py-2 text-xs font-medium rounded-lg border transition-all cursor-pointer ${
+                          filters.onAir === true
+                            ? 'bg-green-500 text-white border-green-500'
+                            : 'bg-background border-border hover:border-green-500/50'
+                        }`}
+                      >
+                        <div className={`w-2 h-2 rounded-full ${filters.onAir === true ? 'bg-white' : 'bg-green-500'}`} />
+                        On Air
+                      </button>
+                      <button
+                        onClick={() => setFilters({ ...filters, onAir: filters.onAir === false ? undefined : false })}
+                        className={`flex items-center gap-1.5 px-3 py-2 text-xs font-medium rounded-lg border transition-all cursor-pointer ${
+                          filters.onAir === false
+                            ? 'bg-red-500 text-white border-red-500'
+                            : 'bg-background border-border hover:border-red-500/50'
+                        }`}
+                      >
+                        <div className={`w-2 h-2 rounded-full ${filters.onAir === false ? 'bg-white' : 'bg-red-500'}`} />
+                        Off Air
+                      </button>
+                    </div>
+
+                    {/* Inspection Status */}
+                    <select
+                      value={filters.inspection68 || ''}
+                      onChange={(e) => setFilters({ ...filters, inspection68: e.target.value || undefined })}
+                      className="px-3 py-2 text-sm border border-border rounded-lg bg-background focus:ring-2 focus:ring-primary focus:border-transparent min-w-[140px]"
+                    >
+                      <option value="">All Inspection</option>
+                      {initialInspectionStatuses.map(status => (
+                        <option key={status} value={status}>{status}</option>
+                      ))}
+                    </select>
+
+                    {/* Clear Filters */}
+                    {(filters.search || filters.province || filters.city || filters.onAir !== undefined || filters.inspection68) && (
+                      <button
+                        onClick={clearFilters}
+                        className="flex items-center gap-1.5 px-3 py-2 text-xs font-medium bg-destructive/10 text-destructive hover:bg-destructive/20 rounded-lg border border-destructive/20 cursor-pointer"
+                      >
+                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                        </svg>
+                        Clear
+                      </button>
+                    )}
+                  </div>
+                </div>
+
+                {/* Map container */}
+                <div className="flex-1 relative min-h-[400px]">
+                  <div className="absolute inset-0 rounded-2xl overflow-hidden glass-card">
+                    <Map
+                      stations={filteredStations}
+                      selectedStation={selectedStation}
+                      onStationSelect={handleStationSelect}
+                      onUpdateStation={handleUpdateStation}
+                      highlightedStationIds={highlightedStationIds}
+                      flyToStations={flyToStations}
+                    />
+                  </div>
+                </div>
+              </div>
+            ) : activeTab === 'intermod' ? (
+              /* Intermodulation Calculator */
+              <IntermodCalculator
+                stations={stations}
+                onHighlightStations={handleHighlightStations}
+                onSwitchToStations={handleSwitchToStations}
               />
-            </div>
+            ) : (
+              /* Settings Page - Placeholder */
+              <div className="flex-1 glass-card p-6 rounded-2xl">
+                <div className="flex items-center gap-3 mb-6">
+                  <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-muted to-secondary flex items-center justify-center">
+                    <svg className="w-5 h-5 text-foreground" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                    </svg>
+                  </div>
+                  <div>
+                    <h2 className="text-lg font-heading font-bold text-foreground">Settings</h2>
+                    <p className="text-xs text-muted-foreground">Configure application preferences</p>
+                  </div>
+                </div>
+
+                <div className="flex flex-col items-center justify-center h-[400px] text-center">
+                  <div className="w-20 h-20 rounded-2xl bg-secondary/50 flex items-center justify-center mb-4">
+                    <svg className="w-10 h-10 text-muted-foreground" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
+                    </svg>
+                  </div>
+                  <h4 className="text-lg font-semibold text-foreground mb-2">Coming Soon</h4>
+                  <p className="text-sm text-muted-foreground max-w-md">
+                    Settings page is under development. Configure theme, notifications,
+                    and other preferences here.
+                  </p>
+                </div>
+              </div>
+            )}
           </div>
         </div>
       </div>
 
-      {/* Test Suite Modal */}
+      {/* Mobile Bottom Navigation */}
+      <div className="lg:hidden mobile-bottom-nav">
+        <div className="flex items-center justify-around py-2">
+          <button
+            onClick={() => setActiveTab('stations')}
+            className={`flex flex-col items-center gap-1 px-4 py-2 rounded-xl transition-all ${
+              activeTab === 'stations'
+                ? 'text-primary'
+                : 'text-muted-foreground'
+            }`}
+          >
+            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8.111 16.404a5.5 5.5 0 017.778 0M12 20h.01m-7.08-7.071c3.904-3.905 10.236-3.905 14.141 0M1.394 9.393c5.857-5.857 15.355-5.857 21.213 0" />
+            </svg>
+            <span className="text-xs font-medium">Stations</span>
+          </button>
+          <button
+            onClick={() => setActiveTab('intermod')}
+            className={`flex flex-col items-center gap-1 px-4 py-2 rounded-xl transition-all ${
+              activeTab === 'intermod'
+                ? 'text-accent'
+                : 'text-muted-foreground'
+            }`}
+          >
+            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 7h6m0 10v-3m-3 3h.01M9 17h.01M9 14h.01M12 14h.01M15 11h.01M12 11h.01M9 11h.01M7 21h10a2 2 0 002-2V5a2 2 0 00-2-2H7a2 2 0 00-2 2v14a2 2 0 002 2z" />
+            </svg>
+            <span className="text-xs font-medium">Intermod</span>
+          </button>
+          <button
+            onClick={() => setActiveTab('settings')}
+            className={`flex flex-col items-center gap-1 px-4 py-2 rounded-xl transition-all ${
+              activeTab === 'settings'
+                ? 'text-foreground'
+                : 'text-muted-foreground'
+            }`}
+          >
+            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+            </svg>
+            <span className="text-xs font-medium">Settings</span>
+          </button>
+        </div>
+      </div>
     </>
   );
 }
