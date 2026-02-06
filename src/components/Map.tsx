@@ -14,80 +14,97 @@ L.Icon.Default.mergeOptions({
   shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-shadow.png',
 });
 
-// Custom icons for different markers
-const greenStationIcon = new L.Icon({
-  iconUrl: 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-2x-green.png',
-  shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-shadow.png',
-  iconSize: [25, 41],
-  iconAnchor: [12, 41],
-  popupAnchor: [1, -34],
-  shadowSize: [41, 41]
-});
+// SVG icons for station markers (inline to avoid external dependencies)
+const radioOnSvg = `<svg class="station-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+  <circle cx="12" cy="12" r="3"/>
+  <path d="M4.93 4.93a10 10 0 0 1 14.14 0"/>
+  <path d="M7.76 7.76a6 6 0 0 1 8.48 0"/>
+</svg>`;
 
-const redStationIcon = new L.Icon({
-  iconUrl: 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-2x-red.png',
-  shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-shadow.png',
-  iconSize: [25, 41],
-  iconAnchor: [12, 41],
-  popupAnchor: [1, -34],
-  shadowSize: [41, 41]
-});
+const radioOffSvg = `<svg class="station-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+  <circle cx="12" cy="12" r="3"/>
+  <path d="M4.93 4.93a10 10 0 0 1 14.14 0" opacity="0.3"/>
+  <path d="M7.76 7.76a6 6 0 0 1 8.48 0" opacity="0.3"/>
+  <line x1="4" y1="4" x2="20" y2="20" stroke-width="2"/>
+</svg>`;
 
-const blackStationIcon = new L.Icon({
-  iconUrl: 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-2x-black.png',
-  shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-shadow.png',
-  iconSize: [25, 41],
-  iconAnchor: [12, 41],
-  popupAnchor: [1, -34],
-  shadowSize: [41, 41]
-});
+// Create custom station icon with status indicators
+const createStationIcon = (
+  station: FMStation,
+  isHighlighted: boolean = false,
+  stationCount: number = 1
+): L.DivIcon => {
+  const hasNoRequest = station.submitRequest === 'ไม่ยื่น';
+  const isOffAir = !station.onAir;
+  const isInspected = station.inspection69 === 'ตรวจแล้ว';
+  const isMainStation = station.type === 'สถานีหลัก' || station.genre === 'สถานีหลัก';
 
-const greyStationIcon = new L.Icon({
-  iconUrl: 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-2x-grey.png',
-  shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-shadow.png',
-  iconSize: [25, 41],
-  iconAnchor: [12, 41],
-  popupAnchor: [1, -34],
-  shadowSize: [41, 41]
-});
+  // Determine color class based on status priority
+  let colorClass = 'station-marker--orange'; // default: not inspected + on air
+  if (isHighlighted) {
+    colorClass = 'station-marker--gold';
+  } else if (hasNoRequest) {
+    colorClass = 'station-marker--black';
+  } else if (isOffAir) {
+    colorClass = 'station-marker--grey';
+  } else if (isInspected) {
+    colorClass = 'station-marker--green';
+  }
+
+  // Determine badge content
+  let badge = '';
+  if (stationCount > 1) {
+    // Multiple stations at location - show count
+    badge = `<div class="station-badge station-badge--danger">${stationCount}</div>`;
+  } else if (isMainStation) {
+    // Main station badge
+    badge = '<div class="station-badge station-badge--info">★</div>';
+  } else if (hasNoRequest) {
+    // No request warning
+    badge = '<div class="station-badge station-badge--danger">!</div>';
+  } else if (isHighlighted) {
+    // Highlighted (intermod) warning
+    badge = '<div class="station-badge station-badge--warning">⚠</div>';
+  } else if (isInspected) {
+    // Inspected checkmark
+    badge = '<div class="station-badge station-badge--success">✓</div>';
+  } else {
+    // Pending inspection
+    badge = '<div class="station-badge station-badge--warning">⏳</div>';
+  }
+
+  // Select radio icon based on on-air status
+  const radioIcon = isOffAir ? radioOffSvg : radioOnSvg;
+
+  // Add pulse ring for highlighted stations
+  const pulseRing = isHighlighted ? '<div class="station-marker-pulse"></div>' : '';
+
+  return L.divIcon({
+    className: 'custom-station-marker',
+    html: `
+      <div class="station-marker ${colorClass}">
+        ${pulseRing}
+        <div class="station-marker-circle">
+          ${radioIcon}
+        </div>
+        <div class="station-marker-pointer"></div>
+        ${badge}
+      </div>
+    `,
+    iconSize: [32, 40],
+    iconAnchor: [16, 40],
+    popupAnchor: [0, -38]
+  });
+};
 
 // Create a custom Google Maps style location icon
 const createLocationIcon = () => {
   return L.divIcon({
     className: 'custom-location-icon',
     html: `
-      <div style="
-        width: 20px;
-        height: 20px;
-        background: #4285F4;
-        border: 3px solid #ffffff;
-        border-radius: 50%;
-        box-shadow: 0 2px 6px rgba(0,0,0,0.3);
-        position: relative;
-      ">
-        <div style="
-          width: 40px;
-          height: 40px;
-          background: rgba(66, 133, 244, 0.2);
-          border-radius: 50%;
-          position: absolute;
-          top: -13px;
-          left: -13px;
-          animation: locationPulse 2s infinite;
-        "></div>
+      <div class="location-marker">
+        <div class="location-pulse"></div>
       </div>
-      <style>
-        @keyframes locationPulse {
-          0% {
-            transform: scale(0.8);
-            opacity: 1;
-          }
-          100% {
-            transform: scale(2);
-            opacity: 0;
-          }
-        }
-      </style>
     `,
     iconSize: [20, 20],
     iconAnchor: [10, 10],
@@ -95,15 +112,6 @@ const createLocationIcon = () => {
   });
 };
 
-// Highlighted station icon (orange/gold for intermod results)
-const highlightedStationIcon = new L.Icon({
-  iconUrl: 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-2x-gold.png',
-  shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-shadow.png',
-  iconSize: [30, 49], // Slightly larger for emphasis
-  iconAnchor: [15, 49],
-  popupAnchor: [1, -40],
-  shadowSize: [49, 49]
-});
 
 interface FlyToTarget {
   lat1: number;
@@ -271,168 +279,13 @@ export default function Map({ stations, selectedStation, onStationSelect, onUpda
     // If it's an array (multiple stations), use the first station's status
     const station = Array.isArray(stationOrGroup) ? stationOrGroup[0] : stationOrGroup;
     const stationsToCheck = Array.isArray(stationOrGroup) ? stationOrGroup : [stationOrGroup];
-    const isMultiple = count && count > 1;
-    const isMainStation = station.type === 'สถานีหลัก' || station.genre === 'สถานีหลัก';
-    const hasNoRequest = station.submitRequest === 'ไม่ยื่น';
+    const stationCount = count || 1;
 
     // Check if any station in this group is highlighted
     const isHighlighted = stationsToCheck.some(s => highlightedStationIds.includes(s.id));
 
-    // Get base icon based on station status (or highlighted status)
-    let baseIcon;
-    if (isHighlighted) {
-      baseIcon = highlightedStationIcon;
-    } else if (hasNoRequest) {
-      baseIcon = blackStationIcon;
-    } else if (!station.onAir) {
-      baseIcon = greyStationIcon;
-    } else if (station.inspection69 === 'ตรวจแล้ว') {
-      baseIcon = greenStationIcon;
-    } else if (station.inspection69 === 'ยังไม่ตรวจ') {
-      baseIcon = redStationIcon;
-    } else {
-      baseIcon = redStationIcon;
-    }
-
-    // Create custom icon with main station symbol, count badge, warning badge, or highlight effect
-    if (isMainStation || isMultiple || isHighlighted || hasNoRequest) {
-      const iconWidth = isHighlighted ? 30 : 25;
-      const iconHeight = isHighlighted ? 49 : 41;
-      return L.divIcon({
-        className: `custom-station-icon ${isHighlighted ? 'highlighted-station' : ''}`,
-        html: `
-          <div style="position: relative;">
-            ${isHighlighted ? `
-              <div style="
-                position: absolute;
-                top: 50%;
-                left: 50%;
-                transform: translate(-50%, -50%);
-                width: 50px;
-                height: 50px;
-                background: rgba(255, 193, 7, 0.3);
-                border-radius: 50%;
-                animation: highlightPulse 1.5s ease-in-out infinite;
-              "></div>
-              <style>
-                @keyframes highlightPulse {
-                  0%, 100% { transform: translate(-50%, -50%) scale(1); opacity: 1; }
-                  50% { transform: translate(-50%, -50%) scale(1.5); opacity: 0.5; }
-                }
-              </style>
-            ` : ''}
-            <img src="${baseIcon.options.iconUrl}"
-                 style="width: ${iconWidth}px; height: ${iconHeight}px; position: relative; z-index: 1;"
-                 alt="Station marker" />
-            ${hasNoRequest && !isMultiple && !isMainStation && !isHighlighted ? `
-              <div style="
-                position: absolute;
-                top: -8px;
-                right: -8px;
-                background: #ef4444;
-                color: white;
-                border-radius: 50%;
-                width: 18px;
-                height: 18px;
-                display: flex;
-                align-items: center;
-                justify-content: center;
-                font-size: 12px;
-                font-weight: bold;
-                border: 2px solid white;
-                box-shadow: 0 1px 3px rgba(0,0,0,0.3);
-                z-index: 2;
-              ">!</div>
-            ` : ''}
-            ${isMainStation && !isMultiple ? `
-              <div style="
-                position: absolute;
-                top: -6px;
-                right: -6px;
-                background: #4285F4;
-                color: white;
-                border-radius: 50%;
-                width: 16px;
-                height: 16px;
-                display: flex;
-                align-items: center;
-                justify-content: center;
-                font-size: 10px;
-                font-weight: bold;
-                border: 2px solid white;
-                box-shadow: 0 1px 3px rgba(0,0,0,0.3);
-                z-index: 2;
-              ">★</div>
-            ` : ''}
-            ${isMultiple && !isMainStation ? `
-              <div style="
-                position: absolute;
-                top: -8px;
-                right: -8px;
-                background: ${hasNoRequest ? '#ef4444' : '#ff4444'};
-                color: white;
-                border-radius: 50%;
-                width: 18px;
-                height: 18px;
-                display: flex;
-                align-items: center;
-                justify-content: center;
-                font-size: 11px;
-                font-weight: bold;
-                border: 2px solid white;
-                box-shadow: 0 1px 3px rgba(0,0,0,0.3);
-                z-index: 2;
-              ">${hasNoRequest ? '!' + count : count}</div>
-            ` : ''}
-            ${isMultiple && isMainStation ? `
-              <div style="
-                position: absolute;
-                top: -8px;
-                right: -8px;
-                background: #4285F4;
-                color: white;
-                border-radius: 50%;
-                width: 18px;
-                height: 18px;
-                display: flex;
-                align-items: center;
-                justify-content: center;
-                font-size: 9px;
-                font-weight: bold;
-                border: 2px solid white;
-                box-shadow: 0 1px 3px rgba(0,0,0,0.3);
-                z-index: 2;
-              ">★${count}</div>
-            ` : ''}
-            ${isHighlighted && !isMultiple && !isMainStation && !hasNoRequest ? `
-              <div style="
-                position: absolute;
-                top: -8px;
-                right: -8px;
-                background: #f97316;
-                color: white;
-                border-radius: 50%;
-                width: 18px;
-                height: 18px;
-                display: flex;
-                align-items: center;
-                justify-content: center;
-                font-size: 10px;
-                font-weight: bold;
-                border: 2px solid white;
-                box-shadow: 0 1px 3px rgba(0,0,0,0.3);
-                z-index: 2;
-              ">⚠</div>
-            ` : ''}
-          </div>
-        `,
-        iconSize: [iconWidth, iconHeight],
-        iconAnchor: [iconWidth / 2, iconHeight],
-        popupAnchor: [1, -34]
-      });
-    }
-
-    return baseIcon;
+    // Use the new createStationIcon function
+    return createStationIcon(station, isHighlighted, stationCount);
   };
 
   // Function to format inspection date

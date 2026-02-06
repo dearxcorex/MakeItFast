@@ -854,6 +854,39 @@ input[type="checkbox"][role="switch"]:focus {
   }
 }
 
+/* Location marker styles */
+.location-marker {
+  width: 20px;
+  height: 20px;
+  background: #4285F4;
+  border: 3px solid #ffffff;
+  border-radius: 50%;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.3);
+  position: relative;
+}
+
+.location-pulse {
+  width: 40px;
+  height: 40px;
+  background: rgba(66, 133, 244, 0.2);
+  border-radius: 50%;
+  position: absolute;
+  top: -13px;
+  left: -13px;
+  animation: locationPulse 1.5s ease-out infinite;
+}
+
+@keyframes locationPulse {
+  0% {
+    transform: scale(0.8);
+    opacity: 1;
+  }
+  100% {
+    transform: scale(2);
+    opacity: 0;
+  }
+}
+
 /* Reduced motion for accessibility */
 @media (prefers-reduced-motion: reduce) {
   *,
@@ -869,11 +902,181 @@ input[type="checkbox"][role="switch"]:focus {
   .animate-slide-in,
   .animate-scale-in,
   .animate-spin,
-  .animate-pulse {
+  .animate-pulse,
+  .location-pulse,
+  .station-marker-pulse {
     animation: none !important;
   }
 
   .bottom-sheet {
     transition: none !important;
+  }
+}
+
+/* ============================================
+   Custom Station Markers with Status Icons
+   ============================================ */
+
+/* Reset leaflet's default icon styling */
+.custom-station-marker {
+  background: transparent !important;
+  border: none !important;
+}
+
+/* Station Marker Container */
+.station-marker {
+  width: 32px;
+  height: 40px;
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+/* Circular marker body */
+.station-marker-circle {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  border: 2px solid white;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.3);
+  position: relative;
+  z-index: 1;
+}
+
+/* Pointer/arrow below the circle */
+.station-marker-pointer {
+  position: absolute;
+  bottom: 0;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 0;
+  height: 0;
+  border-left: 6px solid transparent;
+  border-right: 6px solid transparent;
+}
+
+/* Color Variants */
+/* Green - Inspected + On Air */
+.station-marker--green .station-marker-circle {
+  background: #22c55e;
+}
+.station-marker--green .station-marker-pointer {
+  border-top: 10px solid #22c55e;
+}
+
+/* Orange - Not Inspected + On Air */
+.station-marker--orange .station-marker-circle {
+  background: #f59e0b;
+}
+.station-marker--orange .station-marker-pointer {
+  border-top: 10px solid #f59e0b;
+}
+
+/* Grey - Off Air */
+.station-marker--grey .station-marker-circle {
+  background: #6b7280;
+}
+.station-marker--grey .station-marker-pointer {
+  border-top: 10px solid #6b7280;
+}
+
+/* Black - No Request */
+.station-marker--black .station-marker-circle {
+  background: #1f2937;
+  border-color: #ef4444;
+}
+.station-marker--black .station-marker-pointer {
+  border-top: 10px solid #1f2937;
+}
+
+/* Gold - Highlighted (Intermod results) */
+.station-marker--gold .station-marker-circle {
+  background: #eab308;
+  animation: stationPulse 1.5s ease-in-out infinite;
+}
+.station-marker--gold .station-marker-pointer {
+  border-top: 10px solid #eab308;
+}
+
+@keyframes stationPulse {
+  0%, 100% {
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.3), 0 0 0 0 rgba(234, 179, 8, 0.5);
+  }
+  50% {
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.3), 0 0 0 8px rgba(234, 179, 8, 0);
+  }
+}
+
+/* Status Badge - top right corner */
+.station-badge {
+  position: absolute;
+  top: -4px;
+  right: -4px;
+  min-width: 16px;
+  height: 16px;
+  border-radius: 8px;
+  font-size: 10px;
+  font-weight: bold;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 1.5px solid white;
+  color: white;
+  z-index: 2;
+  padding: 0 3px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
+}
+
+/* Badge color variants */
+.station-badge--success {
+  background: #22c55e;
+}
+
+.station-badge--warning {
+  background: #f59e0b;
+}
+
+.station-badge--danger {
+  background: #ef4444;
+}
+
+.station-badge--info {
+  background: #4285f4;
+}
+
+/* Center icon in marker */
+.station-icon {
+  width: 16px;
+  height: 16px;
+  color: white;
+  flex-shrink: 0;
+}
+
+/* Highlighted station pulse ring */
+.station-marker-pulse {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 40px;
+  height: 40px;
+  background: rgba(234, 179, 8, 0.3);
+  border-radius: 50%;
+  animation: highlightPulse 1.5s ease-in-out infinite;
+  z-index: 0;
+}
+
+@keyframes highlightPulse {
+  0%, 100% {
+    transform: translate(-50%, -50%) scale(1);
+    opacity: 1;
+  }
+  50% {
+    transform: translate(-50%, -50%) scale(1.5);
+    opacity: 0.3;
   }
 }
