@@ -22,7 +22,6 @@
   --ring: #F59E0B;
   --sidebar-bg: rgba(255, 255, 255, 0.95);
   --sidebar-border: rgba(148, 163, 184, 0.2);
-  --header-bg: rgba(255, 255, 255, 0.9);
 
   /* Syntax highlighting colors */
   --syntax-green: #16A34A;
@@ -81,7 +80,6 @@
   --ring: #F59E0B;
   --sidebar-bg: rgba(15, 23, 42, 0.95);
   --sidebar-border: rgba(148, 163, 184, 0.1);
-  --header-bg: rgba(15, 23, 42, 0.9);
 
   /* Glassmorphism - Dark version */
   --glass-bg: rgba(30, 41, 59, 0.6);
@@ -302,10 +300,10 @@ h1, h2, h3, .font-heading {
     overflow-anchor: none !important;
   }
 
-  /* Fix popup width on mobile to prevent shake */
+  /* Fix popup width on mobile to prevent shake and edge cutoff */
   .leaflet-popup-content {
-    width: 280px !important;
-    max-width: calc(100vw - 40px) !important;
+    width: 260px !important;
+    max-width: calc(100vw - 48px) !important;
     margin: 0 !important;
     /* Additional stability fixes */
     contain: layout style;
@@ -523,97 +521,6 @@ h1, h2, h3, .font-heading {
 
 .leaflet-control-zoom a:hover {
   background-color: var(--accent) !important;
-}
-
-/* Glass morphism effect */
-.glass-effect {
-  background: rgba(255, 255, 255, 0.15);
-  backdrop-filter: blur(16px);
-  border: 1px solid rgba(255, 255, 255, 0.25);
-  box-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.15);
-}
-
-.dark .glass-effect {
-  background: rgba(15, 23, 42, 0.85);
-  backdrop-filter: blur(16px);
-  border: 1px solid rgba(51, 65, 85, 0.35);
-  box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.25);
-}
-
-/* Minimal header with solid color and subtle border */
-.header-gradient {
-  position: relative;
-  background: var(--header-bg);
-  border-bottom: 1px solid var(--border);
-}
-
-.header-gradient::before {
-  display: none;
-}
-
-.dark .header-gradient::before {
-  display: none;
-}
-
-/* Modern animations */
-@keyframes fadeIn {
-  from {
-    opacity: 0;
-    transform: translateY(10px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
-}
-
-@keyframes slideIn {
-  from {
-    opacity: 0;
-    transform: translateX(-20px);
-  }
-  to {
-    opacity: 1;
-    transform: translateX(0);
-  }
-}
-
-@keyframes scaleIn {
-  from {
-    opacity: 0;
-    transform: scale(0.95);
-  }
-  to {
-    opacity: 1;
-    transform: scale(1);
-  }
-}
-
-.animate-fade-in {
-  animation: fadeIn 0.3s ease-out;
-}
-
-.animate-slide-in {
-  animation: slideIn 0.3s ease-out;
-}
-
-.animate-scale-in {
-  animation: scaleIn 0.2s ease-out;
-}
-
-/* Modern button styles */
-.btn-modern {
-  @apply px-4 py-2 rounded-xl font-medium transition-all duration-200;
-  @apply bg-primary text-primary-foreground;
-  @apply hover:scale-105 hover:shadow-lg;
-  @apply active:scale-95;
-}
-
-.btn-secondary {
-  @apply px-4 py-2 rounded-xl font-medium transition-all duration-200;
-  @apply bg-secondary text-secondary-foreground;
-  @apply hover:bg-accent hover:scale-105;
-  @apply active:scale-95;
 }
 
 /* Stable scrollbar to prevent popup shake */
@@ -898,9 +805,6 @@ input[type="checkbox"][role="switch"]:focus {
     scroll-behavior: auto !important;
   }
 
-  .animate-fade-in,
-  .animate-slide-in,
-  .animate-scale-in,
   .animate-spin,
   .animate-pulse,
   .location-pulse,

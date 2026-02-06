@@ -41,11 +41,6 @@ module.exports = {
         '88': '22rem',
         '100': '25rem',
       },
-      animation: {
-        'fade-in': 'fadeIn 0.3s ease-out',
-        'slide-in': 'slideIn 0.3s ease-out',
-        'scale-in': 'scaleIn 0.2s ease-out',
-      },
       screens: {
         'xs': '475px',
       },

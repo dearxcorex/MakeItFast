@@ -3,7 +3,7 @@ import type { FMStation } from '@/types/station';
 import type { fm_station } from '@prisma/client';
 
 // Convert database row to FMStation interface
-function convertToFMStation(row: fm_station): FMStation {
+export function convertToFMStation(row: fm_station): FMStation {
   return {
     id: row.id_fm,
     name: row.name || '',
@@ -12,16 +12,16 @@ function convertToFMStation(row: fm_station): FMStation {
     longitude: row.long || 0,
     city: row.district || '',
     state: row.province || '',
-    genre: row.type || '',
-    type: row.type || '',
-    description: `${row.type || ''} radio station in ${row.district || ''}, ${row.province || ''}`,
+    genre: row.type?.trim() || '',
+    type: row.type?.trim() || '',
+    description: `${row.type?.trim() || ''} radio station in ${row.district || ''}, ${row.province || ''}`,
     website: undefined,
     transmitterPower: undefined,
     permit: undefined,
     inspection68: row.inspection_68 ? 'ตรวจแล้ว' : 'ยังไม่ตรวจ',
     inspection69: row.inspection_69 ? 'ตรวจแล้ว' : 'ยังไม่ตรวจ',
     dateInspected: row.date_inspected || undefined,
-    details: undefined,
+    details: row.note || undefined,
     onAir: row.on_air || false,
     submitRequest: row.submit_a_request ? 'ยื่น' : 'ไม่ยื่น',
     createdAt: undefined,
@@ -54,105 +54,6 @@ export async function fetchFMStationById(id: number): Promise<FMStation | null> 
   }
 }
 
-export async function fetchFMStationsByGenre(genre: string): Promise<FMStation[]> {
-  try {
-    const data = await prisma.fm_station.findMany({
-      where: { type: genre },
-      orderBy: { name: 'asc' },
-    });
-    return data.map(convertToFMStation);
-  } catch (error) {
-    console.error('Service error fetching FM stations by genre:', error);
-    throw error;
-  }
-}
-
-export async function fetchFMStationsByCity(city: string): Promise<FMStation[]> {
-  try {
-    const data = await prisma.fm_station.findMany({
-      where: { district: city },
-      orderBy: { name: 'asc' },
-    });
-    return data.map(convertToFMStation);
-  } catch (error) {
-    console.error('Service error fetching FM stations by city:', error);
-    throw error;
-  }
-}
-
-export async function fetchUniqueGenres(): Promise<string[]> {
-  try {
-    const data = await prisma.fm_station.findMany({
-      select: { type: true },
-      distinct: ['type'],
-      orderBy: { type: 'asc' },
-    });
-    return data.map(item => item.type).filter((t): t is string => t !== null);
-  } catch (error) {
-    console.error('Service error fetching genres:', error);
-    return [];
-  }
-}
-
-export async function fetchUniqueCities(): Promise<string[]> {
-  try {
-    const data = await prisma.fm_station.findMany({
-      select: { district: true },
-      distinct: ['district'],
-      orderBy: { district: 'asc' },
-    });
-    return data.map(item => item.district).filter((d): d is string => d !== null);
-  } catch (error) {
-    console.error('Service error fetching cities:', error);
-    return [];
-  }
-}
-
-export async function fetchUniqueProvinces(): Promise<string[]> {
-  try {
-    const data = await prisma.fm_station.findMany({
-      select: { province: true },
-      distinct: ['province'],
-      orderBy: { province: 'asc' },
-    });
-    return data.map(item => item.province).filter((p): p is string => p !== null);
-  } catch (error) {
-    console.error('Service error fetching provinces:', error);
-    return [];
-  }
-}
-
-export async function fetchUniqueInspectionStatuses(): Promise<string[]> {
-  return ['ตรวจแล้ว', 'ยังไม่ตรวจ'];
-}
-
-export async function fetchFMStationsByProvince(province: string): Promise<FMStation[]> {
-  try {
-    const data = await prisma.fm_station.findMany({
-      where: { province },
-      orderBy: { name: 'asc' },
-    });
-    return data.map(convertToFMStation);
-  } catch (error) {
-    console.error('Service error fetching FM stations by province:', error);
-    throw error;
-  }
-}
-
-export async function fetchFMStationsByInspectionStatus(status: string): Promise<FMStation[]> {
-  try {
-    const isInspected = status === 'ตรวจแล้ว';
-    const data = await prisma.fm_station.findMany({
-      where: { inspection_68: isInspected },
-      orderBy: { name: 'asc' },
-    });
-    return data.map(convertToFMStation);
-  } catch (error) {
-    console.error('Service error fetching FM stations by inspection status:', error);
-    throw error;
-  }
-}
-
 // Group stations by identical coordinates
 export function groupStationsByCoordinates(stations: FMStation[]): Map<string, FMStation[]> {
   const groupedStations = new Map<string, FMStation[]>();
@@ -170,28 +71,8 @@ export function groupStationsByCoordinates(stations: FMStation[]): Map<string, F
   return groupedStations;
 }
 
-// Check for duplicate coordinates in the database
-export async function checkDuplicateCoordinates(): Promise<{[key: string]: FMStation[]}> {
-  try {
-    const stations = await fetchFMStations();
-    const grouped = groupStationsByCoordinates(stations);
-    const duplicates: {[key: string]: FMStation[]} = {};
-
-    grouped.forEach((stationGroup, coordKey) => {
-      if (stationGroup.length > 1) {
-        duplicates[coordKey] = stationGroup;
-      }
-    });
-
-    return duplicates;
-  } catch (error) {
-    console.error('Error checking duplicate coordinates:', error);
-    return {};
-  }
-}
-
 // Update station data in the database
-export async function updateFMStation(stationId: number, updates: Partial<fm_station>): Promise<FMStation | null> {
+export async function updateFMStation(stationId: number, updates: Partial<fm_station>): Promise<FMStation> {
   try {
     const data = await prisma.fm_station.update({
       where: { id_fm: stationId },
@@ -202,14 +83,4 @@ export async function updateFMStation(stationId: number, updates: Partial<fm_sta
     console.error('Service error updating FM station:', error);
     throw error;
   }
-}
-
-// Update station on_air status
-export async function updateStationOnAirStatus(stationId: number, onAir: boolean): Promise<FMStation | null> {
-  return updateFMStation(stationId, { on_air: onAir });
-}
-
-// Update station inspection status
-export async function updateStationInspectionStatus(stationId: number, inspected: boolean): Promise<FMStation | null> {
-  return updateFMStation(stationId, { inspection_68: inspected });
 }

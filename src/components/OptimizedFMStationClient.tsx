@@ -8,22 +8,12 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import dynamic from 'next/dynamic';
 import { FMStation, UserLocation, FilterType } from '@/types/station';
-import { useOptimizedFilters, useOptimizedCityFilter, useMemoryMonitor } from '@/hooks/useOptimizedFilters';
-import { useTheme } from '@/contexts/ThemeContext';
-
-// Tab type for navigation
-type ActiveTab = 'stations' | 'intermod' | 'settings';
-// Simple replacements for removed debug utilities
-const GeolocationDebugger = {
-  cleanupWatchers: () => {},
-  trackWatcher: () => {}
-};
-const MapPerformanceMonitor = {
-  startTimer: () => {},
-  endTimer: () => {},
-  recordMemoryUsage: () => {}
-};
+import { useOptimizedFilters, useMemoryMonitor } from '@/hooks/useOptimizedFilters';
 import NavSidebar from '@/components/NavSidebar';
+import AppHeader from '@/components/client/AppHeader';
+import MobileFilterBar from '@/components/client/MobileFilterBar';
+
+type ActiveTab = 'stations' | 'intermod' | 'settings';
 
 // Lazy load components
 const Map = dynamic(() => import('@/components/Map'), {
@@ -55,14 +45,10 @@ interface OptimizedFMStationClientProps {
 
 export default function OptimizedFMStationClient({
   initialStations,
-  initialOnAirStatuses,
   initialCities,
   initialProvinces,
   initialInspectionStatuses
 }: OptimizedFMStationClientProps) {
-  // Theme
-  const { theme, toggleTheme } = useTheme();
-
   // State management
   const [selectedStation, setSelectedStation] = useState<FMStation | undefined>();
   const [userLocation, setUserLocation] = useState<UserLocation | undefined>();
@@ -83,8 +69,6 @@ export default function OptimizedFMStationClient({
   // Optimized filtering
   const {
     filteredStations,
-    calculateDistance,
-    getPerformanceMetrics,
     clearCaches
   } = useOptimizedFilters({
     stations,
@@ -92,14 +76,10 @@ export default function OptimizedFMStationClient({
     userLocation
   });
 
-  // Optimized city filtering
-  useOptimizedCityFilter(stations, filters.province, initialCities);
-
   // Cleanup function for geolocation
   const cleanupGeolocation = useCallback(() => {
     if (geolocationWatcherRef.current !== null) {
       navigator.geolocation.clearWatch(geolocationWatcherRef.current);
-      GeolocationDebugger.cleanupWatchers();
       geolocationWatcherRef.current = null;
     }
   }, []);
@@ -110,8 +90,6 @@ export default function OptimizedFMStationClient({
       console.warn('Geolocation not supported');
       return;
     }
-
-    MapPerformanceMonitor.startTimer();
 
     // Set default location (Thailand center) as fallback
     const defaultLocation: UserLocation = {
@@ -129,7 +107,6 @@ export default function OptimizedFMStationClient({
       };
       console.info('📍 Location obtained:', `${location.accuracy?.toFixed(0)}m accuracy`);
       setUserLocation(location);
-      MapPerformanceMonitor.endTimer();
     };
 
     // Try with low accuracy first (faster, works on desktop)
@@ -159,7 +136,6 @@ export default function OptimizedFMStationClient({
               }
               console.info('📍', errorMessage);
               setUserLocation(defaultLocation);
-              MapPerformanceMonitor.endTimer();
             },
             {
               enableHighAccuracy: true,
@@ -204,25 +180,16 @@ export default function OptimizedFMStationClient({
     );
 
     geolocationWatcherRef.current = watchId;
-    GeolocationDebugger.trackWatcher();
 
     return cleanupGeolocation;
   }, [cleanupGeolocation]);
 
   // Performance monitoring
   useEffect(() => {
-
     const monitorPerformance = () => {
       checkMemoryUsage();
-      MapPerformanceMonitor.recordMemoryUsage();
-
-      const metrics = getPerformanceMetrics();
-      if (metrics.filteredStations > 1000) {
-        console.warn('⚠️ Large dataset detected, consider pagination');
-      }
     };
 
-    // Monitor every 30 seconds
     performanceMonitorRef.current = setInterval(monitorPerformance, 30000);
 
     return () => {
@@ -231,7 +198,7 @@ export default function OptimizedFMStationClient({
         performanceMonitorRef.current = null;
       }
     };
-  }, [checkMemoryUsage, getPerformanceMetrics]);
+  }, [checkMemoryUsage]);
 
   // Cleanup on unmount
   useEffect(() => {
@@ -392,14 +359,6 @@ export default function OptimizedFMStationClient({
     }
   }, []);
 
-
-  // Performance warning for large datasets
-  useEffect(() => {
-    if (stations.length > 5000) {
-      console.warn('⚠️ Large dataset detected. Consider implementing virtual scrolling.');
-    }
-  }, [stations.length]);
-
   // Handle empty stations
   if (stations.length === 0) {
     return (
@@ -433,116 +392,8 @@ export default function OptimizedFMStationClient({
 
         {/* Main Content Area */}
         <div className="flex-1 flex flex-col min-w-0">
-          {/* Header - Slim version */}
-          <header className="glass-card border-b border-border/50 px-4 lg:px-6 py-3 relative z-10 mx-4 mt-4 rounded-2xl">
-            <div className="flex items-center justify-between gap-4">
-              {/* Left: Title */}
-              <div className="flex items-center gap-3">
-                <div className="flex items-center gap-3 lg:hidden">
-                  <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-primary to-accent flex items-center justify-center glow-gold">
-                    <svg className="w-5 h-5 text-primary-foreground" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
-                    </svg>
-                  </div>
-                  <div className="hidden sm:block">
-                    <h1 className="text-lg font-heading font-bold gradient-text">Task Tracker</h1>
-                    <p className="text-xs text-muted-foreground">
-                      {userLocation ? `Location: ±${userLocation.accuracy?.toFixed(0)}m` : 'NBTC FM Monitoring'}
-                    </p>
-                  </div>
-                </div>
-
-                {/* Desktop: Just show location info */}
-                <div className="hidden lg:flex items-center gap-2 text-sm text-muted-foreground">
-                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
-                  </svg>
-                  <span>{userLocation ? `±${userLocation.accuracy?.toFixed(0)}m accuracy` : 'NBTC FM Monitoring'}</span>
-                </div>
-              </div>
-
-              {/* Right: Stats */}
-              <div className="hidden lg:flex items-center gap-3">
-                {/* Filtered Count */}
-                <div className="flex items-center gap-2 px-3 py-2 glass-card rounded-xl">
-                  <div className="text-center">
-                    <div className="text-lg font-bold text-primary">{filteredStations.length}</div>
-                    <div className="text-[10px] text-muted-foreground uppercase tracking-wider">Stations</div>
-                  </div>
-                </div>
-
-                {/* On/Off Air */}
-                <div className="flex items-center gap-2 px-3 py-2 glass-card rounded-xl">
-                  <div className="flex items-center gap-1.5">
-                    <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse" />
-                    <span className="text-sm font-bold text-green-400">{filteredStations.filter(s => s.onAir).length}</span>
-                  </div>
-                  <div className="w-px h-4 bg-border" />
-                  <div className="flex items-center gap-1.5">
-                    <div className="w-2 h-2 bg-red-500 rounded-full" />
-                    <span className="text-sm font-bold text-red-400">{filteredStations.filter(s => !s.onAir).length}</span>
-                  </div>
-                </div>
-
-                {/* Legend */}
-                <div className="flex items-center gap-2 px-3 py-2 glass-card rounded-xl">
-                  <div className="flex items-center gap-2">
-                    <div className="w-2.5 h-2.5 rounded-full bg-green-500" title="Inspected" />
-                    <div className="w-2.5 h-2.5 rounded-full bg-red-500" title="Pending" />
-                    <div className="w-2.5 h-2.5 rounded-full bg-gray-400" title="Off Air" />
-                  </div>
-                </div>
-
-                {/* Theme Toggle */}
-                <button
-                  onClick={toggleTheme}
-                  className="flex items-center justify-center w-10 h-10 glass-card rounded-xl hover:bg-secondary/50 transition-all"
-                  aria-label={`Switch to ${theme === 'dark' ? 'light' : 'dark'} mode`}
-                >
-                  {theme === 'dark' ? (
-                    <svg className="w-5 h-5 text-yellow-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z" />
-                    </svg>
-                  ) : (
-                    <svg className="w-5 h-5 text-muted-foreground" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z" />
-                    </svg>
-                  )}
-                </button>
-              </div>
-
-              {/* Mobile Stats */}
-              <div className="flex lg:hidden items-center gap-2">
-                <span className="text-xs font-bold text-primary">{filteredStations.length}</span>
-                <div className="w-px h-3 bg-border" />
-                <div className="flex items-center gap-1">
-                  <div className="w-1.5 h-1.5 bg-green-500 rounded-full" />
-                  <span className="text-xs text-green-400">{filteredStations.filter(s => s.onAir).length}</span>
-                </div>
-                <div className="flex items-center gap-1">
-                  <div className="w-1.5 h-1.5 bg-red-500 rounded-full" />
-                  <span className="text-xs text-red-400">{filteredStations.filter(s => !s.onAir).length}</span>
-                </div>
-                <div className="w-px h-3 bg-border" />
-                <button
-                  onClick={toggleTheme}
-                  className="flex items-center justify-center w-8 h-8 rounded-lg hover:bg-secondary/50 transition-all"
-                  aria-label={`Switch to ${theme === 'dark' ? 'light' : 'dark'} mode`}
-                >
-                  {theme === 'dark' ? (
-                    <svg className="w-4 h-4 text-yellow-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z" />
-                    </svg>
-                  ) : (
-                    <svg className="w-4 h-4 text-muted-foreground" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z" />
-                    </svg>
-                  )}
-                </button>
-              </div>
-            </div>
-          </header>
+          {/* Header */}
+          <AppHeader filteredStations={filteredStations} userLocation={userLocation} />
 
           {/* Main content */}
           <div className="flex-1 flex flex-col lg:flex-row overflow-y-auto p-4 pt-2 gap-4">
@@ -550,136 +401,17 @@ export default function OptimizedFMStationClient({
               /* Map with Filter Bar */
               <div className="flex-1 flex flex-col gap-2">
                 {/* Filter Bar */}
-                <div className="glass-card rounded-xl p-3">
-                  <div className="flex items-center gap-2">
-                    {/* Search Input - always visible */}
-                    <div className="relative flex-1 min-w-0">
-                      <svg className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-muted-foreground" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-                      </svg>
-                      <input
-                        type="text"
-                        placeholder="Search stations..."
-                        value={filters.search || ''}
-                        onChange={(e) => setFilters({ ...filters, search: e.target.value || undefined })}
-                        className="w-full pl-9 pr-8 py-2 text-sm border border-border rounded-lg bg-background focus:ring-2 focus:ring-primary focus:border-transparent"
-                      />
-                      {filters.search && (
-                        <button
-                          onClick={() => setFilters({ ...filters, search: undefined })}
-                          className="absolute right-2 top-1/2 transform -translate-y-1/2 text-muted-foreground hover:text-foreground p-1"
-                        >
-                          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                          </svg>
-                        </button>
-                      )}
-                    </div>
-
-                    {/* Filter toggle button - mobile only */}
-                    <button
-                      onClick={() => setShowFilters(!showFilters)}
-                      className="lg:hidden relative flex items-center justify-center w-10 h-10 rounded-lg border border-border bg-background hover:bg-muted transition-all flex-shrink-0"
-                      aria-label="Toggle filters"
-                    >
-                      <svg className="w-4 h-4 text-muted-foreground" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z" />
-                      </svg>
-                      {(() => {
-                        const activeFilterCount = [filters.province, filters.city, filters.onAir !== undefined ? 'set' : undefined, filters.inspection68].filter(Boolean).length;
-                        return activeFilterCount > 0 ? (
-                          <span className="absolute -top-1 -right-1 w-4 h-4 bg-primary text-primary-foreground text-[10px] font-bold rounded-full flex items-center justify-center">
-                            {activeFilterCount}
-                          </span>
-                        ) : null;
-                      })()}
-                    </button>
-                  </div>
-
-                  {/* Collapsible filters - mobile: toggle, desktop: always show */}
-                  <div className={`${showFilters ? 'max-h-[200px] opacity-100 mt-2' : 'max-h-0 opacity-0'} lg:max-h-none lg:opacity-100 lg:mt-2 overflow-hidden transition-all duration-200 ease-in-out`}>
-                    <div className="flex flex-wrap items-center gap-2">
-                      {/* Province Select */}
-                      <select
-                        value={filters.province || ''}
-                        onChange={(e) => setFilters({ ...filters, province: e.target.value || undefined, city: undefined })}
-                        className="px-3 py-2 text-sm border border-border rounded-lg bg-background focus:ring-2 focus:ring-primary focus:border-transparent min-w-[140px]"
-                      >
-                        <option value="">All Provinces</option>
-                        {initialProvinces.map(province => (
-                          <option key={province} value={province}>{province}</option>
-                        ))}
-                      </select>
-
-                      {/* City Select */}
-                      <select
-                        value={filters.city || ''}
-                        onChange={(e) => setFilters({ ...filters, city: e.target.value || undefined })}
-                        className={`px-3 py-2 text-sm border border-border rounded-lg bg-background focus:ring-2 focus:ring-primary focus:border-transparent min-w-[140px] ${!filters.province ? 'opacity-50' : ''}`}
-                        disabled={!filters.province}
-                      >
-                        <option value="">{filters.province ? 'All Cities' : 'Select province'}</option>
-                        {filters.province && initialCities
-                          .filter(city => stations.some(s => s.state === filters.province && s.city === city))
-                          .map(city => (
-                            <option key={city} value={city}>{city}</option>
-                          ))
-                        }
-                      </select>
-
-                      {/* On Air Toggle */}
-                      <div className="flex gap-1">
-                        <button
-                          onClick={() => setFilters({ ...filters, onAir: filters.onAir === true ? undefined : true })}
-                          className={`flex items-center gap-1.5 px-3 py-2 text-xs font-medium rounded-lg border transition-all cursor-pointer ${
-                            filters.onAir === true
-                              ? 'bg-green-500 text-white border-green-500'
-                              : 'bg-background border-border hover:border-green-500/50'
-                          }`}
-                        >
-                          <div className={`w-2 h-2 rounded-full ${filters.onAir === true ? 'bg-white' : 'bg-green-500'}`} />
-                          On Air
-                        </button>
-                        <button
-                          onClick={() => setFilters({ ...filters, onAir: filters.onAir === false ? undefined : false })}
-                          className={`flex items-center gap-1.5 px-3 py-2 text-xs font-medium rounded-lg border transition-all cursor-pointer ${
-                            filters.onAir === false
-                              ? 'bg-red-500 text-white border-red-500'
-                              : 'bg-background border-border hover:border-red-500/50'
-                          }`}
-                        >
-                          <div className={`w-2 h-2 rounded-full ${filters.onAir === false ? 'bg-white' : 'bg-red-500'}`} />
-                          Off Air
-                        </button>
-                      </div>
-
-                      {/* Inspection Status */}
-                      <select
-                        value={filters.inspection68 || ''}
-                        onChange={(e) => setFilters({ ...filters, inspection68: e.target.value || undefined })}
-                        className="px-3 py-2 text-sm border border-border rounded-lg bg-background focus:ring-2 focus:ring-primary focus:border-transparent min-w-[140px]"
-                      >
-                        <option value="">All Inspection</option>
-                        {initialInspectionStatuses.map(status => (
-                          <option key={status} value={status}>{status}</option>
-                        ))}
-                      </select>
-
-                      {/* Clear Filters */}
-                      {(filters.search || filters.province || filters.city || filters.onAir !== undefined || filters.inspection68) && (
-                        <button
-                          onClick={clearFilters}
-                          className="flex items-center gap-1.5 px-3 py-2 text-xs font-medium bg-destructive/10 text-destructive hover:bg-destructive/20 rounded-lg border border-destructive/20 cursor-pointer"
-                        >
-                          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                          </svg>
-                          Clear
-                        </button>
-                      )}
-                    </div>
-                  </div>
-                </div>
+                <MobileFilterBar
+                  filters={filters}
+                  setFilters={setFilters}
+                  showFilters={showFilters}
+                  setShowFilters={setShowFilters}
+                  clearFilters={clearFilters}
+                  initialProvinces={initialProvinces}
+                  initialCities={initialCities}
+                  initialInspectionStatuses={initialInspectionStatuses}
+                  stations={stations}
+                />
 
                 {/* Map container */}
                 <div className="flex-1 relative min-h-[400px]">
