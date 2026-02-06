@@ -180,7 +180,8 @@ export function useOptimizedFilters({
     // Sort by pre-calculated distance
     const sorted = stationsWithDistance
       .sort((a, b) => a.distance - b.distance)
-      .map(({ distance: _, ...station }) => station); // Remove distance property
+      // eslint-disable-next-line @typescript-eslint/no-unused-vars
+      .map(({ distance: _dist, ...station }) => station); // Remove distance property
 
 
     return sorted;

@@ -4,7 +4,7 @@ import prisma from '@/lib/prisma';
 export async function GET() {
   try {
     // Test database connection
-    const station = await prisma.fm_station.findFirst({
+    await prisma.fm_station.findFirst({
       select: { id_fm: true },
     });
 

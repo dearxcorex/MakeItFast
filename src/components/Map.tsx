@@ -529,13 +529,14 @@ export default function Map({ stations, selectedStation, onStationSelect, onUpda
   };
 
   // Component to render multiple stations popup - iOS Safari aggressive fix
-  const MultipleStationsPopup = ({ stationGroup, lat, lng, distance, currentPage, setCurrentPage }: {
+  const MultipleStationsPopup = ({ stationGroup, lat, lng, distance, currentPage, setCurrentPage, isMobile }: {
     stationGroup: FMStation[];
     lat: number;
     lng: number;
     distance: number | null;
     currentPage: number;
     setCurrentPage: (page: number) => void;
+    isMobile: boolean;
   }) => {
     const [loadingStations, setLoadingStations] = useState<Set<string | number>>(new Set());
     const containerRef = useRef<HTMLDivElement>(null);
@@ -549,14 +550,17 @@ export default function Map({ stations, selectedStation, onStationSelect, onUpda
 
     // Debug state changes
     useEffect(() => {
+      const currentStationId = isMobile
+        ? stationGroup[currentPage]?.id
+        : stationGroup[currentPage * itemsPerPage]?.id;
       console.log('MultipleStationsPopup state:', {
         currentPage,
         totalPages,
         stationGroupLength: stationGroup.length,
         isMobile,
-        currentStationId: currentStations[0]?.id
+        currentStationId
       });
-    }, [currentPage, totalPages, stationGroup.length, isMobile, currentStations]);
+    }, [currentPage, totalPages, stationGroup, isMobile, itemsPerPage]);
 
     // iOS Safari minimal scroll prevention - only block container scrolling, not button clicks
     useEffect(() => {
@@ -1209,6 +1213,7 @@ export default function Map({ stations, selectedStation, onStationSelect, onUpda
                     distance={distance}
                     currentPage={paginationState[coordKey] || 0}
                     setCurrentPage={(page) => updatePaginationPage(coordKey, page)}
+                    isMobile={isMobile}
                   />
                 ) : (
                   <SingleStationPopup
