@@ -9,7 +9,6 @@ export async function GET() {
         id_fm: true,
         on_air: true,
         inspection_68: true,
-        unwanted: true,
         submit_a_request: true,
       },
     });
@@ -19,7 +18,6 @@ export async function GET() {
       id: station.id_fm,
       onAir: station.on_air,
       inspection68: station.inspection_68 ? 'ตรวจแล้ว' : 'ยังไม่ตรวจ',
-      unwanted: station.unwanted,
       submitRequest: station.submit_a_request ? 'ยื่น' : 'ไม่ยื่น'
     }));
 
