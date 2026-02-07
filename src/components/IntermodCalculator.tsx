@@ -12,7 +12,6 @@ import {
   findPairsForTargetFrequency,
   assessInterferenceRisk,
   calculateThirdOrderProducts,
-  formatFrequency,
   formatDistance,
   getRiskLevelColor,
   getRiskLevelBgColor,

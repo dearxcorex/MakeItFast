@@ -102,7 +102,7 @@ function FlyToHighlightedStations({ target }: { target: FlyToTarget | null }) {
       }, 100);
       return () => clearTimeout(timer);
     }
-  }, [map, target?.timestamp]);
+  }, [map, target]);
 
   return null;
 }
