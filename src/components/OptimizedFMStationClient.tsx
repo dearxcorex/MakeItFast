@@ -8,21 +8,12 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import dynamic from 'next/dynamic';
 import { FMStation, UserLocation, FilterType } from '@/types/station';
-import { useOptimizedFilters, useOptimizedCityFilter, useMemoryMonitor } from '@/hooks/useOptimizedFilters';
-
-// Tab type for navigation
-type ActiveTab = 'stations' | 'intermod' | 'settings';
-// Simple replacements for removed debug utilities
-const GeolocationDebugger = {
-  cleanupWatchers: () => {},
-  trackWatcher: () => {}
-};
-const MapPerformanceMonitor = {
-  startTimer: () => {},
-  endTimer: () => {},
-  recordMemoryUsage: () => {}
-};
+import { useOptimizedFilters, useMemoryMonitor } from '@/hooks/useOptimizedFilters';
 import NavSidebar from '@/components/NavSidebar';
+import AppHeader from '@/components/client/AppHeader';
+import MobileFilterBar from '@/components/client/MobileFilterBar';
+
+type ActiveTab = 'stations' | 'intermod' | 'settings';
 
 // Lazy load components
 const Map = dynamic(() => import('@/components/Map'), {
@@ -54,7 +45,6 @@ interface OptimizedFMStationClientProps {
 
 export default function OptimizedFMStationClient({
   initialStations,
-  initialOnAirStatuses,
   initialCities,
   initialProvinces,
   initialInspectionStatuses
@@ -63,10 +53,13 @@ export default function OptimizedFMStationClient({
   const [selectedStation, setSelectedStation] = useState<FMStation | undefined>();
   const [userLocation, setUserLocation] = useState<UserLocation | undefined>();
   const [stations, setStations] = useState<FMStation[]>(initialStations);
+  const stationsRef = useRef(stations);
+  stationsRef.current = stations;
   const [filters, setFilters] = useState<FilterType>({});
   const [activeTab, setActiveTab] = useState<ActiveTab>('stations');
   const [highlightedStationIds, setHighlightedStationIds] = useState<(string | number)[]>([]);
   const [flyToStations, setFlyToStations] = useState<{ lat1: number; lng1: number; lat2: number; lng2: number; timestamp: number } | null>(null);
+  const [showFilters, setShowFilters] = useState(false);
 
   // Performance monitoring
   const { checkMemoryUsage } = useMemoryMonitor();
@@ -76,8 +69,6 @@ export default function OptimizedFMStationClient({
   // Optimized filtering
   const {
     filteredStations,
-    calculateDistance,
-    getPerformanceMetrics,
     clearCaches
   } = useOptimizedFilters({
     stations,
@@ -85,14 +76,10 @@ export default function OptimizedFMStationClient({
     userLocation
   });
 
-  // Optimized city filtering
-  useOptimizedCityFilter(stations, filters.province, initialCities);
-
   // Cleanup function for geolocation
   const cleanupGeolocation = useCallback(() => {
     if (geolocationWatcherRef.current !== null) {
       navigator.geolocation.clearWatch(geolocationWatcherRef.current);
-      GeolocationDebugger.cleanupWatchers();
       geolocationWatcherRef.current = null;
     }
   }, []);
@@ -103,8 +90,6 @@ export default function OptimizedFMStationClient({
       console.warn('Geolocation not supported');
       return;
     }
-
-    MapPerformanceMonitor.startTimer();
 
     // Set default location (Thailand center) as fallback
     const defaultLocation: UserLocation = {
@@ -122,7 +107,6 @@ export default function OptimizedFMStationClient({
       };
       console.info('📍 Location obtained:', `${location.accuracy?.toFixed(0)}m accuracy`);
       setUserLocation(location);
-      MapPerformanceMonitor.endTimer();
     };
 
     // Try with low accuracy first (faster, works on desktop)
@@ -152,7 +136,6 @@ export default function OptimizedFMStationClient({
               }
               console.info('📍', errorMessage);
               setUserLocation(defaultLocation);
-              MapPerformanceMonitor.endTimer();
             },
             {
               enableHighAccuracy: true,
@@ -197,25 +180,16 @@ export default function OptimizedFMStationClient({
     );
 
     geolocationWatcherRef.current = watchId;
-    GeolocationDebugger.trackWatcher();
 
     return cleanupGeolocation;
   }, [cleanupGeolocation]);
 
   // Performance monitoring
   useEffect(() => {
-
     const monitorPerformance = () => {
       checkMemoryUsage();
-      MapPerformanceMonitor.recordMemoryUsage();
-
-      const metrics = getPerformanceMetrics();
-      if (metrics.filteredStations > 1000) {
-        console.warn('⚠️ Large dataset detected, consider pagination');
-      }
     };
 
-    // Monitor every 30 seconds
     performanceMonitorRef.current = setInterval(monitorPerformance, 30000);
 
     return () => {
@@ -224,7 +198,7 @@ export default function OptimizedFMStationClient({
         performanceMonitorRef.current = null;
       }
     };
-  }, [checkMemoryUsage, getPerformanceMetrics]);
+  }, [checkMemoryUsage]);
 
   // Cleanup on unmount
   useEffect(() => {
@@ -292,9 +266,14 @@ export default function OptimizedFMStationClient({
   }, []);
 
   // Stable optimistic updates without blinking
+  // Uses stationsRef to avoid stale closures - Leaflet popups hold callback references
+  // that don't update when stations changes, so we read from the ref instead.
   const handleUpdateStation = useCallback(async (stationId: string | number, updates: Partial<FMStation>) => {
-    const originalStation = stations.find(station => station.id === stationId);
-    if (!originalStation) return;
+    const originalStation = stationsRef.current.find(station => station.id === stationId);
+    if (!originalStation) {
+      console.error(`Station ${stationId} not found in ${stationsRef.current.length} stations`);
+      return;
+    }
 
     console.log(`🔄 Updating station ${stationId}:`, updates);
 
@@ -332,66 +311,53 @@ export default function OptimizedFMStationClient({
         apiUpdates.details = updates.details;
       }
 
-      // Send to server and wait for response to get auto-generated fields like dateInspected
-      fetch(`/api/stations/${numericId}`, {
+      // Send to server and await response to get auto-generated fields like dateInspected
+      const response = await fetch(`/api/stations/${numericId}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(apiUpdates),
-      }).then(async response => {
-        if (response.ok) {
-          const result = await response.json();
-          console.log(`✅ Station ${stationId} successfully updated on server`, result);
-
-          // Update with server response data (includes auto-generated dateInspected)
-          if (result.data) {
-            const serverData = {
-              onAir: result.data.on_air,
-              // Convert boolean back to Thai string for UI
-              inspection68: result.data.inspection_68 ? 'ตรวจแล้ว' : 'ยังไม่ตรวจ',
-              inspection69: result.data.inspection_69 ? 'ตรวจแล้ว' : 'ยังไม่ตรวจ',
-              dateInspected: result.data.date_inspected,
-              details: result.data.details,
-              submitRequest: result.data.submit_a_request ? 'ยื่น' : 'ไม่ยื่น'
-            };
-
-            // Update stations with server data
-            setStations(prevStations =>
-              prevStations.map(station =>
-                station.id === stationId
-                  ? { ...station, ...serverData }
-                  : station
-              )
-            );
-
-            // Update selected station with server data
-            setSelectedStation(prevSelected =>
-              prevSelected && prevSelected.id === stationId
-                ? { ...prevSelected, ...serverData }
-                : prevSelected
-            );
-          }
-        } else {
-          console.warn(`⚠️ Server update failed for station ${stationId}, but UI remains optimistic`);
-        }
-      }).catch(error => {
-        console.warn(`⚠️ Network error for station ${stationId}:`, error);
-        // Don't revert optimistic update to prevent blinking
-        // Real-time will sync when connection is restored
       });
 
+      if (response.ok) {
+        const result = await response.json();
+        console.log(`✅ Station ${stationId} successfully updated on server`, result);
+
+        // Update with server response data (includes auto-generated dateInspected)
+        if (result.data) {
+          const serverData = {
+            onAir: result.data.on_air,
+            // Convert boolean back to Thai string for UI
+            inspection68: result.data.inspection_68 ? 'ตรวจแล้ว' : 'ยังไม่ตรวจ',
+            inspection69: result.data.inspection_69 ? 'ตรวจแล้ว' : 'ยังไม่ตรวจ',
+            dateInspected: result.data.date_inspected,
+            details: result.data.note,
+            submitRequest: result.data.submit_a_request ? 'ยื่น' : 'ไม่ยื่น'
+          };
+
+          // Update stations with server data
+          setStations(prevStations =>
+            prevStations.map(station =>
+              station.id === stationId
+                ? { ...station, ...serverData }
+                : station
+            )
+          );
+
+          // Update selected station with server data
+          setSelectedStation(prevSelected =>
+            prevSelected && prevSelected.id === stationId
+              ? { ...prevSelected, ...serverData }
+              : prevSelected
+          );
+        }
+      } else {
+        console.warn(`Server update failed for station ${stationId}: ${response.status}`);
+      }
     } catch (error) {
-      console.error('❌ Error in optimistic update:', error);
-      // Even on error, keep optimistic update to prevent blinking
+      console.warn(`Network error for station ${stationId}:`, error);
+      // Don't revert optimistic update to prevent blinking
     }
-  }, [stations]);
-
-
-  // Performance warning for large datasets
-  useEffect(() => {
-    if (stations.length > 5000) {
-      console.warn('⚠️ Large dataset detected. Consider implementing virtual scrolling.');
-    }
-  }, [stations.length]);
+  }, []);
 
   // Handle empty stations
   if (stations.length === 0) {
@@ -426,83 +392,8 @@ export default function OptimizedFMStationClient({
 
         {/* Main Content Area */}
         <div className="flex-1 flex flex-col min-w-0">
-          {/* Header - Slim version */}
-          <header className="glass-card border-b border-border/50 px-4 lg:px-6 py-3 relative z-10 mx-4 mt-4 rounded-2xl">
-            <div className="flex items-center justify-between gap-4">
-              {/* Left: Title */}
-              <div className="flex items-center gap-3">
-                <div className="flex items-center gap-3 lg:hidden">
-                  <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-primary to-accent flex items-center justify-center glow-gold">
-                    <svg className="w-5 h-5 text-primary-foreground" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
-                    </svg>
-                  </div>
-                  <div className="hidden sm:block">
-                    <h1 className="text-lg font-heading font-bold gradient-text">Task Tracker</h1>
-                    <p className="text-xs text-muted-foreground">
-                      {userLocation ? `Location: ±${userLocation.accuracy?.toFixed(0)}m` : 'NBTC FM Monitoring'}
-                    </p>
-                  </div>
-                </div>
-
-                {/* Desktop: Just show location info */}
-                <div className="hidden lg:flex items-center gap-2 text-sm text-muted-foreground">
-                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
-                  </svg>
-                  <span>{userLocation ? `±${userLocation.accuracy?.toFixed(0)}m accuracy` : 'NBTC FM Monitoring'}</span>
-                </div>
-              </div>
-
-              {/* Right: Stats */}
-              <div className="hidden lg:flex items-center gap-3">
-                {/* Filtered Count */}
-                <div className="flex items-center gap-2 px-3 py-2 glass-card rounded-xl">
-                  <div className="text-center">
-                    <div className="text-lg font-bold text-primary">{filteredStations.length}</div>
-                    <div className="text-[10px] text-muted-foreground uppercase tracking-wider">Stations</div>
-                  </div>
-                </div>
-
-                {/* On/Off Air */}
-                <div className="flex items-center gap-2 px-3 py-2 glass-card rounded-xl">
-                  <div className="flex items-center gap-1.5">
-                    <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse" />
-                    <span className="text-sm font-bold text-green-400">{filteredStations.filter(s => s.onAir).length}</span>
-                  </div>
-                  <div className="w-px h-4 bg-border" />
-                  <div className="flex items-center gap-1.5">
-                    <div className="w-2 h-2 bg-red-500 rounded-full" />
-                    <span className="text-sm font-bold text-red-400">{filteredStations.filter(s => !s.onAir).length}</span>
-                  </div>
-                </div>
-
-                {/* Legend */}
-                <div className="flex items-center gap-2 px-3 py-2 glass-card rounded-xl">
-                  <div className="flex items-center gap-2">
-                    <div className="w-2.5 h-2.5 rounded-full bg-green-500" title="Inspected" />
-                    <div className="w-2.5 h-2.5 rounded-full bg-red-500" title="Pending" />
-                    <div className="w-2.5 h-2.5 rounded-full bg-gray-400" title="Off Air" />
-                  </div>
-                </div>
-              </div>
-
-              {/* Mobile Stats */}
-              <div className="flex lg:hidden items-center gap-2">
-                <span className="text-xs font-bold text-primary">{filteredStations.length}</span>
-                <div className="w-px h-3 bg-border" />
-                <div className="flex items-center gap-1">
-                  <div className="w-1.5 h-1.5 bg-green-500 rounded-full" />
-                  <span className="text-xs text-green-400">{filteredStations.filter(s => s.onAir).length}</span>
-                </div>
-                <div className="flex items-center gap-1">
-                  <div className="w-1.5 h-1.5 bg-red-500 rounded-full" />
-                  <span className="text-xs text-red-400">{filteredStations.filter(s => !s.onAir).length}</span>
-                </div>
-              </div>
-            </div>
-          </header>
+          {/* Header */}
+          <AppHeader filteredStations={filteredStations} userLocation={userLocation} />
 
           {/* Main content */}
           <div className="flex-1 flex flex-col lg:flex-row overflow-y-auto p-4 pt-2 gap-4">
@@ -510,112 +401,17 @@ export default function OptimizedFMStationClient({
               /* Map with Filter Bar */
               <div className="flex-1 flex flex-col gap-2">
                 {/* Filter Bar */}
-                <div className="glass-card rounded-xl p-3">
-                  <div className="flex flex-wrap items-center gap-2">
-                    {/* Search Input */}
-                    <div className="relative flex-1 min-w-[180px]">
-                      <svg className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-muted-foreground" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-                      </svg>
-                      <input
-                        type="text"
-                        placeholder="Search stations..."
-                        value={filters.search || ''}
-                        onChange={(e) => setFilters({ ...filters, search: e.target.value || undefined })}
-                        className="w-full pl-9 pr-8 py-2 text-sm border border-border rounded-lg bg-background focus:ring-2 focus:ring-primary focus:border-transparent"
-                      />
-                      {filters.search && (
-                        <button
-                          onClick={() => setFilters({ ...filters, search: undefined })}
-                          className="absolute right-2 top-1/2 transform -translate-y-1/2 text-muted-foreground hover:text-foreground p-1"
-                        >
-                          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                          </svg>
-                        </button>
-                      )}
-                    </div>
-
-                    {/* Province Select */}
-                    <select
-                      value={filters.province || ''}
-                      onChange={(e) => setFilters({ ...filters, province: e.target.value || undefined, city: undefined })}
-                      className="px-3 py-2 text-sm border border-border rounded-lg bg-background focus:ring-2 focus:ring-primary focus:border-transparent min-w-[140px]"
-                    >
-                      <option value="">All Provinces</option>
-                      {initialProvinces.map(province => (
-                        <option key={province} value={province}>{province}</option>
-                      ))}
-                    </select>
-
-                    {/* City Select */}
-                    <select
-                      value={filters.city || ''}
-                      onChange={(e) => setFilters({ ...filters, city: e.target.value || undefined })}
-                      className={`px-3 py-2 text-sm border border-border rounded-lg bg-background focus:ring-2 focus:ring-primary focus:border-transparent min-w-[140px] ${!filters.province ? 'opacity-50' : ''}`}
-                      disabled={!filters.province}
-                    >
-                      <option value="">{filters.province ? 'All Cities' : 'Select province'}</option>
-                      {filters.province && initialCities
-                        .filter(city => stations.some(s => s.state === filters.province && s.city === city))
-                        .map(city => (
-                          <option key={city} value={city}>{city}</option>
-                        ))
-                      }
-                    </select>
-
-                    {/* On Air Toggle */}
-                    <div className="flex gap-1">
-                      <button
-                        onClick={() => setFilters({ ...filters, onAir: filters.onAir === true ? undefined : true })}
-                        className={`flex items-center gap-1.5 px-3 py-2 text-xs font-medium rounded-lg border transition-all cursor-pointer ${
-                          filters.onAir === true
-                            ? 'bg-green-500 text-white border-green-500'
-                            : 'bg-background border-border hover:border-green-500/50'
-                        }`}
-                      >
-                        <div className={`w-2 h-2 rounded-full ${filters.onAir === true ? 'bg-white' : 'bg-green-500'}`} />
-                        On Air
-                      </button>
-                      <button
-                        onClick={() => setFilters({ ...filters, onAir: filters.onAir === false ? undefined : false })}
-                        className={`flex items-center gap-1.5 px-3 py-2 text-xs font-medium rounded-lg border transition-all cursor-pointer ${
-                          filters.onAir === false
-                            ? 'bg-red-500 text-white border-red-500'
-                            : 'bg-background border-border hover:border-red-500/50'
-                        }`}
-                      >
-                        <div className={`w-2 h-2 rounded-full ${filters.onAir === false ? 'bg-white' : 'bg-red-500'}`} />
-                        Off Air
-                      </button>
-                    </div>
-
-                    {/* Inspection Status */}
-                    <select
-                      value={filters.inspection68 || ''}
-                      onChange={(e) => setFilters({ ...filters, inspection68: e.target.value || undefined })}
-                      className="px-3 py-2 text-sm border border-border rounded-lg bg-background focus:ring-2 focus:ring-primary focus:border-transparent min-w-[140px]"
-                    >
-                      <option value="">All Inspection</option>
-                      {initialInspectionStatuses.map(status => (
-                        <option key={status} value={status}>{status}</option>
-                      ))}
-                    </select>
-
-                    {/* Clear Filters */}
-                    {(filters.search || filters.province || filters.city || filters.onAir !== undefined || filters.inspection68) && (
-                      <button
-                        onClick={clearFilters}
-                        className="flex items-center gap-1.5 px-3 py-2 text-xs font-medium bg-destructive/10 text-destructive hover:bg-destructive/20 rounded-lg border border-destructive/20 cursor-pointer"
-                      >
-                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                        </svg>
-                        Clear
-                      </button>
-                    )}
-                  </div>
-                </div>
+                <MobileFilterBar
+                  filters={filters}
+                  setFilters={setFilters}
+                  showFilters={showFilters}
+                  setShowFilters={setShowFilters}
+                  clearFilters={clearFilters}
+                  initialProvinces={initialProvinces}
+                  initialCities={initialCities}
+                  initialInspectionStatuses={initialInspectionStatuses}
+                  stations={stations}
+                />
 
                 {/* Map container */}
                 <div className="flex-1 relative min-h-[400px]">

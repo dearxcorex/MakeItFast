@@ -1,17 +1,24 @@
 import type { Metadata } from "next";
-import { Inter } from "next/font/google";
+import { Exo_2, Orbitron } from "next/font/google";
 import "./globals.css";
 import { ThemeProvider } from "@/contexts/ThemeContext";
 
-const inter = Inter({
+const exo2 = Exo_2({
   subsets: ["latin"],
   display: "swap",
+  variable: "--font-body",
+});
+
+const orbitron = Orbitron({
+  subsets: ["latin"],
+  display: "swap",
+  variable: "--font-heading",
 });
 
 export const metadata: Metadata = {
-  title: "FM Station Tracker",
-  description: "Track your drive to FM radio stations with an interactive map",
-  keywords: "FM radio, stations, map, tracker, navigation",
+  title: "Task Tracker | NBTC FM Monitoring",
+  description: "Track FM radio stations and calculate intermodulation with an interactive dashboard",
+  keywords: "FM radio, stations, map, tracker, intermodulation, NBTC",
 };
 
 export default function RootLayout({
@@ -20,8 +27,8 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en" suppressHydrationWarning>
-      <body className={`${inter.className} antialiased`} suppressHydrationWarning>
+    <html lang="en" className="dark" suppressHydrationWarning>
+      <body className={`${exo2.variable} ${orbitron.variable} font-sans antialiased`} suppressHydrationWarning>
         <ThemeProvider>
           {children}
         </ThemeProvider>

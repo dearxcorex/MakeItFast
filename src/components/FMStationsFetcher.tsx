@@ -1,45 +1,19 @@
 import prisma from '@/lib/prisma';
+import { convertToFMStation } from '@/services/stationService';
 import OptimizedFMStationClient from './OptimizedFMStationClient';
 
 export default async function FMStationsFetcher() {
   try {
-    // Fetch FM stations and filter data using Prisma
-    const [stations, onAirData, cityData, provinceData] = await Promise.all([
+    const [stations, cityData, provinceData] = await Promise.all([
       prisma.fm_station.findMany({ orderBy: { name: 'asc' } }),
-      prisma.fm_station.findMany({ select: { on_air: true }, distinct: ['on_air'] }),
       prisma.fm_station.findMany({ select: { district: true }, distinct: ['district'], orderBy: { district: 'asc' } }),
       prisma.fm_station.findMany({ select: { province: true }, distinct: ['province'], orderBy: { province: 'asc' } }),
     ]);
 
-    // Transform stations data to match our interface
-    const transformedStations = stations.map(station => ({
-      id: station.id_fm,
-      name: station.name || '',
-      frequency: station.freq || 0,
-      latitude: station.lat || 0,
-      longitude: station.long || 0,
-      city: station.district || '',
-      state: station.province || '',
-      genre: station.type?.trim() || '',
-      type: station.type?.trim() || '',
-      description: `${station.type?.trim() || ''} radio station in ${station.district || ''}, ${station.province || ''}`,
-      website: undefined,
-      transmitterPower: undefined,
-      permit: undefined,
-      inspection68: station.inspection_68 ? 'ตรวจแล้ว' : 'ยังไม่ตรวจ',
-      inspection69: station.inspection_69 ? 'ตรวจแล้ว' : 'ยังไม่ตรวจ',
-      dateInspected: station.date_inspected || undefined,
-      details: undefined,
-      onAir: station.on_air || false,
-      submitRequest: station.submit_a_request ? 'ยื่น' : 'ไม่ยื่น',
-      createdAt: undefined,
-      updatedAt: undefined,
-    }));
-
-    // Extract unique filter data
-    const onAirStatuses = onAirData.map(item => item.on_air).filter((item): item is boolean => item !== null);
+    const transformedStations = stations.map(convertToFMStation);
     const cities = cityData.map(item => item.district).filter((item): item is string => item !== null);
     const provinces = provinceData.map(item => item.province).filter((item): item is string => item !== null);
+    const onAirStatuses = [true, false];
     const inspectionStatuses = ['ตรวจแล้ว', 'ยังไม่ตรวจ'];
 
     return (
