@@ -44,12 +44,13 @@ export function formatInspectionDate(dateStr?: string): string | null {
 export function createStationIcon(
   station: FMStation,
   isHighlighted: boolean = false,
-  stationCount: number = 1
+  stationCount: number = 1,
+  hasMainStation: boolean = false
 ): L.DivIcon {
   const hasNoRequest = station.submitRequest === 'ไม่ยื่น';
   const isOffAir = !station.onAir;
   const isInspected = station.inspection69 === 'ตรวจแล้ว';
-  const isMainStation = station.type === 'สถานีหลัก' || station.genre === 'สถานีหลัก';
+  const isMainStation = hasMainStation || station.type === 'สถานีหลัก' || station.genre === 'สถานีหลัก';
 
   let colorClass = 'station-marker--orange';
   if (isHighlighted) {
@@ -63,7 +64,9 @@ export function createStationIcon(
   }
 
   let badge = '';
-  if (stationCount > 1) {
+  if (stationCount > 1 && isMainStation) {
+    badge = `<div class="station-badge station-badge--info">★${stationCount}</div>`;
+  } else if (stationCount > 1) {
     badge = `<div class="station-badge station-badge--danger">${stationCount}</div>`;
   } else if (isMainStation) {
     badge = '<div class="station-badge station-badge--info">★</div>';
@@ -121,5 +124,6 @@ export function getStationIcon(
   const stationsToCheck = Array.isArray(stationOrGroup) ? stationOrGroup : [stationOrGroup];
   const stationCount = count || 1;
   const isHighlighted = stationsToCheck.some(s => highlightedStationIds.includes(s.id));
-  return createStationIcon(station, isHighlighted, stationCount);
+  const hasMainStation = stationsToCheck.some(s => s.type === 'สถานีหลัก' || s.genre === 'สถานีหลัก');
+  return createStationIcon(station, isHighlighted, stationCount, hasMainStation);
 }
