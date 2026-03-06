@@ -984,3 +984,15 @@ input[type="checkbox"][role="switch"]:focus {
     opacity: 0.3;
   }
 }
+
+/* Interference Markers */
+.interference-tower-marker {
+  background: transparent !important;
+  border: none !important;
+}
+
+.interference-source-marker {
+  background: transparent !important;
+  border: none !important;
+}
+

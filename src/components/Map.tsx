@@ -49,13 +49,17 @@ function LocationTracker({ onLocationUpdate }: { onLocationUpdate: (location: Us
             accuracy: position.coords.accuracy
           };
           onLocationUpdate(location);
-          map.setView([location.latitude, location.longitude], 13);
+          if (map.getContainer()) {
+            map.setView([location.latitude, location.longitude], 13);
+          }
         },
         (error) => {
           console.warn('Initial geolocation error:', error);
           const defaultLocation = { latitude: 34.0522, longitude: -118.2437 };
           onLocationUpdate(defaultLocation);
-          map.setView([defaultLocation.latitude, defaultLocation.longitude], 10);
+          if (map.getContainer()) {
+            map.setView([defaultLocation.latitude, defaultLocation.longitude], 10);
+          }
         },
         { enableHighAccuracy: true, timeout: 10000, maximumAge: 60000 }
       );

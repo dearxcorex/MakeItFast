@@ -4,55 +4,46 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Commands
 
-### Development
-- `npm run dev` - Start development server with Turbopack at http://localhost:3000
-- `npm run build` - Build production application with Turbopack
-- `npm run start` - Start production server
+- `npm run dev` - Start dev server with Turbopack at http://localhost:3000
+- `npm run build` - Production build (`prisma generate && next build --turbopack`)
 - `npm run lint` - Run ESLint
-
-### Note on Turbopack
-This project uses Next.js 15 with Turbopack for faster development builds. All build commands include the `--turbopack` flag.
+- `npx prisma generate` - Regenerate Prisma client after schema changes
+- `npx prisma db push` - Push schema changes to database
 
 ## Architecture Overview
 
-### Application Structure
-This is a responsive FM radio station tracker built with Next.js 15, TypeScript, and Tailwind CSS. The app displays a map for tracking car position relative to FM stations with an interactive sidebar for filtering stations.
+FM radio station tracker for NBTC (Thailand), built with Next.js 15, TypeScript, Tailwind CSS 4, and Prisma + PostgreSQL. Used to track and inspect FM stations across Thai provinces.
 
-### Core Components
-- **`src/app/page.tsx`** - Main application with layout management, geolocation, and state coordination
-- **`src/components/Map.tsx`** - Leaflet-based interactive map with station markers and user location
-- **`src/components/Sidebar.tsx`** - Responsive filtering sidebar with search and station list
+### Data Flow
+1. **`FMStationsFetcher`** (server component) loads all stations from PostgreSQL via Prisma at page load
+2. Passes transformed data to **`OptimizedFMStationClient`** (client component) which manages all client-side state
+3. **`Map`** component uses `react-leaflet` with dynamic import (`ssr: false`) — Leaflet cannot run server-side
+4. API routes under `src/app/api/` provide REST endpoints for station CRUD
 
-### Data Layer
-- **`src/types/station.ts`** - Core TypeScript interfaces for FMStation, UserLocation, and FilterType
-- **`src/data/stations.ts`** - Mock FM station data and utility functions for LA area stations
+### Key Patterns
+- **Database → UI conversion**: `stationService.ts:convertToFMStation()` maps Prisma `fm_station` rows to the `FMStation` interface used throughout the UI. Field names differ significantly (e.g., `id_fm` → `id`, `freq` → `frequency`, `district` → `city`, `province` → `state`)
+- **Station grouping**: Stations at identical coordinates are grouped into clustered markers with multi-station popups
+- **Two tabs**: Stations list, Intermod Calculator — controlled by `ActiveTab` type in `OptimizedFMStationClient`
+- **Thai language**: Inspection statuses use Thai strings ('ตรวจแล้ว'/'ยังไม่ตรวจ', 'ยื่น'/'ไม่ยื่น')
 
-### Map Implementation Details
-- Uses `react-leaflet` with dynamic imports (`ssr: false`) to avoid server-side rendering issues
-- Custom icons for stations (red markers) and user location (blue markers)  
-- Real-time distance calculations between user location and stations
-- Popups show station details including calculated distance
+### Database
+- PostgreSQL via Prisma ORM, schema in `prisma/schema.prisma`
+- Single model: `fm_station` with fields for frequency, location, inspection status, on-air status
+- Connection configured via `DATABASE_URL` env var
+- Prisma client singleton in `src/lib/prisma.ts` with global caching for dev
 
-### Responsive Design Strategy
-- **Desktop (lg+)**: Static sidebar alongside map
-- **Mobile**: Collapsible sidebar with `z-[1000]` that overlays but doesn't cover entire map
-- **Sidebar width**: `w-72` on mobile, `w-80` on larger screens to preserve map visibility
-- No dark overlay on mobile - both sidebar and map remain interactive when sidebar is open
+### Component Organization
+- `src/components/map/` - Map sub-components (popups, station cards, navigation button)
+- `src/components/sidebar/` - Sidebar sub-components (filter controls, station list items)
+- `src/components/client/` - Client-only components (header, mobile filter bar)
+- `src/contexts/ThemeContext.tsx` - Theme provider
+- `src/hooks/` - Custom hooks for filtering (`useOptimizedFilters`) and keyboard nav
+- `src/utils/mapHelpers.ts` - Distance calculation (Haversine), marker icons, map utilities
 
-### Styling and CSS
-- Uses Tailwind CSS 4 with CSS-based configuration (no separate config file)
-- Leaflet CSS imported in `globals.css` with custom z-index fixes for proper layering
-- Custom `.line-clamp-2` utility for text truncation in station descriptions
+### Responsive Design
+- **Desktop**: Fixed left nav sidebar + content sidebar + map
+- **Mobile**: Collapsible sidebar overlay with `z-[1000]`, map remains interactive
+- Tailwind CSS 4 with CSS-based config (no `tailwind.config.js`)
 
-### State Management
-Key state in main component:
-- `selectedStation` - Currently selected FM station for highlighting
-- `sidebarOpen` - Controls sidebar visibility on mobile
-- `userLocation` - User's current geolocation coordinates
-
-### Geolocation Integration
-- Automatic user location detection on component mount
-- Fallback to Los Angeles coordinates if geolocation fails
-- Distance calculation using Haversine formula
-- Station list automatically sorts by distance when user location available
-- do not commit and push to github. wait for my command
+## Important Notes
+- Do not commit and push to GitHub. Wait for explicit command.
