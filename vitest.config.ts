@@ -17,6 +17,7 @@ export default defineConfig({
   resolve: {
     alias: {
       '@': path.resolve(__dirname, './src'),
+      'leaflet/dist/leaflet.css': path.resolve(__dirname, './src/__tests__/css-stub.js'),
     },
   },
 });
