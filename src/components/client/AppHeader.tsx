@@ -2,14 +2,19 @@
 
 import { FMStation, UserLocation } from '@/types/station';
 import { useTheme } from '@/contexts/ThemeContext';
+import type { InterferenceStats } from '@/components/interference/InterferenceAnalysis';
 
 interface AppHeaderProps {
   filteredStations: FMStation[];
   userLocation?: UserLocation;
+  activeTab?: string;
+  interferenceStats?: InterferenceStats | null;
 }
 
-export default function AppHeader({ filteredStations, userLocation }: AppHeaderProps) {
+export default function AppHeader({ filteredStations, userLocation, activeTab, interferenceStats }: AppHeaderProps) {
   const { theme, toggleTheme } = useTheme();
+
+  const isInterference = activeTab === 'interference';
 
   return (
     <header className="glass-card border-b border-border/50 px-4 lg:px-6 py-3 relative z-10 mx-4 mt-4 rounded-2xl">
@@ -41,32 +46,68 @@ export default function AppHeader({ filteredStations, userLocation }: AppHeaderP
 
         {/* Right: Desktop Stats */}
         <div className="hidden lg:flex items-center gap-3">
-          <div className="flex items-center gap-2 px-3 py-2 glass-card rounded-xl">
-            <div className="text-center">
-              <div className="text-lg font-bold text-primary">{filteredStations.length}</div>
-              <div className="text-[10px] text-muted-foreground uppercase tracking-wider">Stations</div>
-            </div>
-          </div>
+          {isInterference && interferenceStats ? (
+            <>
+              <div className="flex items-center gap-2 px-3 py-2 glass-card rounded-xl">
+                <div className="text-center">
+                  <div className="text-lg font-bold text-primary">{interferenceStats.total}</div>
+                  <div className="text-[10px] text-muted-foreground uppercase tracking-wider">Sites</div>
+                </div>
+              </div>
 
-          <div className="flex items-center gap-2 px-3 py-2 glass-card rounded-xl">
-            <div className="flex items-center gap-1.5">
-              <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse" />
-              <span className="text-sm font-bold text-green-400">{filteredStations.filter(s => s.onAir).length}</span>
-            </div>
-            <div className="w-px h-4 bg-border" />
-            <div className="flex items-center gap-1.5">
-              <div className="w-2 h-2 bg-red-500 rounded-full" />
-              <span className="text-sm font-bold text-red-400">{filteredStations.filter(s => !s.onAir).length}</span>
-            </div>
-          </div>
+              <div className="flex items-center gap-2 px-3 py-2 glass-card rounded-xl">
+                <div className="flex items-center gap-1.5">
+                  <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse" />
+                  <span className="text-sm font-bold text-green-400">{interferenceStats.inspected}</span>
+                </div>
+                <div className="w-px h-4 bg-border" />
+                <div className="flex items-center gap-1.5">
+                  <div className="w-2 h-2 bg-amber-500 rounded-full" />
+                  <span className="text-sm font-bold text-amber-400">{interferenceStats.pending}</span>
+                </div>
+              </div>
 
-          <div className="flex items-center gap-2 px-3 py-2 glass-card rounded-xl">
-            <div className="flex items-center gap-2">
-              <div className="w-2.5 h-2.5 rounded-full bg-green-500" title="Inspected" />
-              <div className="w-2.5 h-2.5 rounded-full bg-red-500" title="Pending" />
-              <div className="w-2.5 h-2.5 rounded-full bg-gray-400" title="Off Air" />
-            </div>
-          </div>
+              <div className="flex items-center gap-1.5 px-3 py-2 glass-card rounded-xl">
+                <div className="w-2.5 h-2.5 rounded-full bg-red-500" title="Critical" />
+                <span className="text-xs font-bold text-red-400">{interferenceStats.critical}</span>
+                <div className="w-px h-4 bg-border mx-0.5" />
+                <div className="w-2.5 h-2.5 rounded-full bg-amber-500" title="Major" />
+                <span className="text-xs font-bold text-amber-400">{interferenceStats.major}</span>
+                <div className="w-px h-4 bg-border mx-0.5" />
+                <div className="w-2.5 h-2.5 rounded-full bg-yellow-400" title="Minor" />
+                <span className="text-xs font-bold text-yellow-400">{interferenceStats.minor}</span>
+              </div>
+            </>
+          ) : !isInterference && (
+            <>
+              <div className="flex items-center gap-2 px-3 py-2 glass-card rounded-xl">
+                <div className="text-center">
+                  <div className="text-lg font-bold text-primary">{filteredStations.length}</div>
+                  <div className="text-[10px] text-muted-foreground uppercase tracking-wider">Stations</div>
+                </div>
+              </div>
+
+              <div className="flex items-center gap-2 px-3 py-2 glass-card rounded-xl">
+                <div className="flex items-center gap-1.5">
+                  <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse" />
+                  <span className="text-sm font-bold text-green-400">{filteredStations.filter(s => s.onAir).length}</span>
+                </div>
+                <div className="w-px h-4 bg-border" />
+                <div className="flex items-center gap-1.5">
+                  <div className="w-2 h-2 bg-red-500 rounded-full" />
+                  <span className="text-sm font-bold text-red-400">{filteredStations.filter(s => !s.onAir).length}</span>
+                </div>
+              </div>
+
+              <div className="flex items-center gap-2 px-3 py-2 glass-card rounded-xl">
+                <div className="flex items-center gap-2">
+                  <div className="w-2.5 h-2.5 rounded-full bg-green-500" title="Inspected" />
+                  <div className="w-2.5 h-2.5 rounded-full bg-red-500" title="Pending" />
+                  <div className="w-2.5 h-2.5 rounded-full bg-gray-400" title="Off Air" />
+                </div>
+              </div>
+            </>
+          )}
 
           <button
             onClick={toggleTheme}
@@ -87,17 +128,35 @@ export default function AppHeader({ filteredStations, userLocation }: AppHeaderP
 
         {/* Mobile Stats */}
         <div className="flex lg:hidden items-center gap-2">
-          <span className="text-xs font-bold text-primary">{filteredStations.length}</span>
-          <div className="w-px h-3 bg-border" />
-          <div className="flex items-center gap-1">
-            <div className="w-1.5 h-1.5 bg-green-500 rounded-full" />
-            <span className="text-xs text-green-400">{filteredStations.filter(s => s.onAir).length}</span>
-          </div>
-          <div className="flex items-center gap-1">
-            <div className="w-1.5 h-1.5 bg-red-500 rounded-full" />
-            <span className="text-xs text-red-400">{filteredStations.filter(s => !s.onAir).length}</span>
-          </div>
-          <div className="w-px h-3 bg-border" />
+          {isInterference && interferenceStats ? (
+            <>
+              <span className="text-xs font-bold text-primary">{interferenceStats.total}</span>
+              <div className="w-px h-3 bg-border" />
+              <div className="flex items-center gap-1">
+                <div className="w-1.5 h-1.5 bg-green-500 rounded-full" />
+                <span className="text-xs text-green-400">{interferenceStats.inspected}</span>
+              </div>
+              <div className="flex items-center gap-1">
+                <div className="w-1.5 h-1.5 bg-amber-500 rounded-full" />
+                <span className="text-xs text-amber-400">{interferenceStats.pending}</span>
+              </div>
+              <div className="w-px h-3 bg-border" />
+            </>
+          ) : !isInterference && (
+            <>
+              <span className="text-xs font-bold text-primary">{filteredStations.length}</span>
+              <div className="w-px h-3 bg-border" />
+              <div className="flex items-center gap-1">
+                <div className="w-1.5 h-1.5 bg-green-500 rounded-full" />
+                <span className="text-xs text-green-400">{filteredStations.filter(s => s.onAir).length}</span>
+              </div>
+              <div className="flex items-center gap-1">
+                <div className="w-1.5 h-1.5 bg-red-500 rounded-full" />
+                <span className="text-xs text-red-400">{filteredStations.filter(s => !s.onAir).length}</span>
+              </div>
+              <div className="w-px h-3 bg-border" />
+            </>
+          )}
           <button
             onClick={toggleTheme}
             className="flex items-center justify-center w-8 h-8 rounded-lg hover:bg-secondary/50 transition-all"

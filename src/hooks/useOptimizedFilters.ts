@@ -91,8 +91,8 @@ export function useOptimizedFilters({
         (station: FMStation) => station.state === filters.province :
         null,
 
-      inspection: filters.inspection ?
-        (station: FMStation) => station.inspection68 === filters.inspection :
+      inspection: filters.inspection69 ?
+        (station: FMStation) => station.inspection69 === filters.inspection69 :
         null,
 
       submitRequest: filters.submitRequest === 'ไม่ยื่น' ?
@@ -118,7 +118,7 @@ export function useOptimizedFilters({
         } :
         null
     };
-  }, [filters.onAir, filters.city, filters.province, filters.inspection, filters.submitRequest, filters.search]);
+  }, [filters.onAir, filters.city, filters.province, filters.inspection69, filters.submitRequest, filters.search]);
 
   // Optimized filtering with early returns and minimal operations
   const filteredStations = useMemo(() => {

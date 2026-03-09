@@ -332,7 +332,7 @@ describe('FilterControls', () => {
     const inspectionSelect = selects[2];
     fireEvent.change(inspectionSelect, { target: { value: 'ตรวจแล้ว' } });
     expect(onFiltersChange).toHaveBeenCalledWith(
-      expect.objectContaining({ inspection68: 'ตรวจแล้ว' })
+      expect.objectContaining({ inspection69: 'ตรวจแล้ว' })
     );
   });
 

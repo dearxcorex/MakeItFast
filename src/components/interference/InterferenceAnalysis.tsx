@@ -10,11 +10,21 @@ import CloudRFControls from './CloudRFControls';
 
 const InterferenceMap = dynamic(() => import('./InterferenceMap'), { ssr: false });
 
-interface InterferenceAnalysisProps {
-  userLocation?: UserLocation;
+export interface InterferenceStats {
+  total: number;
+  inspected: number;
+  pending: number;
+  critical: number;
+  major: number;
+  minor: number;
 }
 
-export default function InterferenceAnalysis({ userLocation }: InterferenceAnalysisProps) {
+interface InterferenceAnalysisProps {
+  userLocation?: UserLocation;
+  onStatsChange?: (stats: InterferenceStats) => void;
+}
+
+export default function InterferenceAnalysis({ userLocation, onStatsChange }: InterferenceAnalysisProps) {
   const [sites, setSites] = useState<InterferenceSite[]>([]);
   const [selectedSite, setSelectedSite] = useState<InterferenceSite | null>(null);
   const [filters, setFilters] = useState<InterferenceFilter>({});
@@ -44,6 +54,20 @@ export default function InterferenceAnalysis({ userLocation }: InterferenceAnaly
   useEffect(() => {
     fetchSites();
   }, [fetchSites]);
+
+  // Report stats to parent
+  useEffect(() => {
+    if (onStatsChange) {
+      onStatsChange({
+        total: sites.length,
+        inspected: sites.filter(s => s.status === 'ตรวจแล้ว').length,
+        pending: sites.filter(s => s.status !== 'ตรวจแล้ว').length,
+        critical: sites.filter(s => s.ranking?.toLowerCase() === 'critical').length,
+        major: sites.filter(s => s.ranking?.toLowerCase() === 'major').length,
+        minor: sites.filter(s => s.ranking?.toLowerCase() === 'minor').length,
+      });
+    }
+  }, [sites, onStatsChange]);
 
   const handleSiteSelect = useCallback((site: InterferenceSite) => {
     setSelectedSite(site);
@@ -94,49 +118,6 @@ export default function InterferenceAnalysis({ userLocation }: InterferenceAnaly
       <div className="w-full lg:w-96 flex flex-col gap-3 min-h-0">
         <div className="flex items-center justify-between">
           <h2 className="font-heading text-lg gradient-text">Interference Analysis</h2>
-        </div>
-
-        {/* Summary Stats */}
-        <div className="flex items-center gap-2 flex-wrap">
-          <div className="flex items-center gap-2 px-3 py-2 glass-card rounded-xl">
-            <div className="text-center">
-              <div className="text-lg font-bold text-primary">{sites.length}</div>
-              <div className="text-[10px] text-muted-foreground uppercase tracking-wider">Sites</div>
-            </div>
-          </div>
-
-          <div className="flex items-center gap-2 px-3 py-2 glass-card rounded-xl">
-            <div className="flex items-center gap-1.5">
-              <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse" />
-              <span className="text-sm font-bold text-green-400">
-                {sites.filter(s => s.status === 'ตรวจแล้ว').length}
-              </span>
-            </div>
-            <div className="w-px h-4 bg-border" />
-            <div className="flex items-center gap-1.5">
-              <div className="w-2 h-2 bg-amber-500 rounded-full" />
-              <span className="text-sm font-bold text-amber-400">
-                {sites.filter(s => s.status !== 'ตรวจแล้ว').length}
-              </span>
-            </div>
-          </div>
-
-          <div className="flex items-center gap-1.5 px-3 py-2 glass-card rounded-xl">
-            <div className="w-2.5 h-2.5 rounded-full bg-red-500" title="Critical" />
-            <span className="text-xs font-bold text-red-400">
-              {sites.filter(s => s.ranking?.toLowerCase() === 'critical').length}
-            </span>
-            <div className="w-px h-4 bg-border mx-0.5" />
-            <div className="w-2.5 h-2.5 rounded-full bg-amber-500" title="Major" />
-            <span className="text-xs font-bold text-amber-400">
-              {sites.filter(s => s.ranking?.toLowerCase() === 'major').length}
-            </span>
-            <div className="w-px h-4 bg-border mx-0.5" />
-            <div className="w-2.5 h-2.5 rounded-full bg-yellow-400" title="Minor" />
-            <span className="text-xs font-bold text-yellow-400">
-              {sites.filter(s => s.ranking?.toLowerCase() === 'minor').length}
-            </span>
-          </div>
         </div>
 
         {/* Desktop: detail panel inline */}
