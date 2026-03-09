@@ -385,18 +385,6 @@ describe('InterferenceFilterPanel', () => {
     vi.restoreAllMocks();
   });
 
-  it('renders search input', () => {
-    const { container } = render(
-      <InterferenceFilterPanel
-        filters={{}}
-        onFiltersChange={vi.fn()}
-      />
-    );
-    const input = container.querySelector('input[type="text"]');
-    expect(input).toBeTruthy();
-    expect(input?.getAttribute('placeholder')).toBe('Search sites...');
-  });
-
   it('renders ranking badges (Critical, Major, Minor)', () => {
     const { container } = render(
       <InterferenceFilterPanel
@@ -419,7 +407,7 @@ describe('InterferenceFilterPanel', () => {
     expect(container.textContent).toContain('Has Source');
   });
 
-  it('renders province and ranking select dropdowns', () => {
+  it('renders province select dropdown', () => {
     const { container } = render(
       <InterferenceFilterPanel
         filters={{}}
@@ -427,9 +415,8 @@ describe('InterferenceFilterPanel', () => {
       />
     );
     const selects = container.querySelectorAll('select');
-    expect(selects.length).toBe(2);
+    expect(selects.length).toBe(1);
     expect(container.textContent).toContain('All Provinces');
-    expect(container.textContent).toContain('All Rankings');
   });
 
   it('shows Clear all filters when filters are active', () => {

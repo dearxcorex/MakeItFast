@@ -74,14 +74,13 @@ export function createStationIcon(
     badge = '<div class="station-badge station-badge--danger">!</div>';
   } else if (isHighlighted) {
     badge = '<div class="station-badge station-badge--warning">⚠</div>';
-  } else if (isInspected) {
-    badge = '<div class="station-badge station-badge--success">✓</div>';
-  } else {
+  } else if (!isInspected) {
     badge = '<div class="station-badge station-badge--warning">⏳</div>';
   }
 
   const radioIcon = isOffAir ? radioOffSvg : radioOnSvg;
   const pulseRing = isHighlighted ? '<div class="station-marker-pulse"></div>' : '';
+  const inspectedMark = isInspected ? '<div class="station-inspected-mark">✓</div>' : '';
 
   return L.divIcon({
     className: 'custom-station-marker',
@@ -93,6 +92,7 @@ export function createStationIcon(
         </div>
         <div class="station-marker-pointer"></div>
         ${badge}
+        ${inspectedMark}
       </div>
     `,
     iconSize: [32, 40],

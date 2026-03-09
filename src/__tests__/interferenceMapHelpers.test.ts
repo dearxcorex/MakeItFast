@@ -69,6 +69,17 @@ describe('createTowerIcon', () => {
     const icon = createTowerIcon('Critical', true);
     expect(icon.options.html).toContain('0 0 8px');
   });
+
+  it('shows inspected badge when status is ตรวจแล้ว', () => {
+    const icon = createTowerIcon('Critical', false, 'ตรวจแล้ว');
+    expect(icon.options.html).toContain('✓');
+    expect(icon.options.html).toContain('#22c55e');
+  });
+
+  it('does not show inspected badge when not inspected', () => {
+    const icon = createTowerIcon('Critical', false, null);
+    expect(icon.options.html).not.toContain('✓');
+  });
 });
 
 describe('createSourceIcon', () => {

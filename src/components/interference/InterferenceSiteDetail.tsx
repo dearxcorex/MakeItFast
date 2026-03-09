@@ -1,12 +1,14 @@
 'use client';
 
 import type { InterferenceSite } from '@/types/interference';
+import NavigateButton from '@/components/map/NavigateButton';
 
 interface InterferenceSiteDetailProps {
   site: InterferenceSite;
+  onUpdateSite?: (siteId: number, updates: { status?: string }) => void;
 }
 
-export default function InterferenceSiteDetail({ site }: InterferenceSiteDetailProps) {
+export default function InterferenceSiteDetail({ site, onUpdateSite }: InterferenceSiteDetailProps) {
   const rankingColor = (r: string | null) => {
     switch (r?.toLowerCase()) {
       case 'critical': return 'badge-error';
@@ -81,11 +83,38 @@ export default function InterferenceSiteDetail({ site }: InterferenceSiteDetailP
         <Detail label="NBTC Area" value={site.nbtcArea} />
         <Detail label="Direction" value={site.direction != null ? `${site.direction}°` : null} />
         <Detail label="Sector" value={site.sectorName} />
-        <Detail label="Status" value={site.status} />
         <Detail label="Est. Distance" value={site.estimateDistance != null ? `${site.estimateDistance.toFixed(2)} km` : null} />
         <Detail label="Lot" value={site.lot} />
         <Detail label="AWN Contact" value={site.awnContact} />
         <Detail label="On-site Scan" value={site.onSiteScanBy} />
+      </div>
+
+      {/* Inspection Status */}
+      <div className={`flex items-center justify-between gap-2 p-3 rounded-lg ${
+        site.status === 'ตรวจแล้ว'
+          ? 'bg-green-500/10 border border-green-500/20'
+          : 'bg-amber-500/10 border border-amber-500/20'
+      }`}>
+        <span className={`text-sm font-medium ${
+          site.status === 'ตรวจแล้ว' ? 'text-green-500' : 'text-amber-500'
+        }`}>
+          {site.status === 'ตรวจแล้ว' ? '✅ ตรวจแล้ว' : '⏳ ยังไม่ตรวจ'}
+        </span>
+        {onUpdateSite && (
+          <button
+            onClick={() => {
+              const newStatus = site.status === 'ตรวจแล้ว' ? 'ยังไม่ตรวจ' : 'ตรวจแล้ว';
+              onUpdateSite(site.id, { status: newStatus });
+            }}
+            className={`px-3 py-1.5 text-xs font-medium rounded-lg transition-colors ${
+              site.status === 'ตรวจแล้ว'
+                ? 'bg-secondary text-muted-foreground hover:bg-secondary/80'
+                : 'bg-primary text-primary-foreground hover:bg-primary/90'
+            }`}
+          >
+            {site.status === 'ตรวจแล้ว' ? 'Undo' : 'Mark Inspected'}
+          </button>
+        )}
       </div>
 
       {/* Source Location */}
@@ -110,6 +139,11 @@ export default function InterferenceSiteDetail({ site }: InterferenceSiteDetailP
           <div className="text-xs text-muted-foreground mb-1">Notes</div>
           <p className="text-xs text-foreground">{site.notes}</p>
         </div>
+      )}
+
+      {/* Navigate to Google Maps */}
+      {site.lat != null && site.long != null && (
+        <NavigateButton lat={site.lat} lng={site.long} stationName={site.siteName || site.siteCode || undefined} />
       )}
     </div>
   );

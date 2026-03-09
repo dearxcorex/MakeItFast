@@ -351,14 +351,36 @@ describe('/api/interference/[id]', () => {
     const { PATCH } = await import('@/app/api/interference/[id]/route');
     const req = new Request('http://localhost', {
       method: 'PATCH',
-      body: JSON.stringify({ notes: 'updated', ranking: 'Major', status: 'Resolved' }),
+      body: JSON.stringify({ notes: 'updated', ranking: 'Major', status: 'ตรวจแล้ว' }),
     });
     const res = await PATCH(req as never, { params: Promise.resolve({ id: '1' }) });
     expect(res.status).toBe(200);
     expect(prisma.interference_site.update).toHaveBeenCalledWith({
       where: { id: 1 },
-      data: { notes: 'updated', ranking: 'Major', status: 'Resolved' },
+      data: { notes: 'updated', ranking: 'Major', status: 'ตรวจแล้ว' },
     });
+  });
+
+  it('PATCH rejects invalid status value', async () => {
+    const { PATCH } = await import('@/app/api/interference/[id]/route');
+    const req = new Request('http://localhost', {
+      method: 'PATCH',
+      body: JSON.stringify({ status: 'InvalidStatus' }),
+    });
+    const res = await PATCH(req as never, { params: Promise.resolve({ id: '1' }) });
+    expect(res.status).toBe(400);
+    const data = await res.json();
+    expect(data.error).toBe('No valid fields to update');
+  });
+
+  it('PATCH rejects empty update body', async () => {
+    const { PATCH } = await import('@/app/api/interference/[id]/route');
+    const req = new Request('http://localhost', {
+      method: 'PATCH',
+      body: JSON.stringify({}),
+    });
+    const res = await PATCH(req as never, { params: Promise.resolve({ id: '1' }) });
+    expect(res.status).toBe(400);
   });
 });
 

@@ -41,6 +41,7 @@ export interface InterferenceFilter {
   nbtcArea?: string;
   hasSource?: boolean;
   search?: string;
+  status?: string;
   noiseMin?: number;
   noiseMax?: number;
 }

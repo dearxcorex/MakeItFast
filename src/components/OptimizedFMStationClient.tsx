@@ -442,7 +442,7 @@ export default function OptimizedFMStationClient({
               />
             ) : (
               /* Interference Analysis */
-              <InterferenceAnalysis />
+              <InterferenceAnalysis userLocation={userLocation} />
             )}
           </div>
         </div>

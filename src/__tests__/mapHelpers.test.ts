@@ -118,10 +118,10 @@ describe('createStationIcon', () => {
     expect(icon.options.html).toContain('station-badge--danger');
   });
 
-  it('shows ✓ badge for inspected', () => {
+  it('shows ✓ inspected mark for inspected', () => {
     const icon = createStationIcon(makeStation({ inspection69: 'ตรวจแล้ว' }));
     expect(icon.options.html).toContain('✓');
-    expect(icon.options.html).toContain('station-badge--success');
+    expect(icon.options.html).toContain('station-inspected-mark');
   });
 
   it('shows ⏳ badge for pending', () => {

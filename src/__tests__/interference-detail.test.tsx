@@ -2,6 +2,18 @@ import { describe, it, expect, vi, afterEach } from 'vitest';
 import { render, cleanup } from '@testing-library/react';
 import React from 'react';
 
+// Mock NavigateButton so we can assert it receives the correct props
+vi.mock('@/components/map/NavigateButton', () => ({
+  default: ({ lat, lng, stationName }: { lat: number; lng: number; stationName?: string }) => (
+    <div
+      data-testid="navigate-button"
+      data-lat={lat}
+      data-lng={lng}
+      data-station-name={stationName ?? ''}
+    />
+  ),
+}));
+
 import InterferenceSiteDetail from '@/components/interference/InterferenceSiteDetail';
 
 afterEach(() => {
@@ -72,11 +84,12 @@ describe('InterferenceSiteDetail', () => {
     expect(container.textContent).toContain('Area-1');
     expect(container.textContent).toContain('90°');
     expect(container.textContent).toContain('Sector-B');
-    expect(container.textContent).toContain('Active');
     expect(container.textContent).toContain('3.45 km');
     expect(container.textContent).toContain('Lot-5');
     expect(container.textContent).toContain('John');
     expect(container.textContent).toContain('Team A');
+    // Inspection status section (status='Active' doesn't match 'ตรวจแล้ว' so shows ยังไม่ตรวจ)
+    expect(container.textContent).toContain('ยังไม่ตรวจ');
   });
 
   it('renders interference source info', () => {
@@ -155,5 +168,72 @@ describe('InterferenceSiteDetail', () => {
     const cellText = container.querySelector('p.text-xs.text-muted-foreground');
     // Should not contain cell-specific element
     expect(container.textContent).not.toContain('Cell-1');
+  });
+});
+
+// ==========================================
+// InterferenceSiteDetail — NavigateButton integration
+// ==========================================
+describe('InterferenceSiteDetail NavigateButton', () => {
+  it('renders NavigateButton when lat and long are present', () => {
+    const { container } = render(
+      <InterferenceSiteDetail site={makeSite({ lat: 13.75, long: 100.5 })} />
+    );
+    expect(container.querySelector('[data-testid="navigate-button"]')).toBeTruthy();
+  });
+
+  it('does NOT render NavigateButton when lat is null', () => {
+    const { container } = render(
+      <InterferenceSiteDetail site={makeSite({ lat: null, long: 100.5 })} />
+    );
+    expect(container.querySelector('[data-testid="navigate-button"]')).toBeNull();
+  });
+
+  it('does NOT render NavigateButton when long is null', () => {
+    const { container } = render(
+      <InterferenceSiteDetail site={makeSite({ lat: 13.75, long: null })} />
+    );
+    expect(container.querySelector('[data-testid="navigate-button"]')).toBeNull();
+  });
+
+  it('does NOT render NavigateButton when both lat and long are null', () => {
+    const { container } = render(
+      <InterferenceSiteDetail site={makeSite({ lat: null, long: null })} />
+    );
+    expect(container.querySelector('[data-testid="navigate-button"]')).toBeNull();
+  });
+
+  it('passes correct lat and lng to NavigateButton', () => {
+    const { container } = render(
+      <InterferenceSiteDetail site={makeSite({ lat: 13.75, long: 100.5 })} />
+    );
+    const btn = container.querySelector('[data-testid="navigate-button"]');
+    expect(btn?.getAttribute('data-lat')).toBe('13.75');
+    expect(btn?.getAttribute('data-lng')).toBe('100.5');
+  });
+
+  it('passes siteName as stationName when siteName is present', () => {
+    const { container } = render(
+      <InterferenceSiteDetail site={makeSite({ siteName: 'Site Alpha', lat: 13.75, long: 100.5 })} />
+    );
+    const btn = container.querySelector('[data-testid="navigate-button"]');
+    expect(btn?.getAttribute('data-station-name')).toBe('Site Alpha');
+  });
+
+  it('passes siteCode as stationName when siteName is null', () => {
+    const { container } = render(
+      <InterferenceSiteDetail site={makeSite({ siteName: null, siteCode: 'AWN-001', lat: 13.75, long: 100.5 })} />
+    );
+    const btn = container.querySelector('[data-testid="navigate-button"]');
+    expect(btn?.getAttribute('data-station-name')).toBe('AWN-001');
+  });
+
+  it('passes undefined stationName when both siteName and siteCode are null', () => {
+    const { container } = render(
+      <InterferenceSiteDetail site={makeSite({ siteName: null, siteCode: null, lat: 13.75, long: 100.5 })} />
+    );
+    const btn = container.querySelector('[data-testid="navigate-button"]');
+    // undefined converts to '' in our mock's data-station-name attribute
+    expect(btn?.getAttribute('data-station-name')).toBe('');
   });
 });

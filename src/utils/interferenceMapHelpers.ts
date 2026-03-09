@@ -15,12 +15,35 @@ export function getRankingColor(ranking: string | null): string {
 
 export function createTowerIcon(
   ranking: string | null,
-  isSelected: boolean = false
+  isSelected: boolean = false,
+  status: string | null = null
 ): L.DivIcon {
   const color = getRankingColor(ranking);
+  const isInspected = status === 'ตรวจแล้ว';
   const size = isSelected ? 36 : 28;
   const borderWidth = isSelected ? 3 : 2;
   const glowSize = isSelected ? 8 : 0;
+
+  const inspectedBadge = isInspected ? `
+        <div style="
+          position: absolute;
+          top: -4px;
+          right: -6px;
+          width: 14px;
+          height: 14px;
+          background: #22c55e;
+          border-radius: 50%;
+          border: 1.5px solid white;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          box-shadow: 0 1px 3px rgba(0,0,0,0.2);
+          font-size: 9px;
+          font-weight: 700;
+          color: white;
+          line-height: 1;
+        ">✓</div>
+  ` : '';
 
   return L.divIcon({
     className: 'interference-tower-marker',
@@ -62,6 +85,7 @@ export function createTowerIcon(
           border-right: 5px solid transparent;
           border-top: 8px solid ${color};
         "></div>
+        ${inspectedBadge}
       </div>
     `,
     iconSize: [size, size + 8],

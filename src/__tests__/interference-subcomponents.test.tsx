@@ -22,142 +22,6 @@ afterEach(() => {
 });
 
 // ==========================================
-// ImportDialog
-// ==========================================
-import ImportDialog from '@/components/interference/ImportDialog';
-
-describe('ImportDialog', () => {
-  it('renders dialog with title and buttons', () => {
-    const { container } = render(<ImportDialog onClose={vi.fn()} onImportComplete={vi.fn()} />);
-    expect(container.textContent).toContain('Import Interference Data');
-    expect(container.textContent).toContain('Cancel');
-    expect(container.textContent).toContain('Import');
-  });
-
-  it('calls onClose when Cancel is clicked', () => {
-    const onClose = vi.fn();
-    const { container } = render(<ImportDialog onClose={onClose} onImportComplete={vi.fn()} />);
-    const cancelBtn = Array.from(container.querySelectorAll('button')).find(
-      (b) => b.textContent?.includes('Cancel')
-    )!;
-    fireEvent.click(cancelBtn);
-    expect(onClose).toHaveBeenCalled();
-  });
-
-  it('calls onClose when backdrop is clicked', () => {
-    const onClose = vi.fn();
-    const { container } = render(<ImportDialog onClose={onClose} onImportComplete={vi.fn()} />);
-    // Backdrop is the first div with bg-black
-    const backdrop = container.querySelector('.bg-black\\/60');
-    if (backdrop) fireEvent.click(backdrop);
-    expect(onClose).toHaveBeenCalled();
-  });
-
-  it('disables import button when no file selected', () => {
-    const { container } = render(<ImportDialog onClose={vi.fn()} onImportComplete={vi.fn()} />);
-    const importBtn = Array.from(container.querySelectorAll('button')).find(
-      (b) => b.textContent === 'Import'
-    )!;
-    expect(importBtn.disabled).toBe(true);
-  });
-
-  it('shows file info after selection', async () => {
-    const { container } = render(<ImportDialog onClose={vi.fn()} onImportComplete={vi.fn()} />);
-    const fileInput = container.querySelector('input[type="file"]') as HTMLInputElement;
-    const file = new File(['data'], 'test.csv', { type: 'text/csv' });
-
-    await act(async () => {
-      fireEvent.change(fileInput, { target: { files: [file] } });
-    });
-
-    expect(container.textContent).toContain('test.csv');
-  });
-
-  it('handles successful import', async () => {
-    vi.useFakeTimers();
-    const onImportComplete = vi.fn();
-    mockFetch.mockResolvedValue({
-      ok: true,
-      json: () => Promise.resolve({ success: true, imported: 5 }),
-    });
-
-    const { container } = render(<ImportDialog onClose={vi.fn()} onImportComplete={onImportComplete} />);
-    const fileInput = container.querySelector('input[type="file"]') as HTMLInputElement;
-    const file = new File(['data'], 'test.csv', { type: 'text/csv' });
-
-    fireEvent.change(fileInput, { target: { files: [file] } });
-
-    const importBtn = Array.from(container.querySelectorAll('button')).find(
-      (b) => b.textContent === 'Import'
-    )!;
-
-    // Click and flush promises
-    await act(async () => {
-      fireEvent.click(importBtn);
-      // Allow the async handleImport to run
-      await Promise.resolve();
-      await Promise.resolve();
-    });
-
-    expect(container.textContent).toContain('Successfully imported 5 records');
-
-    // onImportComplete called after 1500ms timeout
-    act(() => {
-      vi.advanceTimersByTime(1600);
-    });
-    expect(onImportComplete).toHaveBeenCalled();
-    vi.useRealTimers();
-  });
-
-  it('handles import error', async () => {
-    mockFetch.mockResolvedValue({
-      ok: true,
-      json: () => Promise.resolve({ success: false, error: 'Invalid file format' }),
-    });
-
-    const { container } = render(<ImportDialog onClose={vi.fn()} onImportComplete={vi.fn()} />);
-    const fileInput = container.querySelector('input[type="file"]') as HTMLInputElement;
-    const file = new File(['data'], 'test.csv', { type: 'text/csv' });
-
-    fireEvent.change(fileInput, { target: { files: [file] } });
-
-    const importBtn = Array.from(container.querySelectorAll('button')).find(
-      (b) => b.textContent === 'Import'
-    )!;
-
-    await act(async () => {
-      fireEvent.click(importBtn);
-      await Promise.resolve();
-      await Promise.resolve();
-    });
-
-    expect(container.textContent).toContain('Error: Invalid file format');
-  });
-
-  it('handles network error during import', async () => {
-    mockFetch.mockRejectedValue(new Error('Network failed'));
-
-    const { container } = render(<ImportDialog onClose={vi.fn()} onImportComplete={vi.fn()} />);
-    const fileInput = container.querySelector('input[type="file"]') as HTMLInputElement;
-    const file = new File(['data'], 'test.csv', { type: 'text/csv' });
-
-    fireEvent.change(fileInput, { target: { files: [file] } });
-
-    const importBtn = Array.from(container.querySelectorAll('button')).find(
-      (b) => b.textContent === 'Import'
-    )!;
-
-    await act(async () => {
-      fireEvent.click(importBtn);
-      await Promise.resolve();
-      await Promise.resolve();
-    });
-
-    expect(container.textContent).toContain('Error:');
-  });
-});
-
-// ==========================================
 // InterferenceFilterPanel
 // ==========================================
 import InterferenceFilterPanel from '@/components/interference/InterferenceFilterPanel';
@@ -170,13 +34,11 @@ describe('InterferenceFilterPanel', () => {
     });
   });
 
-  it('renders search input and dropdowns', async () => {
+  it('renders dropdowns', async () => {
     const { container } = render(
       <InterferenceFilterPanel filters={{}} onFiltersChange={vi.fn()} />
     );
-    expect(container.querySelector('input[type="text"]')).toBeTruthy();
     expect(container.textContent).toContain('All Provinces');
-    expect(container.textContent).toContain('All Rankings');
   });
 
   it('renders ranking filter badges', () => {
@@ -243,13 +105,15 @@ describe('InterferenceFilterPanel', () => {
     expect(onChange).toHaveBeenCalledWith(expect.objectContaining({ changwat: 'Bangkok' }));
   });
 
-  it('changes ranking filter via select', () => {
+  it('changes ranking filter via badge click', () => {
     const onChange = vi.fn();
     const { container } = render(
       <InterferenceFilterPanel filters={{}} onFiltersChange={onChange} />
     );
-    const selects = container.querySelectorAll('select');
-    fireEvent.change(selects[1], { target: { value: 'Major' } });
+    const majorBtn = Array.from(container.querySelectorAll('button')).find(
+      (b) => b.textContent === 'Major'
+    )!;
+    fireEvent.click(majorBtn);
     expect(onChange).toHaveBeenCalledWith(expect.objectContaining({ ranking: 'Major' }));
   });
 
@@ -276,212 +140,81 @@ describe('InterferenceFilterPanel', () => {
     expect(clearBtn).toBeUndefined();
   });
 
-  it('debounces search input', async () => {
-    vi.useFakeTimers();
+  it('renders status filter buttons', () => {
+    const { container } = render(
+      <InterferenceFilterPanel filters={{}} onFiltersChange={vi.fn()} />
+    );
+    expect(container.textContent).toContain('ตรวจแล้ว');
+    expect(container.textContent).toContain('ยังไม่ตรวจ');
+  });
+
+  it('toggles ตรวจแล้ว status filter on click', () => {
     const onChange = vi.fn();
     const { container } = render(
       <InterferenceFilterPanel filters={{}} onFiltersChange={onChange} />
     );
-    const searchInput = container.querySelector('input[type="text"]')!;
-    fireEvent.change(searchInput, { target: { value: 'test' } });
-
-    // Not called immediately
-    expect(onChange).not.toHaveBeenCalled();
-
-    act(() => {
-      vi.advanceTimersByTime(350);
-    });
-
-    expect(onChange).toHaveBeenCalledWith(expect.objectContaining({ search: 'test' }));
-    vi.useRealTimers();
-  });
-});
-
-// ==========================================
-// InterferenceSiteList
-// ==========================================
-import InterferenceSiteList from '@/components/interference/InterferenceSiteList';
-
-const makeSite = (overrides = {}) => ({
-  id: 1,
-  siteCode: 'AWN-001',
-  siteName: 'Site Alpha',
-  lat: 13.75,
-  long: 100.5,
-  changwat: 'Bangkok',
-  ranking: 'Critical',
-  mcZone: null,
-  cellName: 'Cell-A',
-  sectorName: null,
-  direction: 90,
-  avgNiCarrier: -80,
-  dayTime: null,
-  nightTime: null,
-  sourceLat: null,
-  sourceLong: null,
-  estimateDistance: 2.5,
-  status: null,
-  nbtcArea: null,
-  awnContact: null,
-  lot: null,
-  onSiteScanBy: null,
-  onSiteScanDate: null,
-  checkRealtime: null,
-  sourceLocation1: null,
-  sourceLocation2: null,
-  cameraModel1: null,
-  cameraModel2: null,
-  notes: null,
-  createdAt: new Date(),
-  updatedAt: new Date(),
-  ...overrides,
-});
-
-describe('InterferenceSiteList', () => {
-  it('shows loading state', () => {
-    const { container } = render(
-      <InterferenceSiteList sites={[]} selectedSite={null} onSiteSelect={vi.fn()} loading={true} />
-    );
-    expect(container.textContent).toContain('Loading sites...');
+    const statusBtn = Array.from(container.querySelectorAll('button')).find(
+      (b) => b.textContent?.includes('ตรวจแล้ว') && !b.textContent?.includes('ยังไม่ตรวจ')
+    )!;
+    fireEvent.click(statusBtn);
+    expect(onChange).toHaveBeenCalledWith(expect.objectContaining({ status: 'ตรวจแล้ว' }));
   });
 
-  it('shows empty state', () => {
+  it('untoggles ตรวจแล้ว status filter when already active', () => {
+    const onChange = vi.fn();
     const { container } = render(
-      <InterferenceSiteList sites={[]} selectedSite={null} onSiteSelect={vi.fn()} loading={false} />
+      <InterferenceFilterPanel filters={{ status: 'ตรวจแล้ว' }} onFiltersChange={onChange} />
     );
-    expect(container.textContent).toContain('No sites found');
+    const statusBtn = Array.from(container.querySelectorAll('button')).find(
+      (b) => b.textContent?.includes('ตรวจแล้ว') && !b.textContent?.includes('ยังไม่ตรวจ')
+    )!;
+    fireEvent.click(statusBtn);
+    expect(onChange).toHaveBeenCalledWith(expect.objectContaining({ status: undefined }));
   });
 
-  it('renders site list with count', () => {
-    const sites = [makeSite(), makeSite({ id: 2, siteName: 'Site Beta', ranking: 'Major' })];
+  it('toggles ยังไม่ตรวจ status filter on click', () => {
+    const onChange = vi.fn();
     const { container } = render(
-      <InterferenceSiteList sites={sites} selectedSite={null} onSiteSelect={vi.fn()} loading={false} />
+      <InterferenceFilterPanel filters={{}} onFiltersChange={onChange} />
     );
-    expect(container.textContent).toContain('2 sites');
-    expect(container.textContent).toContain('Site Alpha');
-    expect(container.textContent).toContain('Site Beta');
+    const statusBtn = Array.from(container.querySelectorAll('button')).find(
+      (b) => b.textContent?.includes('ยังไม่ตรวจ')
+    )!;
+    fireEvent.click(statusBtn);
+    expect(onChange).toHaveBeenCalledWith(expect.objectContaining({ status: 'ยังไม่ตรวจ' }));
   });
 
-  it('shows changwat and cell name', () => {
+  it('shows badge-success class when ตรวจแล้ว status is active', () => {
     const { container } = render(
-      <InterferenceSiteList sites={[makeSite()]} selectedSite={null} onSiteSelect={vi.fn()} loading={false} />
+      <InterferenceFilterPanel filters={{ status: 'ตรวจแล้ว' }} onFiltersChange={vi.fn()} />
     );
-    expect(container.textContent).toContain('Bangkok');
-    expect(container.textContent).toContain('Cell-A');
+    const statusBtn = Array.from(container.querySelectorAll('button')).find(
+      (b) => b.textContent?.includes('ตรวจแล้ว') && !b.textContent?.includes('ยังไม่ตรวจ')
+    )!;
+    expect(statusBtn.className).toContain('badge-success');
   });
 
-  it('shows ranking badge', () => {
+  it('shows badge-warning class when ยังไม่ตรวจ status is active', () => {
     const { container } = render(
-      <InterferenceSiteList sites={[makeSite()]} selectedSite={null} onSiteSelect={vi.fn()} loading={false} />
+      <InterferenceFilterPanel filters={{ status: 'ยังไม่ตรวจ' }} onFiltersChange={vi.fn()} />
     );
-    expect(container.textContent).toContain('Critical');
+    const statusBtn = Array.from(container.querySelectorAll('button')).find(
+      (b) => b.textContent?.includes('ยังไม่ตรวจ')
+    )!;
+    expect(statusBtn.className).toContain('badge-warning');
   });
 
-  it('shows noise level', () => {
+  it('includes status in clear all filters', () => {
+    const onChange = vi.fn();
     const { container } = render(
-      <InterferenceSiteList sites={[makeSite()]} selectedSite={null} onSiteSelect={vi.fn()} loading={false} />
+      <InterferenceFilterPanel filters={{ status: 'ตรวจแล้ว' }} onFiltersChange={onChange} />
     );
-    expect(container.textContent).toContain('-80.0 dBm');
-  });
-
-  it('shows distance', () => {
-    const { container } = render(
-      <InterferenceSiteList sites={[makeSite()]} selectedSite={null} onSiteSelect={vi.fn()} loading={false} />
-    );
-    expect(container.textContent).toContain('2.50 km');
-  });
-
-  it('calls onSiteSelect when site is clicked', () => {
-    const onSelect = vi.fn();
-    const site = makeSite();
-    const { container } = render(
-      <InterferenceSiteList sites={[site]} selectedSite={null} onSiteSelect={onSelect} loading={false} />
-    );
-    const siteBtn = container.querySelector('button[class*="w-full"]')!;
-    fireEvent.click(siteBtn);
-    expect(onSelect).toHaveBeenCalledWith(expect.objectContaining({ id: 1 }));
-  });
-
-  it('highlights selected site', () => {
-    const site = makeSite();
-    const { container } = render(
-      <InterferenceSiteList sites={[site]} selectedSite={site} onSiteSelect={vi.fn()} loading={false} />
-    );
-    const siteBtn = container.querySelector('button[class*="w-full"]')!;
-    expect(siteBtn.className).toContain('bg-primary/10');
-  });
-
-  it('sorts by name', () => {
-    const sites = [
-      makeSite({ id: 1, siteName: 'Zulu', ranking: 'Minor' }),
-      makeSite({ id: 2, siteName: 'Alpha', ranking: 'Critical' }),
-    ];
-    const { container } = render(
-      <InterferenceSiteList sites={sites} selectedSite={null} onSiteSelect={vi.fn()} loading={false} />
-    );
-    // Change sort to name
-    const select = container.querySelector('select')!;
-    fireEvent.change(select, { target: { value: 'name' } });
-
-    const buttons = container.querySelectorAll('button[class*="w-full"]');
-    expect(buttons[0].textContent).toContain('Alpha');
-    expect(buttons[1].textContent).toContain('Zulu');
-  });
-
-  it('sorts by noise', () => {
-    const sites = [
-      makeSite({ id: 1, siteName: 'Loud', avgNiCarrier: -60 }),
-      makeSite({ id: 2, siteName: 'Quiet', avgNiCarrier: -90 }),
-    ];
-    const { container } = render(
-      <InterferenceSiteList sites={sites} selectedSite={null} onSiteSelect={vi.fn()} loading={false} />
-    );
-    const select = container.querySelector('select')!;
-    fireEvent.change(select, { target: { value: 'noise' } });
-
-    const buttons = container.querySelectorAll('button[class*="w-full"]');
-    expect(buttons[0].textContent).toContain('Quiet');
-    expect(buttons[1].textContent).toContain('Loud');
-  });
-
-  it('sorts by distance', () => {
-    const sites = [
-      makeSite({ id: 1, siteName: 'Far', estimateDistance: 10 }),
-      makeSite({ id: 2, siteName: 'Near', estimateDistance: 1 }),
-    ];
-    const { container } = render(
-      <InterferenceSiteList sites={sites} selectedSite={null} onSiteSelect={vi.fn()} loading={false} />
-    );
-    const select = container.querySelector('select')!;
-    fireEvent.change(select, { target: { value: 'distance' } });
-
-    const buttons = container.querySelectorAll('button[class*="w-full"]');
-    expect(buttons[0].textContent).toContain('Near');
-    expect(buttons[1].textContent).toContain('Far');
-  });
-
-  it('falls back to siteCode or id when siteName is null', () => {
-    const { container } = render(
-      <InterferenceSiteList
-        sites={[makeSite({ id: 42, siteName: null, siteCode: 'CODE-42' })]}
-        selectedSite={null}
-        onSiteSelect={vi.fn()}
-        loading={false}
-      />
-    );
-    expect(container.textContent).toContain('CODE-42');
-  });
-
-  it('falls back to Site #id when both siteName and siteCode are null', () => {
-    const { container } = render(
-      <InterferenceSiteList
-        sites={[makeSite({ id: 99, siteName: null, siteCode: null })]}
-        selectedSite={null}
-        onSiteSelect={vi.fn()}
-        loading={false}
-      />
-    );
-    expect(container.textContent).toContain('Site #99');
+    const clearBtn = Array.from(container.querySelectorAll('button')).find(
+      (b) => b.textContent?.includes('Clear all')
+    )!;
+    expect(clearBtn).toBeTruthy();
+    fireEvent.click(clearBtn);
+    expect(onChange).toHaveBeenCalledWith({});
   });
 });
 

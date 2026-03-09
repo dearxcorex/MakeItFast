@@ -14,7 +14,6 @@ export default function InterferenceFilterPanel({
 }: InterferenceFilterPanelProps) {
   const [changwats, setChangwats] = useState<string[]>([]);
   const [rankings] = useState<string[]>(['Critical', 'Major', 'Minor']);
-  const [searchInput, setSearchInput] = useState(filters.search || '');
 
   useEffect(() => {
     fetch('/api/interference/stats')
@@ -27,16 +26,6 @@ export default function InterferenceFilterPanel({
       .catch(console.error);
   }, []);
 
-  // Debounce search
-  useEffect(() => {
-    const timer = setTimeout(() => {
-      if (searchInput !== (filters.search || '')) {
-        onFiltersChange({ ...filters, search: searchInput || undefined });
-      }
-    }, 300);
-    return () => clearTimeout(timer);
-  }, [searchInput, filters, onFiltersChange]);
-
   const rankingColor = (r: string) => {
     switch (r.toLowerCase()) {
       case 'critical': return 'badge-error';
@@ -48,42 +37,19 @@ export default function InterferenceFilterPanel({
 
   return (
     <div className="glass-card p-3 space-y-3">
-      {/* Search */}
-      <input
-        type="text"
-        placeholder="Search sites..."
-        value={searchInput}
-        onChange={(e) => setSearchInput(e.target.value)}
-        className="w-full px-3 py-2 rounded-lg bg-input text-foreground text-sm border border-border/50 focus:outline-none focus:ring-1 focus:ring-primary"
-      />
+      {/* Province */}
+      <select
+        value={filters.changwat || ''}
+        onChange={(e) => onFiltersChange({ ...filters, changwat: e.target.value || undefined })}
+        className="w-full px-2 py-1.5 rounded-lg bg-input text-foreground text-xs border border-border/50"
+      >
+        <option value="">All Provinces</option>
+        {changwats.map((c) => (
+          <option key={c} value={c}>{c}</option>
+        ))}
+      </select>
 
-      <div className="grid grid-cols-2 gap-2">
-        {/* Province */}
-        <select
-          value={filters.changwat || ''}
-          onChange={(e) => onFiltersChange({ ...filters, changwat: e.target.value || undefined })}
-          className="px-2 py-1.5 rounded-lg bg-input text-foreground text-xs border border-border/50"
-        >
-          <option value="">All Provinces</option>
-          {changwats.map((c) => (
-            <option key={c} value={c}>{c}</option>
-          ))}
-        </select>
-
-        {/* Ranking */}
-        <select
-          value={filters.ranking || ''}
-          onChange={(e) => onFiltersChange({ ...filters, ranking: e.target.value || undefined })}
-          className="px-2 py-1.5 rounded-lg bg-input text-foreground text-xs border border-border/50"
-        >
-          <option value="">All Rankings</option>
-          {rankings.map((r) => (
-            <option key={r} value={r}>{r}</option>
-          ))}
-        </select>
-      </div>
-
-      {/* Ranking badges + source toggle */}
+      {/* Ranking badges + source toggle + status filter */}
       <div className="flex items-center gap-2 flex-wrap">
         {rankings.map((r) => (
           <button
@@ -117,13 +83,45 @@ export default function InterferenceFilterPanel({
         </button>
       </div>
 
+      {/* Status filter */}
+      <div className="flex items-center gap-2">
+        <span className="text-xs text-muted-foreground">Status:</span>
+        <button
+          onClick={() =>
+            onFiltersChange({
+              ...filters,
+              status: filters.status === 'ตรวจแล้ว' ? undefined : 'ตรวจแล้ว',
+            })
+          }
+          className={`px-2 py-0.5 rounded-full text-xs font-medium transition-all ${
+            filters.status === 'ตรวจแล้ว'
+              ? 'badge-success'
+              : 'bg-secondary text-muted-foreground'
+          }`}
+        >
+          ✅ ตรวจแล้ว
+        </button>
+        <button
+          onClick={() =>
+            onFiltersChange({
+              ...filters,
+              status: filters.status === 'ยังไม่ตรวจ' ? undefined : 'ยังไม่ตรวจ',
+            })
+          }
+          className={`px-2 py-0.5 rounded-full text-xs font-medium transition-all ${
+            filters.status === 'ยังไม่ตรวจ'
+              ? 'badge-warning'
+              : 'bg-secondary text-muted-foreground'
+          }`}
+        >
+          ⏳ ยังไม่ตรวจ
+        </button>
+      </div>
+
       {/* Clear filters */}
       {Object.values(filters).some(Boolean) && (
         <button
-          onClick={() => {
-            onFiltersChange({});
-            setSearchInput('');
-          }}
+          onClick={() => onFiltersChange({})}
           className="text-xs text-muted-foreground hover:text-foreground"
         >
           Clear all filters

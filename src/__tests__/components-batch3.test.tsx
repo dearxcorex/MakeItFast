@@ -2,6 +2,18 @@ import { describe, it, expect, vi, afterEach } from 'vitest';
 import { render, cleanup } from '@testing-library/react';
 import React from 'react';
 
+// Mock NavigateButton so we can assert it receives correct props from InterferenceMap
+vi.mock('@/components/map/NavigateButton', () => ({
+  default: ({ lat, lng, stationName }: { lat: number; lng: number; stationName?: string }) => (
+    <div
+      data-testid="navigate-button"
+      data-lat={lat}
+      data-lng={lng}
+      data-station-name={stationName ?? ''}
+    />
+  ),
+}));
+
 // Mock leaflet CSS import
 vi.mock('leaflet/dist/leaflet.css', () => ({}));
 
@@ -152,34 +164,21 @@ vi.mock('@/components/interference/InterferenceFilterPanel', () => ({
   default: () => <div data-testid="filter-panel">FilterPanel</div>,
 }));
 
-vi.mock('@/components/interference/InterferenceSiteList', () => ({
-  default: ({ loading }: { loading: boolean }) => (
-    <div data-testid="site-list">{loading ? 'Loading...' : 'SiteList'}</div>
-  ),
-}));
-
 vi.mock('@/components/interference/InterferenceSiteDetail', () => ({
   default: () => <div data-testid="site-detail">SiteDetail</div>,
 }));
 
-vi.mock('@/components/interference/ImportDialog', () => ({
-  default: () => <div data-testid="import-dialog">ImportDialog</div>,
-}));
-
 describe('InterferenceAnalysis', () => {
-  it('renders the Interference Analysis heading and buttons', () => {
+  it('renders the Interference Analysis heading', () => {
     mockFetch.mockResolvedValue({ json: () => Promise.resolve({ sites: [] }) });
     const { container } = render(<InterferenceAnalysis />);
     expect(container.textContent).toContain('Interference Analysis');
-    expect(container.textContent).toContain('Multi-Site');
-    expect(container.textContent).toContain('Import CSV');
   });
 
-  it('renders filter panel and site list by default', () => {
+  it('renders filter panel by default', () => {
     mockFetch.mockResolvedValue({ json: () => Promise.resolve({ sites: [] }) });
     const { container } = render(<InterferenceAnalysis />);
     expect(container.querySelector('[data-testid="filter-panel"]')).toBeTruthy();
-    expect(container.querySelector('[data-testid="site-list"]')).toBeTruthy();
   });
 
   it('renders the map area', () => {
@@ -250,6 +249,64 @@ describe('InterferenceMap', () => {
       <InterferenceMapActual {...defaultProps} propagationOverlays={overlays} />
     );
     expect(container.textContent).toContain('Signal (dBm)');
+  });
+
+  // Tower markers have no popup or NavigateButton (click calls onSiteSelect)
+  it('does not render NavigateButton for tower-only markers (no popup)', () => {
+    const sites = [makeSite({ id: 1, lat: 13.75, long: 100.5, sourceLat: null, sourceLong: null })];
+    const { container } = render(
+      <InterferenceMapActual {...defaultProps} sites={sites} />
+    );
+    const navBtns = container.querySelectorAll('[data-testid="navigate-button"]');
+    expect(navBtns.length).toBe(0);
+  });
+
+  // NavigateButton in source marker popups
+  it('renders NavigateButton inside each source marker popup', () => {
+    const sites = [makeSite({ id: 1, lat: 13.75, long: 100.5, sourceLat: 13.76, sourceLong: 100.51 })];
+    const { container } = render(
+      <InterferenceMapActual {...defaultProps} sites={sites} />
+    );
+    const navBtns = container.querySelectorAll('[data-testid="navigate-button"]');
+    // Only source popup has NavigateButton (tower has no popup)
+    expect(navBtns.length).toBe(1);
+  });
+
+  it('passes source lat/lng to NavigateButton in source popup', () => {
+    const sites = [makeSite({ id: 1, lat: 13.75, long: 100.5, sourceLat: 13.76, sourceLong: 100.51 })];
+    const { container } = render(
+      <InterferenceMapActual {...defaultProps} sites={sites} />
+    );
+    const navBtns = container.querySelectorAll('[data-testid="navigate-button"]');
+    expect(navBtns[0]?.getAttribute('data-lat')).toBe('13.76');
+    expect(navBtns[0]?.getAttribute('data-lng')).toBe('100.51');
+  });
+
+  it('passes "Source: <siteName>" as stationName to NavigateButton in source popup when siteName exists', () => {
+    const sites = [makeSite({ id: 1, siteName: 'Tower A', lat: 13.75, long: 100.5, sourceLat: 13.76, sourceLong: 100.51 })];
+    const { container } = render(
+      <InterferenceMapActual {...defaultProps} sites={sites} />
+    );
+    const navBtns = container.querySelectorAll('[data-testid="navigate-button"]');
+    expect(navBtns[0]?.getAttribute('data-station-name')).toBe('Source: Tower A');
+  });
+
+  it('passes "Interference Source" as stationName to NavigateButton in source popup when siteName is null', () => {
+    const sites = [makeSite({ id: 1, siteName: null, lat: 13.75, long: 100.5, sourceLat: 13.76, sourceLong: 100.51 })];
+    const { container } = render(
+      <InterferenceMapActual {...defaultProps} sites={sites} />
+    );
+    const navBtns = container.querySelectorAll('[data-testid="navigate-button"]');
+    expect(navBtns[0]?.getAttribute('data-station-name')).toBe('Interference Source');
+  });
+
+  it('does not render a source NavigateButton when site has no source coordinates', () => {
+    const sites = [makeSite({ id: 1, lat: 13.75, long: 100.5, sourceLat: null, sourceLong: null })];
+    const { container } = render(
+      <InterferenceMapActual {...defaultProps} sites={sites} />
+    );
+    const navBtns = container.querySelectorAll('[data-testid="navigate-button"]');
+    expect(navBtns.length).toBe(0);
   });
 });
 

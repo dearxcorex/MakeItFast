@@ -62,11 +62,28 @@ export async function fetchInterferenceSites(
       where.source_long = { not: null };
     }
     if (filters.search) {
-      where.OR = [
-        { site_name: { contains: filters.search, mode: 'insensitive' } },
-        { site_code: { contains: filters.search, mode: 'insensitive' } },
-        { cell_name: { contains: filters.search, mode: 'insensitive' } },
+      where.AND = [
+        ...(where.AND || []),
+        {
+          OR: [
+            { site_name: { contains: filters.search, mode: 'insensitive' } },
+            { site_code: { contains: filters.search, mode: 'insensitive' } },
+            { cell_name: { contains: filters.search, mode: 'insensitive' } },
+          ],
+        },
       ];
+    }
+    if (filters.status) {
+      if (filters.status === 'ตรวจแล้ว') {
+        where.status = 'ตรวจแล้ว';
+      } else {
+        // "ยังไม่ตรวจ" means all non-inspected: null, "High interference", "ยังไม่ตรวจ", etc.
+        // Prisma NOT excludes NULLs (SQL standard), so use OR to include them
+        where.AND = [
+          ...(where.AND || []),
+          { OR: [{ status: null }, { status: { not: 'ตรวจแล้ว' } }] },
+        ];
+      }
     }
     if (filters.noiseMin !== undefined || filters.noiseMax !== undefined) {
       where.avg_ni_carrier = {};

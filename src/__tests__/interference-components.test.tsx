@@ -32,29 +32,6 @@ vi.mock('@/components/interference/InterferenceFilterPanel', () => ({
   ),
 }));
 
-vi.mock('@/components/interference/InterferenceSiteList', () => ({
-  default: ({
-    sites,
-    selectedSite,
-    onSiteSelect,
-    loading,
-  }: {
-    sites: Array<{ id: number; siteName: string; lat: number; long: number }>;
-    selectedSite: unknown;
-    onSiteSelect: (site: unknown) => void;
-    loading: boolean;
-  }) => (
-    <div data-testid="site-list">
-      {loading ? 'Loading...' : `${sites.length} sites`}
-      {sites.map((s) => (
-        <button key={s.id} data-testid={`select-site-${s.id}`} onClick={() => onSiteSelect(s)}>
-          {s.siteName}
-        </button>
-      ))}
-    </div>
-  ),
-}));
-
 vi.mock('@/components/interference/InterferenceSiteDetail', () => ({
   default: ({ site }: { site: { siteName: string } }) => (
     <div data-testid="site-detail">{site.siteName} Detail</div>
@@ -85,21 +62,6 @@ vi.mock('@/components/interference/CloudRFControls', () => ({
   ),
 }));
 
-vi.mock('@/components/interference/ImportDialog', () => ({
-  default: ({
-    onClose,
-    onImportComplete,
-  }: {
-    onClose: () => void;
-    onImportComplete: () => void;
-  }) => (
-    <div data-testid="import-dialog">
-      <button data-testid="close-import" onClick={onClose}>Close</button>
-      <button data-testid="complete-import" onClick={onImportComplete}>Complete</button>
-    </div>
-  ),
-}));
-
 import InterferenceAnalysis from '@/components/interference/InterferenceAnalysis';
 
 afterEach(() => {
@@ -120,13 +82,11 @@ describe('InterferenceAnalysis', () => {
     });
   });
 
-  it('renders heading and buttons', async () => {
+  it('renders heading', async () => {
     const { container } = render(<InterferenceAnalysis />);
     await waitFor(() => {
       expect(container.textContent).toContain('Interference Analysis');
     });
-    expect(container.textContent).toContain('Import CSV');
-    expect(container.textContent).toContain('Multi-Site');
   });
 
   it('fetches sites on mount', async () => {
@@ -138,135 +98,11 @@ describe('InterferenceAnalysis', () => {
     });
   });
 
-  it('displays site list after fetch', async () => {
+  it('renders filter panel', async () => {
     const { container } = render(<InterferenceAnalysis />);
     await waitFor(() => {
-      expect(container.textContent).toContain('2 sites');
+      expect(container.querySelector('[data-testid="filter-panel"]')).toBeTruthy();
     });
-  });
-
-  it('selects a site and shows detail view', async () => {
-    const { container } = render(<InterferenceAnalysis />);
-    await waitFor(() => {
-      expect(container.querySelector('[data-testid="select-site-1"]')).toBeTruthy();
-    });
-
-    fireEvent.click(container.querySelector('[data-testid="select-site-1"]')!);
-
-    await waitFor(() => {
-      expect(container.textContent).toContain('Site Alpha Detail');
-      expect(container.textContent).toContain('Back to list');
-    });
-  });
-
-  it('goes back to list from detail view', async () => {
-    const { container } = render(<InterferenceAnalysis />);
-    await waitFor(() => {
-      expect(container.querySelector('[data-testid="select-site-1"]')).toBeTruthy();
-    });
-
-    fireEvent.click(container.querySelector('[data-testid="select-site-1"]')!);
-    await waitFor(() => {
-      expect(container.textContent).toContain('Back to list');
-    });
-
-    const backBtn = Array.from(container.querySelectorAll('button')).find(
-      (b) => b.textContent?.includes('Back to list')
-    )!;
-    fireEvent.click(backBtn);
-
-    await waitFor(() => {
-      expect(container.textContent).toContain('2 sites');
-    });
-  });
-
-  it('opens and closes import dialog', async () => {
-    const { container } = render(<InterferenceAnalysis />);
-    await waitFor(() => {
-      expect(container.textContent).toContain('Import CSV');
-    });
-
-    const importBtn = Array.from(container.querySelectorAll('button')).find(
-      (b) => b.textContent?.includes('Import CSV')
-    )!;
-    fireEvent.click(importBtn);
-
-    expect(container.querySelector('[data-testid="import-dialog"]')).toBeTruthy();
-
-    fireEvent.click(container.querySelector('[data-testid="close-import"]')!);
-    expect(container.querySelector('[data-testid="import-dialog"]')).toBeNull();
-  });
-
-  it('import complete triggers refetch', async () => {
-    const { container } = render(<InterferenceAnalysis />);
-    await waitFor(() => {
-      expect(mockFetch).toHaveBeenCalledTimes(1);
-    });
-
-    const importBtn = Array.from(container.querySelectorAll('button')).find(
-      (b) => b.textContent?.includes('Import CSV')
-    )!;
-    fireEvent.click(importBtn);
-
-    fireEvent.click(container.querySelector('[data-testid="complete-import"]')!);
-
-    // Should refetch
-    await waitFor(() => {
-      expect(mockFetch).toHaveBeenCalledTimes(2);
-    });
-  });
-
-  it('handles multi-site analysis', async () => {
-    mockFetch
-      .mockResolvedValueOnce({
-        ok: true,
-        json: () => Promise.resolve({ sites: mockSites }),
-      })
-      .mockResolvedValueOnce({
-        ok: true,
-        json: () => Promise.resolve({ pngUrl: 'http://test.png', bounds: [[0,0],[1,1]] }),
-      });
-
-    const { container } = render(<InterferenceAnalysis />);
-    await waitFor(() => {
-      expect(container.textContent).toContain('Multi-Site');
-    });
-
-    const multiBtn = Array.from(container.querySelectorAll('button')).find(
-      (b) => b.textContent?.includes('Multi-Site')
-    )!;
-
-    await act(async () => {
-      fireEvent.click(multiBtn);
-    });
-
-    await waitFor(() => {
-      expect(mockFetch).toHaveBeenCalledWith(
-        '/api/cloudrf/multisite',
-        expect.objectContaining({ method: 'POST' })
-      );
-    });
-  });
-
-  it('shows CloudRF controls with overlay management in detail view', async () => {
-    const { container } = render(<InterferenceAnalysis />);
-    await waitFor(() => {
-      expect(container.querySelector('[data-testid="select-site-1"]')).toBeTruthy();
-    });
-
-    fireEvent.click(container.querySelector('[data-testid="select-site-1"]')!);
-
-    await waitFor(() => {
-      expect(container.querySelector('[data-testid="cloudrf-controls"]')).toBeTruthy();
-    });
-
-    // Add overlay
-    fireEvent.click(container.querySelector('[data-testid="add-overlay"]')!);
-    expect(container.textContent).toContain('overlays: 1');
-
-    // Clear overlays
-    fireEvent.click(container.querySelector('[data-testid="clear-overlays"]')!);
-    expect(container.textContent).toContain('overlays: 0');
   });
 
   it('handles fetch error gracefully', async () => {

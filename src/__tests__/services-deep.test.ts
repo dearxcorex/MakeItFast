@@ -298,11 +298,63 @@ describe('interferenceService', () => {
       expect(mockInterfereFindMany).toHaveBeenCalledWith(
         expect.objectContaining({
           where: expect.objectContaining({
-            OR: expect.arrayContaining([
-              expect.objectContaining({ site_name: { contains: 'test', mode: 'insensitive' } }),
+            AND: expect.arrayContaining([
+              expect.objectContaining({
+                OR: expect.arrayContaining([
+                  expect.objectContaining({ site_name: { contains: 'test', mode: 'insensitive' } }),
+                ]),
+              }),
             ]),
           }),
         })
+      );
+    });
+
+    it('applies status filter for inspected sites', async () => {
+      mockInterfereFindMany.mockResolvedValue([]);
+      await fetchInterferenceSites({ status: 'ตรวจแล้ว' });
+      expect(mockInterfereFindMany).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: expect.objectContaining({
+            status: 'ตรวจแล้ว',
+          }),
+        })
+      );
+    });
+
+    it('applies status filter for non-inspected sites including nulls', async () => {
+      mockInterfereFindMany.mockResolvedValue([]);
+      await fetchInterferenceSites({ status: 'ยังไม่ตรวจ' });
+      expect(mockInterfereFindMany).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: expect.objectContaining({
+            AND: expect.arrayContaining([
+              expect.objectContaining({
+                OR: expect.arrayContaining([
+                  { status: null },
+                  { status: { not: 'ตรวจแล้ว' } },
+                ]),
+              }),
+            ]),
+          }),
+        })
+      );
+    });
+
+    it('combines search and status filters using AND', async () => {
+      mockInterfereFindMany.mockResolvedValue([]);
+      await fetchInterferenceSites({ search: 'test', status: 'ยังไม่ตรวจ' });
+      const call = mockInterfereFindMany.mock.calls[0][0];
+      expect(call.where.AND).toHaveLength(2);
+      // First AND entry: search OR
+      expect(call.where.AND[0].OR).toEqual(
+        expect.arrayContaining([
+          expect.objectContaining({ site_name: { contains: 'test', mode: 'insensitive' } }),
+        ])
+      );
+      // Second AND entry: status OR (null + not inspected)
+      expect(call.where.AND[1].OR).toEqual(
+        expect.arrayContaining([{ status: null }, { status: { not: 'ตรวจแล้ว' } }])
       );
     });
 

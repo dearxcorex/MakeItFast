@@ -513,6 +513,71 @@ h1, h2, h3, .font-heading {
   border: 1px solid var(--border);
 }
 
+/* Interference map popup */
+.interference-popup {
+  min-width: 180px;
+  max-width: 240px;
+  font-family: system-ui, sans-serif;
+}
+
+.interference-popup-title {
+  font-size: 13px;
+  font-weight: 700;
+  margin-bottom: 4px;
+  color: var(--card-foreground);
+  line-height: 1.3;
+}
+
+.interference-popup-details {
+  font-size: 11px;
+  color: var(--muted-foreground);
+  line-height: 1.6;
+}
+
+.interference-popup-status {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 6px;
+  padding: 5px 8px;
+  margin-top: 6px;
+  border-radius: 6px;
+}
+
+.interference-popup-status.inspected {
+  background: #dcfce7;
+  border: 1px solid #bbf7d0;
+  color: #166534;
+}
+
+.interference-popup-status.pending {
+  background: #fef9c3;
+  border: 1px solid #fde68a;
+  color: #854d0e;
+}
+
+.interference-popup-btn {
+  padding: 2px 8px;
+  font-size: 11px;
+  font-weight: 500;
+  border-radius: 4px;
+  background: #6366f1;
+  color: white;
+  border: none;
+  cursor: pointer;
+}
+
+.interference-popup-btn:hover {
+  background: #4f46e5;
+}
+
+@media (max-width: 768px) {
+  .interference-popup {
+    min-width: 160px;
+    max-width: 220px;
+  }
+}
+
 .leaflet-control-zoom a {
   background-color: var(--card) !important;
   color: var(--card-foreground) !important;
@@ -950,6 +1015,26 @@ input[type="checkbox"][role="switch"]:focus {
 
 .station-badge--info {
   background: #4285f4;
+}
+
+/* Inspected checkmark - bottom left, always visible */
+.station-inspected-mark {
+  position: absolute;
+  bottom: 8px;
+  left: -6px;
+  width: 14px;
+  height: 14px;
+  background: #22c55e;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 9px;
+  font-weight: 700;
+  color: white;
+  border: 1.5px solid white;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
+  line-height: 1;
 }
 
 /* Center icon in marker */

@@ -5,20 +5,17 @@ import React from 'react';
 // Mock next/dynamic
 vi.mock('next/dynamic', () => ({
   default: () => {
-    const C = () => <div data-testid="interference-map">InterferenceMap</div>;
+    const C = (props: Record<string, unknown>) => {
+      capturedMapProps = props;
+      return <div data-testid="interference-map">InterferenceMap</div>;
+    };
     C.displayName = 'InterferenceMap';
     return C;
   },
 }));
 
-// Capture InterferenceSiteList callbacks
-let capturedSiteListProps: Record<string, unknown> = {};
-vi.mock('@/components/interference/InterferenceSiteList', () => ({
-  default: (props: Record<string, unknown>) => {
-    capturedSiteListProps = props;
-    return <div data-testid="site-list">{(props.loading as boolean) ? 'Loading...' : `${(props.sites as unknown[]).length} sites`}</div>;
-  },
-}));
+// Capture map callbacks (used for site selection since InterferenceSiteList was removed)
+let capturedMapProps: Record<string, unknown> = {};
 
 // Capture filter panel callbacks
 let capturedFilterProps: Record<string, unknown> = {};
@@ -44,22 +41,13 @@ vi.mock('@/components/interference/CloudRFControls', () => ({
   ),
 }));
 
-vi.mock('@/components/interference/ImportDialog', () => ({
-  default: ({ onClose, onImportComplete }: { onClose: () => void; onImportComplete: () => void }) => (
-    <div data-testid="import-dialog">
-      <button data-testid="close-import" onClick={onClose}>Close</button>
-      <button data-testid="complete-import" onClick={onImportComplete}>Complete</button>
-    </div>
-  ),
-}));
-
 const mockFetch = vi.fn();
 global.fetch = mockFetch;
 
 afterEach(() => {
   cleanup();
   vi.clearAllMocks();
-  capturedSiteListProps = {};
+  capturedMapProps = {};
   capturedFilterProps = {};
 });
 
@@ -72,14 +60,14 @@ const makeSite = (overrides = {}) => ({
 });
 
 describe('InterferenceAnalysis - fetchSites', () => {
-  it('fetches sites on mount and shows them', async () => {
+  it('fetches sites on mount', async () => {
     const sites = [makeSite({ id: 1 }), makeSite({ id: 2 })];
     mockFetch.mockResolvedValue({ json: () => Promise.resolve({ sites }) });
 
-    const { container } = render(<InterferenceAnalysis />);
+    render(<InterferenceAnalysis />);
 
     await waitFor(() => {
-      expect(container.querySelector('[data-testid="site-list"]')?.textContent).toContain('2 sites');
+      expect(mockFetch).toHaveBeenCalledWith(expect.stringContaining('/api/interference'));
     });
   });
 
@@ -89,7 +77,8 @@ describe('InterferenceAnalysis - fetchSites', () => {
     const { container } = render(<InterferenceAnalysis />);
 
     await waitFor(() => {
-      expect(container.querySelector('[data-testid="site-list"]')?.textContent).toContain('0 sites');
+      // Should still render without crashing
+      expect(container.textContent).toContain('Interference Analysis');
     });
   });
 
@@ -115,103 +104,48 @@ describe('InterferenceAnalysis - fetchSites', () => {
   });
 });
 
-describe('InterferenceAnalysis - site selection', () => {
-  it('shows detail view when site is selected', async () => {
+describe('InterferenceAnalysis - site selection via map', () => {
+  it('shows detail view when site is selected via map', async () => {
     const sites = [makeSite({ id: 1, siteName: 'Selected Site' })];
     mockFetch.mockResolvedValue({ json: () => Promise.resolve({ sites }) });
 
     const { container } = render(<InterferenceAnalysis />);
 
     await waitFor(() => {
-      expect(capturedSiteListProps.sites).toBeTruthy();
+      expect(capturedMapProps.onSiteSelect).toBeTruthy();
     });
 
-    // Simulate site selection
-    const onSiteSelect = capturedSiteListProps.onSiteSelect as (s: unknown) => void;
+    // Simulate site selection via map
+    const onSiteSelect = capturedMapProps.onSiteSelect as (s: unknown) => void;
     act(() => {
       onSiteSelect(sites[0]);
     });
 
     expect(container.querySelector('[data-testid="site-detail"]')?.textContent).toContain('Selected Site');
     expect(container.querySelector('[data-testid="cloudrf-controls"]')).toBeTruthy();
-    expect(container.textContent).toContain('Back to list');
+    expect(container.textContent).toContain('Back to filters');
   });
 
-  it('goes back to list when back button clicked', async () => {
+  it('goes back to filters when back button clicked', async () => {
     const sites = [makeSite({ id: 1, siteName: 'Test' })];
     mockFetch.mockResolvedValue({ json: () => Promise.resolve({ sites }) });
 
     const { container } = render(<InterferenceAnalysis />);
 
-    await waitFor(() => expect(capturedSiteListProps.sites).toBeTruthy());
+    await waitFor(() => expect(capturedMapProps.onSiteSelect).toBeTruthy());
 
-    const onSiteSelect = capturedSiteListProps.onSiteSelect as (s: unknown) => void;
+    const onSiteSelect = capturedMapProps.onSiteSelect as (s: unknown) => void;
     act(() => {
       onSiteSelect(sites[0]);
     });
 
-    // Click "Back to list"
+    // Click "Back to filters"
     const backBtn = Array.from(container.querySelectorAll('button')).find(
-      (b) => b.textContent?.includes('Back to list')
+      (b) => b.textContent?.includes('Back to filters')
     )!;
     fireEvent.click(backBtn);
 
     expect(container.querySelector('[data-testid="filter-panel"]')).toBeTruthy();
-    expect(container.querySelector('[data-testid="site-list"]')).toBeTruthy();
-  });
-});
-
-describe('InterferenceAnalysis - import dialog', () => {
-  it('shows import dialog when Import CSV clicked', async () => {
-    mockFetch.mockResolvedValue({ json: () => Promise.resolve({ sites: [] }) });
-
-    const { container } = render(<InterferenceAnalysis />);
-
-    const importBtn = Array.from(container.querySelectorAll('button')).find(
-      (b) => b.textContent?.includes('Import CSV')
-    )!;
-    fireEvent.click(importBtn);
-
-    expect(container.querySelector('[data-testid="import-dialog"]')).toBeTruthy();
-  });
-
-  it('closes import dialog on close', async () => {
-    mockFetch.mockResolvedValue({ json: () => Promise.resolve({ sites: [] }) });
-
-    const { container } = render(<InterferenceAnalysis />);
-
-    const importBtn = Array.from(container.querySelectorAll('button')).find(
-      (b) => b.textContent?.includes('Import CSV')
-    )!;
-    fireEvent.click(importBtn);
-
-    const closeBtn = container.querySelector('[data-testid="close-import"]')!;
-    fireEvent.click(closeBtn);
-
-    expect(container.querySelector('[data-testid="import-dialog"]')).toBeNull();
-  });
-
-  it('closes dialog and refetches on import complete', async () => {
-    mockFetch.mockResolvedValue({ json: () => Promise.resolve({ sites: [] }) });
-
-    const { container } = render(<InterferenceAnalysis />);
-
-    await waitFor(() => expect(mockFetch).toHaveBeenCalledTimes(1));
-
-    const importBtn = Array.from(container.querySelectorAll('button')).find(
-      (b) => b.textContent?.includes('Import CSV')
-    )!;
-    fireEvent.click(importBtn);
-
-    const completeBtn = container.querySelector('[data-testid="complete-import"]')!;
-
-    await act(async () => {
-      fireEvent.click(completeBtn);
-    });
-
-    expect(container.querySelector('[data-testid="import-dialog"]')).toBeNull();
-    // Should have refetched
-    expect(mockFetch).toHaveBeenCalledTimes(2);
   });
 });
 
@@ -222,10 +156,10 @@ describe('InterferenceAnalysis - propagation overlays', () => {
 
     const { container } = render(<InterferenceAnalysis />);
 
-    await waitFor(() => expect(capturedSiteListProps.sites).toBeTruthy());
+    await waitFor(() => expect(capturedMapProps.onSiteSelect).toBeTruthy());
 
     // Select site to show CloudRFControls
-    const onSiteSelect = capturedSiteListProps.onSiteSelect as (s: unknown) => void;
+    const onSiteSelect = capturedMapProps.onSiteSelect as (s: unknown) => void;
     act(() => {
       onSiteSelect(sites[0]);
     });
@@ -246,9 +180,9 @@ describe('InterferenceAnalysis - propagation overlays', () => {
 
     const { container } = render(<InterferenceAnalysis />);
 
-    await waitFor(() => expect(capturedSiteListProps.sites).toBeTruthy());
+    await waitFor(() => expect(capturedMapProps.onSiteSelect).toBeTruthy());
 
-    const onSiteSelect = capturedSiteListProps.onSiteSelect as (s: unknown) => void;
+    const onSiteSelect = capturedMapProps.onSiteSelect as (s: unknown) => void;
     act(() => {
       onSiteSelect(sites[0]);
     });
@@ -268,102 +202,5 @@ describe('InterferenceAnalysis - propagation overlays', () => {
     await waitFor(() => {
       expect(container.textContent).toContain('Clear 0');
     });
-  });
-});
-
-describe('InterferenceAnalysis - multisite analysis', () => {
-  it('calls multisite API and adds overlay', async () => {
-    const sites = [makeSite({ id: 1 }), makeSite({ id: 2 })];
-    mockFetch
-      .mockResolvedValueOnce({ json: () => Promise.resolve({ sites }) }) // initial fetch
-      .mockResolvedValueOnce({
-        ok: true,
-        json: () => Promise.resolve({ pngUrl: 'http://x.com/multi.png', bounds: [[13, 100], [14, 101]] }),
-      }); // multisite call
-
-    const { container } = render(<InterferenceAnalysis />);
-
-    await waitFor(() => {
-      expect(container.querySelector('[data-testid="site-list"]')?.textContent).toContain('2 sites');
-    });
-
-    const multiBtn = Array.from(container.querySelectorAll('button')).find(
-      (b) => b.textContent?.includes('Multi-Site')
-    )!;
-
-    await act(async () => {
-      fireEvent.click(multiBtn);
-    });
-
-    await waitFor(() => {
-      expect(mockFetch).toHaveBeenCalledTimes(2);
-    });
-  });
-
-  it('disables multisite button when no sites with coordinates', async () => {
-    mockFetch.mockResolvedValue({ json: () => Promise.resolve({ sites: [] }) });
-
-    const { container } = render(<InterferenceAnalysis />);
-
-    await waitFor(() => {
-      const multiBtn = Array.from(container.querySelectorAll('button')).find(
-        (b) => b.textContent?.includes('Multi-Site')
-      )!;
-      expect(multiBtn.disabled).toBe(true);
-    });
-  });
-
-  it('shows Analyzing... while multisite loading', async () => {
-    const sites = [makeSite({ id: 1 })];
-    let resolveMulti: (v: unknown) => void;
-    const multiPromise = new Promise((resolve) => { resolveMulti = resolve; });
-
-    mockFetch
-      .mockResolvedValueOnce({ json: () => Promise.resolve({ sites }) })
-      .mockReturnValueOnce(multiPromise);
-
-    const { container } = render(<InterferenceAnalysis />);
-
-    await waitFor(() => {
-      expect(container.querySelector('[data-testid="site-list"]')?.textContent).toContain('1 sites');
-    });
-
-    const multiBtn = Array.from(container.querySelectorAll('button')).find(
-      (b) => b.textContent?.includes('Multi-Site')
-    )!;
-
-    act(() => {
-      fireEvent.click(multiBtn);
-    });
-
-    expect(container.textContent).toContain('Analyzing...');
-
-    await act(async () => {
-      resolveMulti!({ ok: true, json: () => Promise.resolve({}) });
-    });
-  });
-
-  it('handles multisite API error gracefully', async () => {
-    const sites = [makeSite({ id: 1 })];
-    mockFetch
-      .mockResolvedValueOnce({ json: () => Promise.resolve({ sites }) })
-      .mockRejectedValueOnce(new Error('fail'));
-
-    const { container } = render(<InterferenceAnalysis />);
-
-    await waitFor(() => {
-      expect(container.querySelector('[data-testid="site-list"]')?.textContent).toContain('1 sites');
-    });
-
-    const multiBtn = Array.from(container.querySelectorAll('button')).find(
-      (b) => b.textContent?.includes('Multi-Site')
-    )!;
-
-    await act(async () => {
-      fireEvent.click(multiBtn);
-    });
-
-    // Should not crash - still showing sites
-    expect(container.textContent).toContain('Multi-Site');
   });
 });

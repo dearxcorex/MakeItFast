@@ -13,6 +13,7 @@ export async function GET(request: NextRequest) {
     if (searchParams.get('nbtcArea')) filters.nbtcArea = searchParams.get('nbtcArea')!;
     if (searchParams.get('hasSource') === 'true') filters.hasSource = true;
     if (searchParams.get('search')) filters.search = searchParams.get('search')!;
+    if (searchParams.get('status')) filters.status = searchParams.get('status')!;
     if (searchParams.get('noiseMin')) filters.noiseMin = parseFloat(searchParams.get('noiseMin')!);
     if (searchParams.get('noiseMax')) filters.noiseMax = parseFloat(searchParams.get('noiseMax')!);
 

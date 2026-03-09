@@ -3,7 +3,10 @@
 import { Fragment, useEffect, useRef } from 'react';
 import { MapContainer, TileLayer, Marker, Popup, Polyline, ImageOverlay, useMap } from 'react-leaflet';
 import type { InterferenceSite, PropagationOverlay } from '@/types/interference';
+import type { UserLocation } from '@/types/station';
 import { createTowerIcon, createSourceIcon, getRankingColor } from '@/utils/interferenceMapHelpers';
+import { createLocationIcon } from '@/utils/mapHelpers';
+import NavigateButton from '@/components/map/NavigateButton';
 import 'leaflet/dist/leaflet.css';
 
 interface InterferenceMapProps {
@@ -12,6 +15,7 @@ interface InterferenceMapProps {
   onSiteSelect: (site: InterferenceSite) => void;
   propagationOverlays: PropagationOverlay[];
   flyToSite: { lat: number; lng: number; timestamp: number } | null;
+  userLocation?: UserLocation;
 }
 
 const SIGNAL_SCALE = [
@@ -76,6 +80,7 @@ export default function InterferenceMap({
   onSiteSelect,
   propagationOverlays,
   flyToSite,
+  userLocation,
 }: InterferenceMapProps) {
   return (
     <div className="relative h-full w-full">
@@ -93,6 +98,26 @@ export default function InterferenceMap({
 
       <FlyToHandler flyToSite={flyToSite} />
 
+      {/* User location marker */}
+      {userLocation && (
+        <Marker
+          position={[userLocation.latitude, userLocation.longitude]}
+          icon={createLocationIcon()}
+        >
+          <Popup>
+            <div className="interference-popup">
+              <div className="interference-popup-title">Your Location</div>
+              <div className="interference-popup-details">
+                Current position
+                {userLocation.accuracy && (
+                  <div>Accuracy: ±{Math.round(userLocation.accuracy)}m</div>
+                )}
+              </div>
+            </div>
+          </Popup>
+        </Marker>
+      )}
+
       {/* Propagation overlays */}
       {propagationOverlays.map((overlay) => (
         <ImageOverlay
@@ -103,7 +128,7 @@ export default function InterferenceMap({
         />
       ))}
 
-      {/* Tower markers */}
+      {/* Tower markers — click only, no popup */}
       {sites.map((site) => {
         if (!site.lat || !site.long) return null;
         const isSelected = selectedSite?.id === site.id;
@@ -112,38 +137,9 @@ export default function InterferenceMap({
           <Marker
             key={`tower-${site.id}`}
             position={[site.lat, site.long]}
-            icon={createTowerIcon(site.ranking, isSelected)}
+            icon={createTowerIcon(site.ranking, isSelected, site.status)}
             eventHandlers={{ click: () => onSiteSelect(site) }}
-          >
-            <Popup>
-              <div className="min-w-[200px]">
-                <div className="font-bold text-sm mb-1">
-                  {site.siteName || site.siteCode || `Site #${site.id}`}
-                </div>
-                <div className="text-xs space-y-0.5 text-gray-600">
-                  {site.cellName && <div>Cell: {site.cellName}</div>}
-                  {site.changwat && <div>Province: {site.changwat}</div>}
-                  {site.ranking && (
-                    <div>
-                      Ranking:{' '}
-                      <span
-                        style={{ color: getRankingColor(site.ranking), fontWeight: 600 }}
-                      >
-                        {site.ranking}
-                      </span>
-                    </div>
-                  )}
-                  {site.avgNiCarrier != null && (
-                    <div>Avg Noise: {site.avgNiCarrier.toFixed(1)} dBm</div>
-                  )}
-                  {site.direction != null && <div>Direction: {site.direction}°</div>}
-                  {site.estimateDistance != null && (
-                    <div>Est. Distance: {site.estimateDistance.toFixed(2)} km</div>
-                  )}
-                </div>
-              </div>
-            </Popup>
-          </Marker>
+          />
         );
       })}
 
@@ -158,9 +154,11 @@ export default function InterferenceMap({
               icon={createSourceIcon()}
             >
               <Popup>
-                <div className="min-w-[160px]">
-                  <div className="font-bold text-sm text-red-600 mb-1">Interference Source</div>
-                  <div className="text-xs space-y-0.5 text-gray-600">
+                <div className="interference-popup">
+                  <div className="interference-popup-title" style={{ color: '#ef4444' }}>
+                    Interference Source
+                  </div>
+                  <div className="interference-popup-details">
                     <div>For: {site.siteName || site.siteCode}</div>
                     {site.sourceLocation1 && <div>{site.sourceLocation1}</div>}
                     {site.sourceLocation2 && <div>{site.sourceLocation2}</div>}
@@ -168,6 +166,7 @@ export default function InterferenceMap({
                       <div>Distance: {site.estimateDistance.toFixed(2)} km</div>
                     )}
                   </div>
+                  <NavigateButton lat={site.sourceLat} lng={site.sourceLong} stationName={site.siteName ? `Source: ${site.siteName}` : 'Interference Source'} />
                 </div>
               </Popup>
             </Marker>
