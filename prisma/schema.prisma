@@ -23,3 +23,55 @@ model fm_station {
   date_inspected   String?
   note             String?
 }
+
+model interference_site {
+  id                Int      @id @default(autoincrement())
+  site_code         String?
+  site_name         String?
+  lat               Float?
+  long              Float?
+  mc_zone           String?
+  changwat          String?
+  cell_name         String?
+  sector_name       String?
+  direction         Float?
+  avg_ni_carrier    Float?
+  day_time          Float?
+  night_time        Float?
+  source_lat        Float?
+  source_long       Float?
+  estimate_distance Float?
+  ranking           String?
+  status            String?
+  nbtc_area         String?
+  awn_contact       String?
+  lot               String?
+  on_site_scan_by   String?
+  on_site_scan_date String?
+  check_realtime    String?
+  source_location_1 String?
+  source_location_2 String?
+  camera_model_1    String?
+  camera_model_2    String?
+  notes             String?
+  created_at        DateTime @default(now())
+  updated_at        DateTime @updatedAt
+
+  @@index([changwat])
+  @@index([ranking])
+  @@index([nbtc_area])
+}
+
+model cloudrf_cache {
+  id             Int      @id @default(autoincrement())
+  request_type   String
+  request_hash   String   @unique
+  request_params Json
+  response_data  Json
+  png_url        String?
+  bounds         Json?
+  viewer_url     String?
+  site_id        Int?
+  created_at     DateTime @default(now())
+  expires_at     DateTime
+}

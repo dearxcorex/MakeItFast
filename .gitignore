@@ -86,6 +86,12 @@ pnpm-lock.yaml
 *.backup
 *.old
 
+# Screenshots (root only)
+/*.png
+
+# Interference data (contains PII)
+data_interference/
+
 /src/generated/prisma
 
 # Backend folder (separate project)
