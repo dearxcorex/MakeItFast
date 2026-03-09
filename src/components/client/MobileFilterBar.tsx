@@ -29,7 +29,7 @@ export default function MobileFilterBar({
     filters.province,
     filters.city,
     filters.onAir !== undefined ? 'set' : undefined,
-    filters.inspection68,
+    filters.inspection69,
   ].filter(Boolean).length;
 
   return (
@@ -131,8 +131,8 @@ export default function MobileFilterBar({
           </div>
 
           <select
-            value={filters.inspection68 || ''}
-            onChange={(e) => setFilters({ ...filters, inspection68: e.target.value || undefined })}
+            value={filters.inspection69 || ''}
+            onChange={(e) => setFilters({ ...filters, inspection69: e.target.value || undefined })}
             className="px-3 py-2 text-sm border border-border rounded-lg bg-background focus:ring-2 focus:ring-primary focus:border-transparent min-w-[140px]"
           >
             <option value="">All Inspection</option>
@@ -141,7 +141,7 @@ export default function MobileFilterBar({
             ))}
           </select>
 
-          {(filters.search || filters.province || filters.city || filters.onAir !== undefined || filters.inspection68) && (
+          {(filters.search || filters.province || filters.city || filters.onAir !== undefined || filters.inspection69) && (
             <button
               onClick={clearFilters}
               className="flex items-center gap-1.5 px-3 py-2 text-xs font-medium bg-destructive/10 text-destructive hover:bg-destructive/20 rounded-lg border border-destructive/20 cursor-pointer"

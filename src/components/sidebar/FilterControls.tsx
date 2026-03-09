@@ -233,8 +233,8 @@ export default function FilterControls({
             </button>
           </div>
           <select
-            value={filters.inspection68 || ''}
-            onChange={(e) => onFiltersChange({ ...filters, inspection68: e.target.value === '' ? undefined : e.target.value })}
+            value={filters.inspection69 || ''}
+            onChange={(e) => onFiltersChange({ ...filters, inspection69: e.target.value === '' ? undefined : e.target.value })}
             className="w-full p-2.5 text-sm border border-border rounded-lg bg-background focus:ring-2 focus:ring-primary focus:border-transparent"
             aria-label="Filter by inspection status"
           >
@@ -246,7 +246,7 @@ export default function FilterControls({
         </div>
 
         {/* Clear */}
-        {(filters.search || filters.province || filters.city || filters.onAir !== undefined || filters.inspection68) && (
+        {(filters.search || filters.province || filters.city || filters.onAir !== undefined || filters.inspection69) && (
           <button
             onClick={onClearFilters}
             className="w-full flex items-center justify-center gap-2 px-4 py-2.5 text-sm font-medium bg-destructive/10 text-destructive hover:bg-destructive/20 rounded-lg transition-colors border border-destructive/20"

@@ -13,6 +13,8 @@ import NavSidebar from '@/components/NavSidebar';
 import AppHeader from '@/components/client/AppHeader';
 import MobileFilterBar from '@/components/client/MobileFilterBar';
 
+import type { InterferenceStats } from '@/components/interference/InterferenceAnalysis';
+
 type ActiveTab = 'stations' | 'intermod' | 'interference';
 
 // Lazy load components
@@ -69,6 +71,7 @@ export default function OptimizedFMStationClient({
   const [highlightedStationIds, setHighlightedStationIds] = useState<(string | number)[]>([]);
   const [flyToStations, setFlyToStations] = useState<{ lat1: number; lng1: number; lat2: number; lng2: number; timestamp: number } | null>(null);
   const [showFilters, setShowFilters] = useState(false);
+  const [interferenceStats, setInterferenceStats] = useState<InterferenceStats | null>(null);
 
   // Performance monitoring
   const { checkMemoryUsage } = useMemoryMonitor();
@@ -399,7 +402,7 @@ export default function OptimizedFMStationClient({
         {/* Main Content Area */}
         <div className="flex-1 flex flex-col min-w-0">
           {/* Header */}
-          <AppHeader filteredStations={filteredStations} userLocation={userLocation} />
+          <AppHeader filteredStations={filteredStations} userLocation={userLocation} activeTab={activeTab} interferenceStats={interferenceStats} />
 
           {/* Main content */}
           <div className="flex-1 flex flex-col lg:flex-row overflow-y-auto p-4 pt-2 gap-4">
@@ -442,7 +445,7 @@ export default function OptimizedFMStationClient({
               />
             ) : (
               /* Interference Analysis */
-              <InterferenceAnalysis userLocation={userLocation} />
+              <InterferenceAnalysis userLocation={userLocation} onStatsChange={setInterferenceStats} />
             )}
           </div>
         </div>

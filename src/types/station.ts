@@ -34,8 +34,7 @@ export type FilterType = {
   onAir?: boolean;
   city?: string;
   province?: string;
-  inspection?: string;
-  inspection68?: string;
+  inspection69?: string;
   search?: string;
   submitRequest?: string;
 }

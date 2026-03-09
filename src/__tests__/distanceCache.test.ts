@@ -75,11 +75,11 @@ describe('useOptimizedFilters', () => {
 
   it('filters by inspection', () => {
     const stations = [
-      makeStation({ id: '1', inspection68: 'ตรวจแล้ว' }),
-      makeStation({ id: '2', inspection68: 'ยังไม่ตรวจ' }),
+      makeStation({ id: '1', inspection69: 'ตรวจแล้ว' }),
+      makeStation({ id: '2', inspection69: 'ยังไม่ตรวจ' }),
     ];
     const { result } = renderHook(() =>
-      useOptimizedFilters({ stations, filters: { inspection: 'ตรวจแล้ว' } })
+      useOptimizedFilters({ stations, filters: { inspection69: 'ตรวจแล้ว' } })
     );
     expect(result.current.filteredStations).toHaveLength(1);
   });
