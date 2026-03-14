@@ -1,9 +1,10 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import dynamic from 'next/dynamic';
 import type { InterferenceSite, InterferenceFilter, PropagationOverlay } from '@/types/interference';
 import type { UserLocation } from '@/types/station';
+import { validateBearing } from '@/utils/bearingUtils';
 import InterferenceFilterPanel from './InterferenceFilterPanel';
 import InterferenceSiteDetail from './InterferenceSiteDetail';
 import CloudRFControls from './CloudRFControls';
@@ -68,6 +69,29 @@ export default function InterferenceAnalysis({ userLocation, onStatsChange }: In
       });
     }
   }, [sites, onStatsChange]);
+
+  // Direction validation stats and client-side filtering
+  const directionStats = useMemo(() => {
+    let match = 0;
+    let mismatch = 0;
+    for (const site of sites) {
+      const v = validateBearing(site);
+      if (v) {
+        if (v.isMatch) match++;
+        else mismatch++;
+      }
+    }
+    return { total: match + mismatch, match, mismatch };
+  }, [sites]);
+
+  const displaySites = useMemo(() => {
+    if (!filters.directionMatch) return sites;
+    return sites.filter((site) => {
+      const v = validateBearing(site);
+      if (!v) return false; // skip sites without enough data
+      return filters.directionMatch === 'match' ? v.isMatch : !v.isMatch;
+    });
+  }, [sites, filters.directionMatch]);
 
   const handleSiteSelect = useCallback((site: InterferenceSite) => {
     setSelectedSite(site);
@@ -143,7 +167,7 @@ export default function InterferenceAnalysis({ userLocation, onStatsChange }: In
             </div>
           </div>
         ) : (
-          <InterferenceFilterPanel filters={filters} onFiltersChange={setFilters} />
+          <InterferenceFilterPanel filters={filters} onFiltersChange={setFilters} directionStats={directionStats} />
         )}
       </div>
 
@@ -151,7 +175,7 @@ export default function InterferenceAnalysis({ userLocation, onStatsChange }: In
       <div className="flex-1 relative min-h-[400px]">
         <div className="absolute inset-0 rounded-2xl overflow-hidden glass-card">
           <InterferenceMap
-            sites={sites}
+            sites={displaySites}
             selectedSite={selectedSite}
             onSiteSelect={handleSiteSelect}
             propagationOverlays={propagationOverlays}

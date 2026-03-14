@@ -6,6 +6,7 @@ import type { InterferenceSite, PropagationOverlay } from '@/types/interference'
 import type { UserLocation } from '@/types/station';
 import { createTowerIcon, createSourceIcon, getRankingColor } from '@/utils/interferenceMapHelpers';
 import { createLocationIcon } from '@/utils/mapHelpers';
+import { calculateEndpoint, validateBearing } from '@/utils/bearingUtils';
 import NavigateButton from '@/components/map/NavigateButton';
 import 'leaflet/dist/leaflet.css';
 
@@ -72,6 +73,21 @@ function FlyToHandler({ flyToSite }: { flyToSite: InterferenceMapProps['flyToSit
   }, [flyToSite, map]);
 
   return null;
+}
+
+function DirectionArc({ site }: { site: InterferenceSite }) {
+  if (!site.lat || !site.long || site.direction == null) return null;
+  const arcLen = Math.max(site.estimateDistance ?? 3, 1); // min 1km for visibility
+  const endPoint = calculateEndpoint(site.lat, site.long, site.direction, arcLen);
+  const validation = validateBearing(site);
+  const arcColor = validation ? (validation.isMatch ? '#6366F1' : '#EF4444') : '#6366F1';
+
+  return (
+    <Polyline
+      positions={[[site.lat, site.long], endPoint]}
+      pathOptions={{ color: arcColor, weight: 2, dashArray: '8, 4', opacity: 0.8 }}
+    />
+  );
 }
 
 export default function InterferenceMap({
@@ -186,6 +202,8 @@ export default function InterferenceMap({
           </Fragment>
         );
       })}
+      {/* Direction arc for selected site */}
+      {selectedSite && <DirectionArc site={selectedSite} />}
     </MapContainer>
     </div>
   );
