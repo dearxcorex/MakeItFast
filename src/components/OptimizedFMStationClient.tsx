@@ -45,7 +45,6 @@ const InterferenceAnalysis = dynamic(() => import('@/components/interference/Int
   )
 });
 
-
 interface OptimizedFMStationClientProps {
   initialStations: FMStation[];
   initialOnAirStatuses: boolean[];

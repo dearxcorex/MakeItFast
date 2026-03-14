@@ -35,12 +35,13 @@ Thumbs.db
 ehthumbs.db
 Desktop.ini
 
-# Debug logs
+# Debug and capture logs
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
 .pnpm-debug.log*
 lerna-debug.log*
+*.log
 
 # Environment variables
 .env*
