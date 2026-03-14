@@ -44,6 +44,7 @@ export interface InterferenceFilter {
   status?: string;
   noiseMin?: number;
   noiseMax?: number;
+  directionMatch?: 'match' | 'mismatch';
 }
 
 export interface CloudRFAreaRequest {
@@ -90,6 +91,15 @@ export interface InterferenceStats {
   byProvince: Record<string, number>;
   avgNoise: number;
   withSource: number;
+}
+
+export interface BearingValidation {
+  calculatedBearing: number;       // 0-360 degrees
+  storedDirection: number;         // from site.direction (normalized)
+  angularDifference: number;       // 0-180 degrees
+  compassDirection: string;        // e.g., "NE (42°)"
+  isMatch: boolean;               // within tolerance
+  toleranceDeg: number;           // tolerance used
 }
 
 // Equipment & Propagation types

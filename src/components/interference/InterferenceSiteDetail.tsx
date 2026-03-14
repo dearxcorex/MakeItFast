@@ -2,6 +2,8 @@
 
 import type { InterferenceSite } from '@/types/interference';
 import NavigateButton from '@/components/map/NavigateButton';
+import BearingValidation from './BearingValidation';
+import { getCompassDirection } from '@/utils/bearingUtils';
 
 interface InterferenceSiteDetailProps {
   site: InterferenceSite;
@@ -81,13 +83,16 @@ export default function InterferenceSiteDetail({ site, onUpdateSite }: Interfere
         <Detail label="Province" value={site.changwat} />
         <Detail label="MC Zone" value={site.mcZone} />
         <Detail label="NBTC Area" value={site.nbtcArea} />
-        <Detail label="Direction" value={site.direction != null ? `${site.direction}°` : null} />
+        <Detail label="Sector Azimuth" value={site.direction != null ? `${site.direction}° (${getCompassDirection(site.direction)})` : null} />
         <Detail label="Sector" value={site.sectorName} />
         <Detail label="Est. Distance" value={site.estimateDistance != null ? `${site.estimateDistance.toFixed(2)} km` : null} />
         <Detail label="Lot" value={site.lot} />
         <Detail label="AWN Contact" value={site.awnContact} />
         <Detail label="On-site Scan" value={site.onSiteScanBy} />
       </div>
+
+      {/* Bearing Validation */}
+      <BearingValidation site={site} />
 
       {/* Inspection Status */}
       <div className={`flex items-center justify-between gap-2 p-3 rounded-lg ${

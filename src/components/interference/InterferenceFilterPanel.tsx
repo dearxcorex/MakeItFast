@@ -3,14 +3,22 @@
 import { useState, useEffect } from 'react';
 import type { InterferenceFilter } from '@/types/interference';
 
+interface DirectionMatchStats {
+  total: number;    // sites with both direction and source
+  match: number;
+  mismatch: number;
+}
+
 interface InterferenceFilterPanelProps {
   filters: InterferenceFilter;
   onFiltersChange: (filters: InterferenceFilter) => void;
+  directionStats?: DirectionMatchStats;
 }
 
 export default function InterferenceFilterPanel({
   filters,
   onFiltersChange,
+  directionStats,
 }: InterferenceFilterPanelProps) {
   const [changwats, setChangwats] = useState<string[]>([]);
   const [rankings] = useState<string[]>(['Critical', 'Major', 'Minor']);
@@ -117,6 +125,47 @@ export default function InterferenceFilterPanel({
           ⏳ ยังไม่ตรวจ
         </button>
       </div>
+
+      {/* Direction match filter */}
+      {directionStats && directionStats.total > 0 && (
+        <div>
+          <div className="text-[10px] text-muted-foreground mb-1">
+            Direction Validation ({directionStats.match}/{directionStats.total} match)
+          </div>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() =>
+                onFiltersChange({
+                  ...filters,
+                  directionMatch: filters.directionMatch === 'match' ? undefined : 'match',
+                })
+              }
+              className={`px-2 py-0.5 rounded-full text-xs font-medium transition-all ${
+                filters.directionMatch === 'match'
+                  ? 'bg-green-500/20 text-green-500 border border-green-500/30'
+                  : 'bg-secondary text-muted-foreground'
+              }`}
+            >
+              Match ({directionStats.match})
+            </button>
+            <button
+              onClick={() =>
+                onFiltersChange({
+                  ...filters,
+                  directionMatch: filters.directionMatch === 'mismatch' ? undefined : 'mismatch',
+                })
+              }
+              className={`px-2 py-0.5 rounded-full text-xs font-medium transition-all ${
+                filters.directionMatch === 'mismatch'
+                  ? 'bg-red-500/20 text-red-500 border border-red-500/30'
+                  : 'bg-secondary text-muted-foreground'
+              }`}
+            >
+              Mismatch ({directionStats.mismatch})
+            </button>
+          </div>
+        </div>
+      )}
 
       {/* Clear filters */}
       {Object.values(filters).some(Boolean) && (

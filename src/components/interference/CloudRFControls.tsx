@@ -46,7 +46,7 @@ export default function CloudRFControls({ site, onResult, onClearOverlays, overl
     return Object.keys(overrides).length > 0 ? overrides : undefined;
   };
 
-  const handleCalculate = async () => {
+  const handleCalculate = async (aziOverride?: number) => {
     if (!site.lat || !site.long) return;
     setLoading(true);
     setError(null);
@@ -60,7 +60,7 @@ export default function CloudRFControls({ site, onResult, onClearOverlays, overl
           lon: site.long,
           alt: height,
           txw: power,
-          azi: azimuth,
+          azi: aziOverride ?? azimuth,
           rad: radius,
           profile: deploymentType,
           antennaGain,
@@ -274,15 +274,37 @@ export default function CloudRFControls({ site, onResult, onClearOverlays, overl
         </div>
       )}
 
+      {/* Scan Direction hint for sites without source */}
+      {site.direction != null && !site.sourceLat && !site.sourceLong && (
+        <div className="p-2 rounded-lg bg-blue-500/10 border border-blue-500/20 text-xs text-blue-400">
+          <div className="font-medium mb-1">No known source location</div>
+          <div className="text-muted-foreground">
+            Run propagation along antenna direction ({site.direction}°) to identify potential interference sources.
+          </div>
+        </div>
+      )}
+
       {/* Action buttons */}
       <div className="flex gap-2">
         <button
-          onClick={handleCalculate}
+          onClick={() => handleCalculate()}
           disabled={loading || !site.lat || !site.long}
           className="flex-1 px-3 py-2 rounded-lg bg-primary text-primary-foreground text-xs font-medium hover:bg-primary/90 disabled:opacity-50 transition-colors"
         >
           {loading ? 'Calculating...' : 'Run Propagation'}
         </button>
+        {site.direction != null && !site.sourceLat && !site.sourceLong && (
+          <button
+            onClick={() => {
+              setAzimuth(site.direction!); // sync slider UI only
+              handleCalculate(site.direction!); // uses aziOverride, not stale state
+            }}
+            disabled={loading || !site.lat || !site.long}
+            className="flex-1 px-3 py-2 rounded-lg bg-blue-600 text-white text-xs font-medium hover:bg-blue-700 disabled:opacity-50 transition-colors"
+          >
+            {loading ? 'Scanning...' : 'Scan Direction'}
+          </button>
+        )}
         {site.sourceLat && site.sourceLong && (
           <button
             onClick={handlePathAnalysis}
