@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import type { InterferenceFilter } from '@/types/interference';
+import KmlImportDialog from './KmlImportDialog';
 
 interface DirectionMatchStats {
   total: number;    // sites with both direction and source
@@ -13,12 +14,14 @@ interface InterferenceFilterPanelProps {
   filters: InterferenceFilter;
   onFiltersChange: (filters: InterferenceFilter) => void;
   directionStats?: DirectionMatchStats;
+  onRefreshSites?: () => void;
 }
 
 export default function InterferenceFilterPanel({
   filters,
   onFiltersChange,
   directionStats,
+  onRefreshSites,
 }: InterferenceFilterPanelProps) {
   const [changwats, setChangwats] = useState<string[]>([]);
   const [rankings] = useState<string[]>(['Critical', 'Major', 'Minor']);
@@ -167,15 +170,18 @@ export default function InterferenceFilterPanel({
         </div>
       )}
 
-      {/* Clear filters */}
-      {Object.values(filters).some(Boolean) && (
-        <button
-          onClick={() => onFiltersChange({})}
-          className="text-xs text-muted-foreground hover:text-foreground"
-        >
-          Clear all filters
-        </button>
-      )}
+      {/* Import KML + Clear filters */}
+      <div className="flex items-center justify-between">
+        <KmlImportDialog onImportComplete={() => onRefreshSites?.()} />
+        {Object.values(filters).some(Boolean) && (
+          <button
+            onClick={() => onFiltersChange({})}
+            className="text-xs text-muted-foreground hover:text-foreground"
+          >
+            Clear all filters
+          </button>
+        )}
+      </div>
     </div>
   );
 }

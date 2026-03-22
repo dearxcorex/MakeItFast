@@ -19,6 +19,7 @@ export default function CloudRFControls({ site, onResult, onClearOverlays, overl
   const [azimuth, setAzimuth] = useState(site.direction ?? 0);
   const [antennaGain, setAntennaGain] = useState(EQUIPMENT_PROFILES.macro_urban.antennaGain);
   const [downtilt, setDowntilt] = useState(EQUIPMENT_PROFILES.macro_urban.downtilt);
+  const [hBeamwidth, setHBeamwidth] = useState(EQUIPMENT_PROFILES.macro_urban.hBeamwidth);
   const [propagationModel, setPropagationModel] = useState(THAILAND_ENVIRONMENT.propagationModel);
   const [clutterEnabled, setClutterEnabled] = useState(true);
   const [buildingsEnabled, setBuildingsEnabled] = useState(true);
@@ -36,6 +37,7 @@ export default function CloudRFControls({ site, onResult, onClearOverlays, overl
     setHeight(profile.antennaHeight);
     setAntennaGain(profile.antennaGain);
     setDowntilt(profile.downtilt);
+    setHBeamwidth(profile.hBeamwidth);
   }, [deploymentType]);
 
   const getEnvironmentOverrides = (): Partial<EnvironmentConfig> | undefined => {
@@ -65,6 +67,7 @@ export default function CloudRFControls({ site, onResult, onClearOverlays, overl
           profile: deploymentType,
           antennaGain,
           downtilt,
+          hbw: hBeamwidth,
           bandwidth: EQUIPMENT_PROFILES[deploymentType].bandwidth,
           environment: getEnvironmentOverrides(),
         }),
@@ -236,6 +239,18 @@ export default function CloudRFControls({ site, onResult, onClearOverlays, overl
                 min={0}
                 max={15}
                 step={0.5}
+              />
+            </div>
+            <div>
+              <label className="text-[10px] text-muted-foreground">H-Beamwidth ({hBeamwidth}°)</label>
+              <input
+                type="range"
+                value={hBeamwidth}
+                onChange={(e) => setHBeamwidth(Number(e.target.value))}
+                className="w-full h-6"
+                min={10}
+                max={360}
+                step={5}
               />
             </div>
           </div>

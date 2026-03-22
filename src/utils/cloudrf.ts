@@ -76,6 +76,8 @@ export function buildAreaPayload(
     txw?: number;
     rad?: number;
     azi?: number;
+    hbw?: number;
+    vbw?: number;
     profile?: DeploymentType;
     antennaGain?: number;
     downtilt?: number;
@@ -99,6 +101,8 @@ export function buildAreaPayload(
       antenna: 1,
       azi: options?.azi ?? site.direction ?? 0,
       tlt: options?.downtilt ?? profile?.downtilt ?? 6,
+      hbw: options?.hbw ?? profile?.hBeamwidth ?? 65,
+      vbw: options?.vbw ?? profile?.vBeamwidth ?? 7,
       frq: 2600,
       pol: 'v',
       txg: options?.antennaGain ?? profile?.antennaGain ?? 17,
@@ -163,6 +167,8 @@ export function buildPathPayloadV2(
       antenna: 1,
       azi: 0,
       tlt: profile?.downtilt ?? 6,
+      hbw: profile?.hBeamwidth ?? 65,
+      vbw: profile?.vBeamwidth ?? 7,
       frq: 2600,
       pol: 'v',
       txg: profile?.antennaGain ?? 17,
@@ -232,6 +238,8 @@ export function buildMultisitePayload(
         antenna: 1,
         azi: s.azi ?? 0,
         tlt: profile?.downtilt ?? 6,
+        hbw: profile?.hBeamwidth ?? 65,
+        vbw: profile?.vBeamwidth ?? 7,
         frq: 2600,
         pol: 'v',
         txg: profile?.antennaGain ?? 17,
@@ -279,6 +287,19 @@ export function convertBoundsToLeaflet(
   return [
     [south, west],
     [north, east],
+  ];
+}
+
+export function convertBoundsToMapLibre(
+  bounds: [number, number, number, number]
+): [[number, number], [number, number], [number, number], [number, number]] {
+  // CloudRF returns [N, E, S, W] → MapLibre image source needs [[topLeft], [topRight], [bottomRight], [bottomLeft]] in [lng, lat]
+  const [north, east, south, west] = bounds;
+  return [
+    [west, north],   // top-left
+    [east, north],   // top-right
+    [east, south],   // bottom-right
+    [west, south],   // bottom-left
   ];
 }
 

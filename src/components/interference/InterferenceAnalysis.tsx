@@ -9,7 +9,7 @@ import InterferenceFilterPanel from './InterferenceFilterPanel';
 import InterferenceSiteDetail from './InterferenceSiteDetail';
 import CloudRFControls from './CloudRFControls';
 
-const InterferenceMap = dynamic(() => import('./InterferenceMap'), { ssr: false });
+const InterferenceMap = dynamic(() => import('./MapLibreMap'), { ssr: false });
 
 export interface InterferenceStats {
   total: number;
@@ -167,7 +167,7 @@ export default function InterferenceAnalysis({ userLocation, onStatsChange }: In
             </div>
           </div>
         ) : (
-          <InterferenceFilterPanel filters={filters} onFiltersChange={setFilters} directionStats={directionStats} />
+          <InterferenceFilterPanel filters={filters} onFiltersChange={setFilters} directionStats={directionStats} onRefreshSites={fetchSites} />
         )}
       </div>
 

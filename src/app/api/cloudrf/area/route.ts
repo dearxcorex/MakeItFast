@@ -12,7 +12,7 @@ import {
 export async function POST(request: Request) {
   try {
     const body = await request.json();
-    const { siteId, lat, lon, alt, txw, azi, rad, profile, antennaGain, downtilt, bandwidth, environment } = body;
+    const { siteId, lat, lon, alt, txw, azi, rad, profile, antennaGain, downtilt, hbw, bandwidth, environment } = body;
 
     const apiKey = process.env.CLOUDRF_API_KEY;
     if (!apiKey) {
@@ -42,7 +42,7 @@ export async function POST(request: Request) {
       site = await fetchInterferenceSiteById(siteId);
     }
 
-    const areaOptions = { alt, txw, rad, azi, profile, antennaGain, downtilt, bandwidth, environment };
+    const areaOptions = { alt, txw, rad, azi, hbw, profile, antennaGain, downtilt, bandwidth, environment };
 
     const payload = site
       ? buildAreaPayload(site, areaOptions)
