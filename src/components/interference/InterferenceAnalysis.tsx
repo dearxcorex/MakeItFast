@@ -32,6 +32,9 @@ export default function InterferenceAnalysis({ userLocation, onStatsChange }: In
   const [propagationOverlays, setPropagationOverlays] = useState<PropagationOverlay[]>([]);
   const [showDetail, setShowDetail] = useState(false);
   const [flyToSite, setFlyToSite] = useState<{ lat: number; lng: number; timestamp: number } | null>(null);
+  const [mobileFiltersOpen, setMobileFiltersOpen] = useState(false);
+
+  const activeFilterCount = Object.values(filters).filter(Boolean).length;
 
   const fetchSites = useCallback(async () => {
     try {
@@ -139,10 +142,38 @@ export default function InterferenceAnalysis({ userLocation, onStatsChange }: In
   return (
     <div className="flex-1 flex flex-col lg:flex-row gap-4 min-h-0">
       {/* Left Panel - Filters + Stats (always visible) */}
-      <div className="w-full lg:w-96 flex flex-col gap-3 min-h-0">
-        <div className="flex items-center justify-between">
-          <h2 className="font-heading text-lg gradient-text">Interference Analysis</h2>
-        </div>
+      <div className="w-full lg:w-96 flex flex-col gap-3 min-h-0 flex-shrink-0 lg:flex-shrink">
+        <button
+          type="button"
+          data-testid="filter-toggle"
+          onClick={() => setMobileFiltersOpen((v) => !v)}
+          className="flex items-center justify-between w-full lg:pointer-events-none lg:cursor-default"
+          aria-expanded={mobileFiltersOpen}
+          aria-controls="filter-panel-wrapper"
+        >
+          <div className="flex items-center gap-2">
+            <h2 className="font-heading text-lg gradient-text">Interference Analysis</h2>
+            {activeFilterCount > 0 && (
+              <span
+                data-testid="filter-count-badge"
+                className="lg:hidden inline-flex items-center justify-center min-w-[20px] h-5 px-1.5 rounded-full bg-primary text-xs font-bold shadow-sm"
+                style={{ color: '#ffffff', WebkitTextFillColor: '#ffffff' }}
+              >
+                {activeFilterCount}
+              </span>
+            )}
+          </div>
+          <svg
+            className={`lg:hidden w-5 h-5 text-muted-foreground transition-transform ${
+              mobileFiltersOpen ? 'rotate-180' : ''
+            }`}
+            fill="none"
+            stroke="currentColor"
+            viewBox="0 0 24 24"
+          >
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+          </svg>
+        </button>
 
         {/* Desktop: detail panel inline */}
         {showDetail && selectedSite ? (
@@ -167,12 +198,18 @@ export default function InterferenceAnalysis({ userLocation, onStatsChange }: In
             </div>
           </div>
         ) : (
-          <InterferenceFilterPanel filters={filters} onFiltersChange={setFilters} directionStats={directionStats} onRefreshSites={fetchSites} />
+          <div
+            id="filter-panel-wrapper"
+            data-testid="filter-panel-wrapper"
+            className={`${mobileFiltersOpen ? 'block max-h-[55vh] overflow-y-auto' : 'hidden'} lg:block lg:max-h-none lg:overflow-visible`}
+          >
+            <InterferenceFilterPanel filters={filters} onFiltersChange={setFilters} directionStats={directionStats} onRefreshSites={fetchSites} />
+          </div>
         )}
       </div>
 
       {/* Right Panel - Map */}
-      <div className="flex-1 relative min-h-[400px]">
+      <div className="flex-1 relative min-h-[300px]">
         <div className="absolute inset-0 rounded-2xl overflow-hidden glass-card">
           <InterferenceMap
             sites={displaySites}

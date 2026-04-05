@@ -204,3 +204,76 @@ describe('InterferenceAnalysis - propagation overlays', () => {
     });
   });
 });
+
+describe('InterferenceAnalysis - mobile filter toggle', () => {
+  it('renders a toggle button for the filter panel', async () => {
+    mockFetch.mockResolvedValue({ json: () => Promise.resolve({ sites: [] }) });
+    const { container } = render(<InterferenceAnalysis />);
+    await waitFor(() => expect(mockFetch).toHaveBeenCalled());
+
+    const toggle = container.querySelector('[data-testid="filter-toggle"]');
+    expect(toggle).toBeTruthy();
+  });
+
+  it('hides filter panel by default on mobile (has hidden class)', async () => {
+    mockFetch.mockResolvedValue({ json: () => Promise.resolve({ sites: [] }) });
+    const { container } = render(<InterferenceAnalysis />);
+    await waitFor(() => expect(mockFetch).toHaveBeenCalled());
+
+    const wrapper = container.querySelector('[data-testid="filter-panel-wrapper"]');
+    expect(wrapper).toBeTruthy();
+    expect(wrapper!.className).toContain('hidden');
+    expect(wrapper!.className).toContain('lg:block');
+  });
+
+  it('shows filter panel when toggle clicked', async () => {
+    mockFetch.mockResolvedValue({ json: () => Promise.resolve({ sites: [] }) });
+    const { container } = render(<InterferenceAnalysis />);
+    await waitFor(() => expect(mockFetch).toHaveBeenCalled());
+
+    const toggle = container.querySelector('[data-testid="filter-toggle"]')!;
+    fireEvent.click(toggle);
+
+    const wrapper = container.querySelector('[data-testid="filter-panel-wrapper"]')!;
+    expect(wrapper.className).toContain('block');
+    expect(wrapper.className).not.toMatch(/(^|\s)hidden(\s|$)/);
+  });
+
+  it('toggles filter panel back to hidden on second click', async () => {
+    mockFetch.mockResolvedValue({ json: () => Promise.resolve({ sites: [] }) });
+    const { container } = render(<InterferenceAnalysis />);
+    await waitFor(() => expect(mockFetch).toHaveBeenCalled());
+
+    const toggle = container.querySelector('[data-testid="filter-toggle"]')!;
+    fireEvent.click(toggle);
+    fireEvent.click(toggle);
+
+    const wrapper = container.querySelector('[data-testid="filter-panel-wrapper"]')!;
+    expect(wrapper.className).toContain('hidden');
+  });
+
+  it('shows active filter count badge when filters are applied', async () => {
+    mockFetch.mockResolvedValue({ json: () => Promise.resolve({ sites: [] }) });
+    const { container } = render(<InterferenceAnalysis />);
+    await waitFor(() => expect(capturedFilterProps.onFiltersChange).toBeTruthy());
+
+    const onFiltersChange = capturedFilterProps.onFiltersChange as (f: Record<string, unknown>) => void;
+    await act(async () => {
+      onFiltersChange({ changwat: 'กรุงเทพ', ranking: 'Critical' });
+    });
+
+    await waitFor(() => {
+      const badge = container.querySelector('[data-testid="filter-count-badge"]');
+      expect(badge).toBeTruthy();
+      expect(badge!.textContent).toContain('2');
+    });
+  });
+
+  it('does not show badge when no filters are active', async () => {
+    mockFetch.mockResolvedValue({ json: () => Promise.resolve({ sites: [] }) });
+    const { container } = render(<InterferenceAnalysis />);
+    await waitFor(() => expect(mockFetch).toHaveBeenCalled());
+
+    expect(container.querySelector('[data-testid="filter-count-badge"]')).toBeNull();
+  });
+});
