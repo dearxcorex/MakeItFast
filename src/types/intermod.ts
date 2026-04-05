@@ -80,13 +80,6 @@ export interface InterferenceRisk {
 }
 
 /**
- * Calculator mode options
- */
-export type CalculatorMode =
-  | 'aircraft-check' // Find FM pairs by aircraft frequency (reverse lookup)
-  | 'specific-frequency'; // Check specific FM frequencies
-
-/**
  * Common aviation frequencies for quick selection
  */
 export const COMMON_AVIATION_FREQUENCIES: { frequency: number; name: string; service: AviationService }[] = [

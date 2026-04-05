@@ -9,9 +9,10 @@ interface AppHeaderProps {
   userLocation?: UserLocation;
   activeTab?: string;
   interferenceStats?: InterferenceStats | null;
+  onMenuClick?: () => void;
 }
 
-export default function AppHeader({ filteredStations, userLocation, activeTab, interferenceStats }: AppHeaderProps) {
+export default function AppHeader({ filteredStations, userLocation, activeTab, interferenceStats, onMenuClick }: AppHeaderProps) {
   const { theme, toggleTheme } = useTheme();
 
   const isInterference = activeTab === 'interference';
@@ -19,14 +20,20 @@ export default function AppHeader({ filteredStations, userLocation, activeTab, i
   return (
     <header className="glass-card border-b border-border/50 px-4 lg:px-6 py-3 relative z-10 mx-4 mt-4 rounded-2xl">
       <div className="flex items-center justify-between gap-4">
-        {/* Left: Title */}
+        {/* Left: Mobile menu + Title */}
         <div className="flex items-center gap-3">
           <div className="flex items-center gap-3 lg:hidden">
-            <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-primary to-accent flex items-center justify-center glow-gold">
+            <button
+              type="button"
+              data-testid="mobile-menu-toggle"
+              onClick={onMenuClick}
+              aria-label="Open navigation menu"
+              className="w-10 h-10 rounded-xl bg-gradient-to-br from-primary to-accent flex items-center justify-center glow-gold hover:opacity-90 active:scale-95 transition-all"
+            >
               <svg className="w-5 h-5 text-primary-foreground" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
               </svg>
-            </div>
+            </button>
             <div className="hidden sm:block">
               <h1 className="text-lg font-heading font-bold gradient-text">Task Tracker</h1>
               <p className="text-xs text-muted-foreground">

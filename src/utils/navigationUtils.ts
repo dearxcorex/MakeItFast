@@ -4,7 +4,7 @@
  */
 
 // Enhanced Google Maps URL generation with validation
-export interface NavigationOptions {
+interface NavigationOptions {
   latitude: number;
   longitude: number;
   travelMode?: 'driving' | 'walking' | 'bicycling' | 'transit';
@@ -306,7 +306,7 @@ export class NavigationUtils {
 }
 
 // Utility for creating enhanced navigation buttons
-export interface NavigationButtonProps {
+interface NavigationButtonProps {
   latitude: number;
   longitude: number;
   stationName?: string;

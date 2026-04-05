@@ -47,50 +47,10 @@ export interface InterferenceFilter {
   directionMatch?: 'match' | 'mismatch';
 }
 
-export interface CloudRFAreaRequest {
-  siteId: number;
-  lat: number;
-  lon: number;
-  alt?: number;
-  txw?: number;
-  azi?: number;
-  rad?: number;
-}
-
-export interface CloudRFAreaResponse {
-  pngUrl: string | null;
-  bounds: [[number, number], [number, number]] | null;
-  coverage: number | null;
-  viewerUrl: string | null;
-  cached: boolean;
-}
-
-export interface CloudRFPathRequest {
-  fromLat: number;
-  fromLon: number;
-  toLat: number;
-  toLon: number;
-}
-
-export interface CloudRFPathResponse {
-  pathLoss: number | null;
-  chartUrl: string | null;
-  signalLevel: number | null;
-  distance: number | null;
-}
-
 export interface PropagationOverlay {
   siteId: number;
   pngUrl: string;
   leafletBounds: [[number, number], [number, number]];
-}
-
-export interface InterferenceStats {
-  total: number;
-  byRanking: Record<string, number>;
-  byProvince: Record<string, number>;
-  avgNoise: number;
-  withSource: number;
 }
 
 export interface BearingValidation {
@@ -128,24 +88,3 @@ export interface EnvironmentConfig {
   reliability: number;
 }
 
-export interface CloudRFAreaRequestV2 extends CloudRFAreaRequest {
-  profile?: DeploymentType;
-  antennaGain?: number;
-  downtilt?: number;
-  bandwidth?: number;
-  environment?: Partial<EnvironmentConfig>;
-}
-
-export interface CloudRFMultisiteRequest {
-  sites: Array<{
-    siteId: number;
-    lat: number;
-    lon: number;
-    alt?: number;
-    txw?: number;
-    azi?: number;
-    profile?: DeploymentType;
-  }>;
-  environment?: Partial<EnvironmentConfig>;
-  radius?: number;
-}

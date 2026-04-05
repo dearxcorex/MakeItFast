@@ -39,6 +39,17 @@ function LocationTracker({ onLocationUpdate }: { onLocationUpdate: (location: Us
 
   useEffect(() => {
     let watchId: number;
+    let isMounted = true;
+
+    // Guard against calling setView on an unmounted/detached map.
+    // mapPane existence is the cheapest check that the internal panes are still alive.
+    const isMapAlive = () => {
+      try {
+        return isMounted && !!map.getContainer() && !!map.getPane('mapPane');
+      } catch {
+        return false;
+      }
+    };
 
     if (navigator.geolocation) {
       navigator.geolocation.getCurrentPosition(
@@ -48,16 +59,18 @@ function LocationTracker({ onLocationUpdate }: { onLocationUpdate: (location: Us
             longitude: position.coords.longitude,
             accuracy: position.coords.accuracy
           };
+          if (!isMounted) return;
           onLocationUpdate(location);
-          if (map.getContainer()) {
+          if (isMapAlive()) {
             map.setView([location.latitude, location.longitude], 13);
           }
         },
         (error) => {
           console.warn('Initial geolocation error:', error);
+          if (!isMounted) return;
           const defaultLocation = { latitude: 34.0522, longitude: -118.2437 };
           onLocationUpdate(defaultLocation);
-          if (map.getContainer()) {
+          if (isMapAlive()) {
             map.setView([defaultLocation.latitude, defaultLocation.longitude], 10);
           }
         },
@@ -66,6 +79,7 @@ function LocationTracker({ onLocationUpdate }: { onLocationUpdate: (location: Us
 
       watchId = navigator.geolocation.watchPosition(
         (position) => {
+          if (!isMounted) return;
           const location: UserLocation = {
             latitude: position.coords.latitude,
             longitude: position.coords.longitude,
@@ -83,6 +97,7 @@ function LocationTracker({ onLocationUpdate }: { onLocationUpdate: (location: Us
     }
 
     return () => {
+      isMounted = false;
       if (watchId) {
         navigator.geolocation.clearWatch(watchId);
       }

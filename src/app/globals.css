@@ -796,6 +796,50 @@ input[type="checkbox"][role="switch"]:focus {
   cursor: pointer;
 }
 
+/* Mobile Drawer Navigation */
+.nav-drawer-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.5);
+  backdrop-filter: blur(2px);
+  -webkit-backdrop-filter: blur(2px);
+  z-index: var(--z-modal-backdrop);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.25s ease;
+}
+
+.nav-drawer-backdrop.open {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+.nav-drawer-panel {
+  position: fixed;
+  top: 0;
+  left: 0;
+  bottom: 0;
+  width: 280px;
+  max-width: 85vw;
+  z-index: var(--z-modal);
+  transform: translateX(-100%);
+  transition: transform 0.28s cubic-bezier(0.4, 0, 0.2, 1);
+  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.3);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.nav-drawer-panel.open {
+  transform: translateX(0);
+}
+
+.nav-drawer-panel > nav {
+  background: var(--background);
+  border-right: 1px solid var(--border);
+  height: 100%;
+}
+
 /* Mobile Bottom Navigation */
 .mobile-bottom-nav {
   position: fixed;
@@ -824,6 +868,215 @@ input[type="checkbox"][role="switch"]:focus {
   .dark input[type="checkbox"][role="switch"] {
     --toggle-border: #ffffff;
   }
+}
+
+/* ============================================
+   Analytics Dashboard - Tropical Thai Theme
+   ============================================ */
+
+.analytics-theme {
+  --tt-cream: #FFF8EF;
+  --tt-cream-deep: #F8EEDB;
+  --tt-teal: #0F6B6B;
+  --tt-teal-light: #2A9D8F;
+  --tt-gold: #D4A017;
+  --tt-gold-light: #F4C430;
+  --tt-coral: #E76F51;
+  --tt-vermillion: #D7263D;
+  --tt-saffron: #F4A261;
+  --tt-jade: #2A9D8F;
+  --tt-lotus: #4A90B8;
+  --tt-orchid: #9C6ADE;
+  --tt-brown: #7A6F63;
+  --tt-teak: #1C1410;
+
+  --tt-surface: rgba(255, 255, 255, 0.85);
+  --tt-surface-elevated: #FFFFFF;
+  --tt-border: rgba(15, 107, 107, 0.15);
+  --tt-border-hover: rgba(212, 160, 23, 0.4);
+
+  background: linear-gradient(135deg, var(--tt-cream) 0%, var(--tt-cream-deep) 100%);
+  color: var(--tt-teak);
+  font-family: 'Prompt', 'Noto Sans Thai', 'Inter', system-ui, sans-serif;
+}
+
+.dark .analytics-theme {
+  --tt-cream: #1C1410;
+  --tt-cream-deep: #2A1E18;
+  --tt-teal: #5EEAD4;
+  --tt-teal-light: #7FFFD4;
+  --tt-gold: #F4C430;
+  --tt-gold-light: #FFE082;
+  --tt-coral: #FF8A65;
+  --tt-vermillion: #FF6B6B;
+  --tt-saffron: #FFB74D;
+  --tt-jade: #4ECDC4;
+  --tt-lotus: #81D4FA;
+  --tt-orchid: #CE93D8;
+  --tt-brown: #C9B8A8;
+  --tt-teak: #FFF8EF;
+
+  --tt-surface: rgba(42, 30, 24, 0.85);
+  --tt-surface-elevated: #2A1E18;
+  --tt-border: rgba(94, 234, 212, 0.2);
+  --tt-border-hover: rgba(244, 196, 48, 0.5);
+
+  background: linear-gradient(135deg, var(--tt-cream) 0%, var(--tt-cream-deep) 100%);
+  color: var(--tt-teak);
+}
+
+.tt-card {
+  background: var(--tt-surface);
+  border: 1px solid var(--tt-border);
+  border-radius: 24px;
+  padding: 24px;
+  position: relative;
+  overflow: hidden;
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  transition: all 0.3s ease;
+  box-shadow: 0 4px 20px rgba(15, 107, 107, 0.05);
+}
+
+.tt-card::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 3px;
+  background: linear-gradient(90deg, var(--tt-teal) 0%, var(--tt-gold) 100%);
+  opacity: 0.8;
+}
+
+.tt-card:hover {
+  border-color: var(--tt-border-hover);
+  box-shadow: 0 8px 32px rgba(15, 107, 107, 0.12);
+  transform: translateY(-2px);
+}
+
+.dark .tt-card {
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+}
+
+.tt-stat-value {
+  font-family: 'Prompt', system-ui, sans-serif;
+  font-size: 2.5rem;
+  font-weight: 700;
+  line-height: 1;
+  letter-spacing: -0.02em;
+  background: linear-gradient(135deg, var(--tt-teal) 0%, var(--tt-gold) 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+.tt-stat-label {
+  font-size: 0.75rem;
+  font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: var(--tt-brown);
+  margin-bottom: 8px;
+}
+
+.tt-heading {
+  font-family: 'Prompt', system-ui, sans-serif;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+  color: var(--tt-teak);
+}
+
+.tt-heading-gradient {
+  background: linear-gradient(135deg, var(--tt-teal) 0%, var(--tt-gold) 60%, var(--tt-coral) 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+.tt-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 10px;
+  border-radius: 999px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  font-family: 'Prompt', system-ui, sans-serif;
+}
+
+.tt-badge-critical {
+  background: rgba(215, 38, 61, 0.12);
+  color: var(--tt-vermillion);
+  border: 1px solid rgba(215, 38, 61, 0.25);
+}
+
+.tt-badge-major {
+  background: rgba(244, 162, 97, 0.12);
+  color: var(--tt-saffron);
+  border: 1px solid rgba(244, 162, 97, 0.25);
+}
+
+.tt-badge-minor {
+  background: rgba(212, 160, 23, 0.12);
+  color: var(--tt-gold);
+  border: 1px solid rgba(212, 160, 23, 0.25);
+}
+
+.tt-badge-success {
+  background: rgba(42, 157, 143, 0.12);
+  color: var(--tt-jade);
+  border: 1px solid rgba(42, 157, 143, 0.25);
+}
+
+/* Gold gradient underline accent under section headings */
+.tt-scallop {
+  display: block;
+  width: 48px;
+  height: 3px;
+  margin-top: 8px;
+  border-radius: 2px;
+  background: linear-gradient(90deg, var(--tt-teal) 0%, var(--tt-gold) 100%);
+  opacity: 0.9;
+}
+
+/* Recharts overrides for Tropical Thai theme */
+.analytics-theme .recharts-cartesian-axis-tick-value,
+.analytics-theme .recharts-text {
+  fill: var(--tt-brown);
+  font-family: 'Prompt', system-ui, sans-serif;
+  font-size: 11px;
+}
+
+.analytics-theme .recharts-cartesian-grid-horizontal line,
+.analytics-theme .recharts-cartesian-grid-vertical line {
+  stroke: var(--tt-border);
+  stroke-dasharray: 3 3;
+}
+
+.analytics-theme .recharts-tooltip-wrapper {
+  outline: none;
+}
+
+.analytics-theme .tt-tooltip {
+  background: var(--tt-surface-elevated);
+  border: 1px solid var(--tt-border);
+  border-radius: 12px;
+  padding: 10px 14px;
+  box-shadow: 0 8px 24px rgba(15, 107, 107, 0.15);
+  font-family: 'Prompt', system-ui, sans-serif;
+}
+
+.analytics-theme .tt-tooltip-label {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--tt-teal);
+  margin-bottom: 4px;
+}
+
+.analytics-theme .tt-tooltip-item {
+  font-size: 11px;
+  color: var(--tt-brown);
 }
 
 /* Location marker styles */

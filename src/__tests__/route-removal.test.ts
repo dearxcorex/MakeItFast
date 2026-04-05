@@ -220,8 +220,10 @@ describe('Route Plan Feature Removal', () => {
 
     it('should still render stations tab and intermod tab', () => {
       content = readFile('components/OptimizedFMStationClient.tsx');
+      // After unified-sidebar refactor, direct setActiveTab('stations') only appears
+      // in handleSwitchToStations — intermod is selected via NavSidebar drawer callback.
       expect(content).toContain("setActiveTab('stations')");
-      expect(content).toContain("setActiveTab('intermod')");
+      expect(content).toContain("activeTab === 'intermod'");
       expect(content).toContain('IntermodCalculator');
     });
 

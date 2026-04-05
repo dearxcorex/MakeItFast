@@ -327,21 +327,28 @@ describe('OptimizedFMStationClient - station selection', () => {
 });
 
 describe('OptimizedFMStationClient - mobile navigation', () => {
-  it('mobile buttons have correct active state styling', () => {
+  it('mobile drawer renders with backdrop, closed by default', () => {
     const { container } = render(<OptimizedFMStationClient {...defaultProps} />);
 
-    const allButtons = Array.from(container.querySelectorAll('button'));
-    const stationsBtn = allButtons.find((b) => b.textContent?.includes('Stations'));
-    const intermodBtn = allButtons.find((b) => b.textContent?.includes('Intermod'));
-    const interferenceBtn = allButtons.find((b) => b.textContent?.includes('Interference'));
+    const drawer = container.querySelector('[data-testid="mobile-nav-drawer"]');
+    const backdrop = container.querySelector('[data-testid="mobile-nav-backdrop"]');
+    expect(drawer).toBeTruthy();
+    expect(backdrop).toBeTruthy();
+    expect(drawer!.className).not.toContain('open');
+    expect(backdrop!.className).not.toContain('open');
+  });
 
-    // Stations should be active
-    expect(stationsBtn?.className).toContain('text-primary');
-    expect(intermodBtn?.className).toContain('text-muted-foreground');
-    expect(interferenceBtn?.className).toContain('text-muted-foreground');
+  it('NavSidebar receives stations as default active tab', () => {
+    render(<OptimizedFMStationClient {...defaultProps} />);
+    expect(capturedNavProps.activeTab).toBe('stations');
+  });
 
-    // Click intermod
-    fireEvent.click(intermodBtn!);
-    expect(intermodBtn?.className).toContain('text-accent');
+  it('tab change via NavSidebar callback updates the active tab', () => {
+    render(<OptimizedFMStationClient {...defaultProps} />);
+    const onTabChange = capturedNavProps.onTabChange as (tab: string) => void;
+    act(() => {
+      onTabChange('intermod');
+    });
+    expect(capturedNavProps.activeTab).toBe('intermod');
   });
 });

@@ -285,11 +285,13 @@ describe('OptimizedFMStationClient', () => {
     expect(container.querySelector('[data-testid="nav-sidebar"]')).toBeTruthy();
   });
 
-  it('renders mobile bottom navigation with Stations, Intermod, and Interference tabs', () => {
+  it('renders mobile navigation drawer (initially closed)', () => {
     const { container } = render(<OptimizedFMStationClient {...defaultProps} />);
-    expect(container.textContent).toContain('Stations');
-    expect(container.textContent).toContain('Intermod');
-    expect(container.textContent).toContain('Interference');
+    const drawer = container.querySelector('[data-testid="mobile-nav-drawer"]');
+    const backdrop = container.querySelector('[data-testid="mobile-nav-backdrop"]');
+    expect(drawer).toBeTruthy();
+    expect(backdrop).toBeTruthy();
+    expect(drawer!.className).not.toContain('open');
   });
 
   it('renders the MobileFilterBar and dynamic Map on stations tab by default', () => {

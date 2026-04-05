@@ -467,7 +467,7 @@ describe('NavSidebar', () => {
       <NavSidebar activeTab="stations" onTabChange={vi.fn()} />
     );
     const buttons = container.querySelectorAll('button');
-    expect(buttons.length).toBe(3); // stations, intermod, interference
+    expect(buttons.length).toBe(4); // stations, intermod, interference, analytics
   });
 
   it('renders as nav element', () => {

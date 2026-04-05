@@ -1,13 +1,14 @@
 /**
- * NavSidebar - Fixed left navigation sidebar for feature switching
- * Follows dashboard conventions with glassmorphism styling
+ * NavSidebar - Navigation menu with two variants:
+ * - 'desktop' (default): hover-expand rail, 64px → 200px, only visible on lg+
+ * - 'mobile-drawer': always-expanded panel for use inside a slide-in drawer
  */
 
 'use client';
 
 import { useState } from 'react';
 
-type ActiveTab = 'stations' | 'intermod' | 'interference';
+type ActiveTab = 'stations' | 'intermod' | 'interference' | 'analytics';
 
 type NavItem = {
   id: ActiveTab;
@@ -18,6 +19,7 @@ type NavItem = {
 interface NavSidebarProps {
   activeTab: ActiveTab;
   onTabChange: (tab: ActiveTab) => void;
+  variant?: 'desktop' | 'mobile-drawer';
 }
 
 const navItems: NavItem[] = [
@@ -48,20 +50,35 @@ const navItems: NavItem[] = [
       </svg>
     ),
   },
+  {
+    id: 'analytics',
+    label: 'Analytics',
+    icon: (
+      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19V6l12-3v13M9 19c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zm12-3c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zM9 10l12-3" />
+      </svg>
+    ),
+  },
 ];
 
-export default function NavSidebar({ activeTab, onTabChange }: NavSidebarProps) {
-  const [isExpanded, setIsExpanded] = useState(false);
+export default function NavSidebar({ activeTab, onTabChange, variant = 'desktop' }: NavSidebarProps) {
+  const [isHoverExpanded, setIsHoverExpanded] = useState(false);
+  const isDrawer = variant === 'mobile-drawer';
+  const isExpanded = isDrawer || isHoverExpanded;
 
   return (
     <nav
-      className="hidden lg:flex flex-col h-full nav-sidebar"
-      onMouseEnter={() => setIsExpanded(true)}
-      onMouseLeave={() => setIsExpanded(false)}
-      style={{
-        width: isExpanded ? '200px' : '64px',
-        transition: 'width 0.2s ease-in-out',
-      }}
+      className={`flex flex-col h-full nav-sidebar ${isDrawer ? 'w-full' : 'hidden lg:flex'}`}
+      onMouseEnter={isDrawer ? undefined : () => setIsHoverExpanded(true)}
+      onMouseLeave={isDrawer ? undefined : () => setIsHoverExpanded(false)}
+      style={
+        isDrawer
+          ? undefined
+          : {
+              width: isHoverExpanded ? '200px' : '64px',
+              transition: 'width 0.2s ease-in-out',
+            }
+      }
     >
       {/* Logo Section */}
       <div className="p-3 border-b border-border/30">
@@ -73,7 +90,7 @@ export default function NavSidebar({ activeTab, onTabChange }: NavSidebarProps) 
           </div>
           {isExpanded && (
             <span className="font-heading font-bold gradient-text whitespace-nowrap overflow-hidden">
-              @23
+              NBTC FM
             </span>
           )}
         </div>
@@ -110,20 +127,22 @@ export default function NavSidebar({ activeTab, onTabChange }: NavSidebarProps) 
         })}
       </div>
 
-      {/* Bottom Section - Expand indicator */}
-      <div className="p-3 border-t border-border/30">
-        <div className={`flex items-center gap-2 text-xs text-muted-foreground ${isExpanded ? '' : 'justify-center'}`}>
-          <svg
-            className={`w-4 h-4 transition-transform duration-200 ${isExpanded ? 'rotate-180' : ''}`}
-            fill="none"
-            stroke="currentColor"
-            viewBox="0 0 24 24"
-          >
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 5l7 7-7 7M5 5l7 7-7 7" />
-          </svg>
-          {isExpanded && <span className="whitespace-nowrap">Collapse</span>}
+      {/* Bottom Section — desktop hover indicator only */}
+      {!isDrawer && (
+        <div className="p-3 border-t border-border/30">
+          <div className={`flex items-center gap-2 text-xs text-muted-foreground ${isExpanded ? '' : 'justify-center'}`}>
+            <svg
+              className={`w-4 h-4 transition-transform duration-200 ${isExpanded ? 'rotate-180' : ''}`}
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 5l7 7-7 7M5 5l7 7-7 7" />
+            </svg>
+            {isExpanded && <span className="whitespace-nowrap">Collapse</span>}
+          </div>
         </div>
-      </div>
+      )}
     </nav>
   );
 }

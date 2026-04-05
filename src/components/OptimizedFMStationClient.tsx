@@ -15,7 +15,7 @@ import MobileFilterBar from '@/components/client/MobileFilterBar';
 
 import type { InterferenceStats } from '@/components/interference/InterferenceAnalysis';
 
-type ActiveTab = 'stations' | 'intermod' | 'interference';
+type ActiveTab = 'stations' | 'intermod' | 'interference' | 'analytics';
 
 // Lazy load components
 const Map = dynamic(() => import('@/components/Map'), {
@@ -35,6 +35,15 @@ const Map = dynamic(() => import('@/components/Map'), {
 });
 
 import IntermodCalculator from '@/components/IntermodCalculator';
+
+const AnalyticsDashboard = dynamic(() => import('@/components/analytics/AnalyticsDashboard'), {
+  ssr: false,
+  loading: () => (
+    <div className="w-full h-full bg-muted animate-pulse flex items-center justify-center">
+      <div className="text-muted-foreground font-medium">Loading analytics...</div>
+    </div>
+  ),
+});
 
 const InterferenceAnalysis = dynamic(() => import('@/components/interference/InterferenceAnalysis'), {
   ssr: false,
@@ -66,7 +75,13 @@ export default function OptimizedFMStationClient({
   const stationsRef = useRef(stations);
   stationsRef.current = stations;
   const [filters, setFilters] = useState<FilterType>({});
-  const [activeTab, setActiveTab] = useState<ActiveTab>('stations');
+  const [activeTab, setActiveTabRaw] = useState<ActiveTab>('stations');
+  const [mobileNavOpen, setMobileNavOpen] = useState(false);
+
+  const setActiveTab = useCallback((tab: ActiveTab) => {
+    setActiveTabRaw(tab);
+    setMobileNavOpen(false);
+  }, []);
   const [highlightedStationIds, setHighlightedStationIds] = useState<(string | number)[]>([]);
   const [flyToStations, setFlyToStations] = useState<{ lat1: number; lng1: number; lat2: number; lng2: number; timestamp: number } | null>(null);
   const [showFilters, setShowFilters] = useState(false);
@@ -274,7 +289,7 @@ export default function OptimizedFMStationClient({
   // Switch to stations tab (used by intermod calculator)
   const handleSwitchToStations = useCallback(() => {
     setActiveTab('stations');
-  }, []);
+  }, [setActiveTab]);
 
   // Stable optimistic updates without blinking
   // Uses stationsRef to avoid stale closures - Leaflet popups hold callback references
@@ -401,7 +416,13 @@ export default function OptimizedFMStationClient({
         {/* Main Content Area */}
         <div className="flex-1 flex flex-col min-w-0">
           {/* Header */}
-          <AppHeader filteredStations={filteredStations} userLocation={userLocation} activeTab={activeTab} interferenceStats={interferenceStats} />
+          <AppHeader
+            filteredStations={filteredStations}
+            userLocation={userLocation}
+            activeTab={activeTab}
+            interferenceStats={interferenceStats}
+            onMenuClick={() => setMobileNavOpen(true)}
+          />
 
           {/* Main content */}
           <div className="flex-1 flex flex-col lg:flex-row overflow-y-auto p-4 pt-2 gap-4">
@@ -442,57 +463,32 @@ export default function OptimizedFMStationClient({
                 onHighlightStations={handleHighlightStations}
                 onSwitchToStations={handleSwitchToStations}
               />
-            ) : (
+            ) : activeTab === 'interference' ? (
               /* Interference Analysis */
               <InterferenceAnalysis userLocation={userLocation} onStatsChange={setInterferenceStats} />
+            ) : (
+              /* Analytics Dashboard */
+              <AnalyticsDashboard />
             )}
           </div>
         </div>
       </div>
 
-      {/* Mobile Bottom Navigation */}
-      <div className="lg:hidden mobile-bottom-nav">
-        <div className="flex items-center justify-around py-2">
-          <button
-            onClick={() => setActiveTab('stations')}
-            className={`flex flex-col items-center gap-1 px-4 py-2 rounded-xl transition-all ${
-              activeTab === 'stations'
-                ? 'text-primary'
-                : 'text-muted-foreground'
-            }`}
-          >
-            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8.111 16.404a5.5 5.5 0 017.778 0M12 20h.01m-7.08-7.071c3.904-3.905 10.236-3.905 14.141 0M1.394 9.393c5.857-5.857 15.355-5.857 21.213 0" />
-            </svg>
-            <span className="text-xs font-medium">Stations</span>
-          </button>
-          <button
-            onClick={() => setActiveTab('intermod')}
-            className={`flex flex-col items-center gap-1 px-4 py-2 rounded-xl transition-all ${
-              activeTab === 'intermod'
-                ? 'text-accent'
-                : 'text-muted-foreground'
-            }`}
-          >
-            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 7h6m0 10v-3m-3 3h.01M9 17h.01M9 14h.01M12 14h.01M15 11h.01M12 11h.01M9 11h.01M7 21h10a2 2 0 002-2V5a2 2 0 00-2-2H7a2 2 0 00-2 2v14a2 2 0 002 2z" />
-            </svg>
-            <span className="text-xs font-medium">Intermod</span>
-          </button>
-          <button
-            onClick={() => setActiveTab('interference')}
-            className={`flex flex-col items-center gap-1 px-4 py-2 rounded-xl transition-all ${
-              activeTab === 'interference'
-                ? 'text-destructive'
-                : 'text-muted-foreground'
-            }`}
-          >
-            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19.428 15.428a2 2 0 00-1.022-.547l-2.387-.477a6 6 0 00-3.86.517l-.318.158a6 6 0 01-3.86.517L6.05 15.21a2 2 0 00-1.806.547M8 4h8l-1 1v5.172a2 2 0 00.586 1.414l5 5c1.26 1.26.367 3.414-1.415 3.414H4.828c-1.782 0-2.674-2.154-1.414-3.414l5-5A2 2 0 009 10.172V5L8 4z" />
-            </svg>
-            <span className="text-xs font-medium">Interference</span>
-          </button>
-        </div>
+      {/* Mobile Navigation Drawer */}
+      <div
+        data-testid="mobile-nav-backdrop"
+        className={`lg:hidden nav-drawer-backdrop ${mobileNavOpen ? 'open' : ''}`}
+        onClick={() => setMobileNavOpen(false)}
+        aria-hidden={!mobileNavOpen}
+      />
+      <div
+        data-testid="mobile-nav-drawer"
+        className={`lg:hidden nav-drawer-panel ${mobileNavOpen ? 'open' : ''}`}
+        role="dialog"
+        aria-modal="true"
+        aria-label="Navigation menu"
+      >
+        <NavSidebar activeTab={activeTab} onTabChange={setActiveTab} variant="mobile-drawer" />
       </div>
     </>
   );

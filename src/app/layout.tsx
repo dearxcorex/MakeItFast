@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { Exo_2, Orbitron } from "next/font/google";
+import { Exo_2, Orbitron, Prompt, Noto_Sans_Thai } from "next/font/google";
 import "./globals.css";
 import { ThemeProvider } from "@/contexts/ThemeContext";
 
@@ -15,6 +15,20 @@ const orbitron = Orbitron({
   variable: "--font-heading",
 });
 
+const prompt = Prompt({
+  subsets: ["latin", "thai"],
+  weight: ["400", "500", "600", "700"],
+  display: "swap",
+  variable: "--font-prompt",
+});
+
+const notoSansThai = Noto_Sans_Thai({
+  subsets: ["thai"],
+  weight: ["400", "500", "600", "700"],
+  display: "swap",
+  variable: "--font-noto-thai",
+});
+
 export const metadata: Metadata = {
   title: "Task Tracker | NBTC FM Monitoring",
   description: "Track FM radio stations and calculate intermodulation with an interactive dashboard",
@@ -28,7 +42,7 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en" className="dark" suppressHydrationWarning>
-      <body className={`${exo2.variable} ${orbitron.variable} font-sans antialiased`} suppressHydrationWarning>
+      <body className={`${exo2.variable} ${orbitron.variable} ${prompt.variable} ${notoSansThai.variable} font-sans antialiased`} suppressHydrationWarning>
         <ThemeProvider>
           {children}
         </ThemeProvider>

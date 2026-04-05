@@ -2,19 +2,20 @@ import { describe, it, expect, vi, afterEach, beforeAll } from 'vitest';
 import { render, fireEvent, cleanup, act } from '@testing-library/react';
 import React from 'react';
 
-// Mock next/dynamic - use a counter inside the factory closure
+// Mock next/dynamic - inspect loader source to route to the right stub
 vi.mock('next/dynamic', () => {
-  let callCount = 0;
   return {
     default: (loader: () => Promise<{ default: React.ComponentType }>, options?: Record<string, unknown>) => {
-      const idx = callCount++;
-      // First dynamic call is Map, second is InterferenceAnalysis
-      if (idx === 1) {
-        const DynamicComponent = (props: Record<string, unknown>) => (
-          <div data-testid="interference-analysis">InterferenceAnalysis</div>
-        );
-        DynamicComponent.displayName = 'InterferenceAnalysis';
-        return DynamicComponent;
+      const src = loader.toString();
+      if (src.includes('AnalyticsDashboard') || src.includes('analytics/AnalyticsDashboard')) {
+        const C = (props: Record<string, unknown>) => <div data-testid="analytics-dashboard">AnalyticsDashboard</div>;
+        C.displayName = 'AnalyticsDashboard';
+        return C;
+      }
+      if (src.includes('InterferenceAnalysis') || src.includes('interference/InterferenceAnalysis')) {
+        const C = (props: Record<string, unknown>) => <div data-testid="interference-analysis">InterferenceAnalysis</div>;
+        C.displayName = 'InterferenceAnalysis';
+        return C;
       }
       const DynamicComponent = (props: Record<string, unknown>) => (
         <div data-testid="dynamic-component" {...props} />
@@ -145,26 +146,27 @@ describe('OptimizedFMStationClient - Deep Tests', () => {
     expect(container.querySelector('[data-testid="intermod-calculator"]')).toBeNull();
   });
 
-  it('switches tabs via mobile bottom navigation', () => {
+  it('renders mobile nav drawer and switches tabs via drawer callback', () => {
     const { container } = render(<OptimizedFMStationClient {...defaultProps} />);
 
-    // Find mobile bottom nav buttons
-    const bottomButtons = container.querySelectorAll('.mobile-bottom-nav button');
-    // Should have 3: Stations, Intermod, Interference
-    // But mobile-bottom-nav might not match the className directly. Use text.
-    const allButtons = Array.from(container.querySelectorAll('button'));
-    const intermodBtn = allButtons.find((b) => b.textContent?.includes('Intermod'));
-    expect(intermodBtn).toBeTruthy();
+    // Drawer + backdrop exist in the DOM
+    expect(container.querySelector('[data-testid="mobile-nav-drawer"]')).toBeTruthy();
+    expect(container.querySelector('[data-testid="mobile-nav-backdrop"]')).toBeTruthy();
 
-    fireEvent.click(intermodBtn!);
+    // NavSidebar (mocked) is used in both desktop + drawer — both capture the same onTabChange
+    act(() => {
+      capturedOnTabChange!('intermod');
+    });
     expect(container.querySelector('[data-testid="intermod-calculator"]')).toBeTruthy();
 
-    const interferenceBtn = allButtons.find((b) => b.textContent?.includes('Interference'));
-    fireEvent.click(interferenceBtn!);
+    act(() => {
+      capturedOnTabChange!('interference');
+    });
     expect(container.querySelector('[data-testid="interference-analysis"]')).toBeTruthy();
 
-    const stationsBtn = allButtons.find((b) => b.textContent?.includes('Stations'));
-    fireEvent.click(stationsBtn!);
+    act(() => {
+      capturedOnTabChange!('stations');
+    });
     expect(container.querySelector('[data-testid="mobile-filter-bar"]')).toBeTruthy();
   });
 
