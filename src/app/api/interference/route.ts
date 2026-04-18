@@ -18,7 +18,8 @@ export async function GET(request: NextRequest) {
     if (!isNaN(rawMin)) filters.noiseMin = rawMin;
     const rawMax = parseFloat(searchParams.get('noiseMax') ?? '');
     if (!isNaN(rawMax)) filters.noiseMax = rawMax;
-    if (searchParams.get('lawPaperSent')) filters.lawPaperSent = searchParams.get('lawPaperSent')!;
+    const lpParam = searchParams.get('lawPaperSent');
+    if (lpParam === 'sent' || lpParam === 'not_sent') filters.lawPaperSent = lpParam;
 
     const sites = await fetchInterferenceSites(
       Object.keys(filters).length > 0 ? filters : undefined

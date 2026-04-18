@@ -420,7 +420,6 @@ export default function OptimizedFMStationClient({
             filteredStations={filteredStations}
             userLocation={userLocation}
             activeTab={activeTab}
-            interferenceStats={interferenceStats}
             onMenuClick={() => setMobileNavOpen(true)}
           />
 

@@ -2,17 +2,15 @@
 
 import { FMStation, UserLocation } from '@/types/station';
 import { useTheme } from '@/contexts/ThemeContext';
-import type { InterferenceStats } from '@/components/interference/InterferenceAnalysis';
 
 interface AppHeaderProps {
   filteredStations: FMStation[];
   userLocation?: UserLocation;
   activeTab?: string;
-  interferenceStats?: InterferenceStats | null;
   onMenuClick?: () => void;
 }
 
-export default function AppHeader({ filteredStations, userLocation, activeTab, interferenceStats, onMenuClick }: AppHeaderProps) {
+export default function AppHeader({ filteredStations, userLocation, activeTab, onMenuClick }: AppHeaderProps) {
   const { theme, toggleTheme } = useTheme();
 
   const isInterference = activeTab === 'interference';

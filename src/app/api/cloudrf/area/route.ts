@@ -77,6 +77,7 @@ export async function POST(request: Request) {
             cameraModel1: null,
             cameraModel2: null,
             notes: null,
+            lawPaperSent: false,
             createdAt: new Date(),
             updatedAt: new Date(),
           },
