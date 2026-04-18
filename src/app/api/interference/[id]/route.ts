@@ -59,6 +59,9 @@ export async function PATCH(
     if ('ranking' in body && typeof body.ranking === 'string' && ALLOWED_RANKINGS.includes(body.ranking)) {
       updateData.ranking = body.ranking;
     }
+    if ('lawPaperSent' in body && typeof body.lawPaperSent === 'boolean') {
+      updateData.law_paper_sent = body.lawPaperSent;
+    }
 
     if (Object.keys(updateData).length === 0) {
       return NextResponse.json({ error: 'No valid fields to update' }, { status: 400 });

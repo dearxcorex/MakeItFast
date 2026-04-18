@@ -46,6 +46,7 @@ export default function InterferenceAnalysis({ userLocation, onStatsChange }: In
       if (filters.hasSource) params.set('hasSource', 'true');
       if (filters.search) params.set('search', filters.search);
       if (filters.status) params.set('status', filters.status);
+      if (filters.lawPaperSent) params.set('lawPaperSent', filters.lawPaperSent);
 
       const res = await fetch(`/api/interference?${params.toString()}`);
       const data = await res.json();
@@ -115,7 +116,7 @@ export default function InterferenceAnalysis({ userLocation, onStatsChange }: In
     setPropagationOverlays([]);
   }, []);
 
-  const handleUpdateSite = useCallback(async (siteId: number, updates: { status?: string }) => {
+  const handleUpdateSite = useCallback(async (siteId: number, updates: { status?: string; lawPaperSent?: boolean }) => {
     // Optimistic update
     setSites((prev) =>
       prev.map((s) => (s.id === siteId ? { ...s, ...updates } : s))
@@ -141,6 +142,7 @@ export default function InterferenceAnalysis({ userLocation, onStatsChange }: In
 
   const inspectedCount = sites.filter(s => s.status === 'ตรวจแล้ว').length;
   const criticalCount = sites.filter(s => s.ranking?.toLowerCase() === 'critical').length;
+  const lawPaperSentCount = sites.filter(s => s.lawPaperSent === true).length;
 
   return (
     <div className="interference-theme flex-1 flex flex-col min-h-0">
@@ -159,6 +161,11 @@ export default function InterferenceAnalysis({ userLocation, onStatsChange }: In
           <span className="if-summary-dot" style={{ background: 'var(--if-critical)' }} />
           <span className="if-summary-value" style={{ color: 'var(--if-critical)' }}>{criticalCount}</span>
           <span>critical</span>
+        </div>
+        <div className="if-summary-item">
+          <span className="if-summary-dot" style={{ background: 'var(--if-warning)' }} />
+          <span className="if-summary-value" style={{ color: 'var(--if-warning)' }}>{lawPaperSentCount}</span>
+          <span>sent</span>
         </div>
         {activeFilterCount > 0 && (
           <div className="if-summary-item">

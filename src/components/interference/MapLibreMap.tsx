@@ -116,6 +116,30 @@ export default function MapLibreMap({
     const map = mapRef.current;
     if (!map) return;
 
+    // Scale markers based on zoom level
+    const getMarkerScale = (zoom: number): number => {
+      if (zoom >= 10) return 1;
+      if (zoom >= 9) return 0.85;
+      if (zoom >= 8) return 0.7;
+      if (zoom >= 7) return 0.55;
+      if (zoom >= 6) return 0.45;
+      return 0.35;
+    };
+
+    const applyZoomScale = () => {
+      const zoom = map.getZoom();
+      const scale = getMarkerScale(zoom);
+      // Scale the inner wrapper, not the marker element itself (MapLibre controls its transform)
+      markersRef.current.forEach((marker) => {
+        const inner = marker.getElement().querySelector('[data-marker-inner]') as HTMLElement | null;
+        if (inner) {
+          inner.style.transform = `scale(${scale})`;
+        }
+      });
+    };
+
+    map.on('zoom', applyZoomScale);
+
     // Wait for map to load
     const update = () => {
       const existingKeys = new Set(markersRef.current.keys());
@@ -133,35 +157,40 @@ export default function MapLibreMap({
 
         const isSelected = group.sites.some(s => s.id === selectedSite?.id);
         const isInspected = primarySite.status === 'ตรวจแล้ว';
+        const isLawPaperSent = primarySite.lawPaperSent === true;
         const rankColor = getRankingColor(primarySite.ranking);
 
         // Determine sectors to display
         const sectors = group.sectors.length > 0 ? group.sectors : siteToSectors(primarySite.direction);
 
-        // Create or update marker
+        // Create or update marker — content wrapped in inner div for zoom scaling
         let marker = markersRef.current.get(key);
         const el = document.createElement('div');
         el.style.cursor = 'pointer';
 
+        const inner = document.createElement('div');
+        inner.setAttribute('data-marker-inner', '');
+        inner.style.transition = 'transform 0.15s ease-out';
+        inner.style.transformOrigin = 'center center';
+
         if (sectors.length > 0) {
-          // Sector antenna icon
           const size = isSelected ? 56 : 48;
-          el.innerHTML = createSectorSVG(sectors, size, {
+          inner.innerHTML = createSectorSVG(sectors, size, {
             isSelected,
             isInspected,
             rankingColor: rankColor,
+            lawPaperSent: isLawPaperSent,
           });
-          el.style.width = `${size}px`;
-          el.style.height = `${size}px`;
+          inner.style.width = `${size}px`;
+          inner.style.height = `${size}px`;
         } else {
-          // Simple circle marker (no direction data)
           const size = isSelected ? 32 : 24;
           const bgColor = isInspected ? '#22c55e' : rankColor;
           const borderColor = isInspected ? '#16a34a' : 'white';
           const shadow = isInspected
             ? '0 2px 6px rgba(0,0,0,0.3), 0 0 6px rgba(34,197,94,0.5)'
             : `0 2px 6px rgba(0,0,0,0.3)${isSelected ? `, 0 0 8px ${rankColor}` : ''}`;
-          el.innerHTML = `
+          inner.innerHTML = `
             <div style="
               width: ${size}px; height: ${size}px;
               background: ${bgColor};
@@ -176,10 +205,16 @@ export default function MapLibreMap({
                   </svg>`
                 : ''}
             </div>
+            ${isLawPaperSent ? `<div style="position:absolute;top:-4px;right:-4px;width:14px;height:14px;background:#F59E0B;border:1.5px solid white;border-radius:50%;display:flex;align-items:center;justify-content:center;">
+              <svg width="8" height="8" viewBox="0 0 12 12" fill="none"><path d="M1 3l5 4 5-4M1 3v6h10V3" stroke="white" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+            </div>` : ''}
           `;
-          el.style.width = `${size}px`;
-          el.style.height = `${size}px`;
+          inner.style.position = 'relative';
+          inner.style.width = `${size}px`;
+          inner.style.height = `${size}px`;
         }
+
+        el.appendChild(inner);
 
         el.addEventListener('click', (e) => {
           e.stopPropagation();
@@ -317,9 +352,14 @@ export default function MapLibreMap({
 
     if (map.loaded()) {
       update();
+      applyZoomScale();
     } else {
-      map.on('load', update);
+      map.on('load', () => { update(); applyZoomScale(); });
     }
+
+    return () => {
+      map.off('zoom', applyZoomScale);
+    };
   }, [sites, selectedSite, onSiteSelect]);
 
   // Propagation overlays

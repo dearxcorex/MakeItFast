@@ -100,6 +100,25 @@ export default function InterferenceFilterPanel({
         </div>
       </div>
 
+      {/* Law Paper */}
+      <div className="if-filter-group">
+        <div className="if-filter-label">Law Paper</div>
+        <div className="flex items-center gap-1.5">
+          <button
+            onClick={() => onFiltersChange({ ...filters, lawPaperSent: filters.lawPaperSent === 'sent' ? undefined : 'sent' })}
+            className={`if-pill if-pill-success ${filters.lawPaperSent === 'sent' ? 'active' : ''}`}
+          >
+            ส่งแล้ว
+          </button>
+          <button
+            onClick={() => onFiltersChange({ ...filters, lawPaperSent: filters.lawPaperSent === 'not_sent' ? undefined : 'not_sent' })}
+            className={`if-pill if-pill-warning ${filters.lawPaperSent === 'not_sent' ? 'active' : ''}`}
+          >
+            ยังไม่ส่ง
+          </button>
+        </div>
+      </div>
+
       {/* Direction Validation */}
       {directionStats && directionStats.total > 0 && (
         <div className="if-filter-group">

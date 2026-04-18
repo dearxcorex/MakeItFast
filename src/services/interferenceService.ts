@@ -33,6 +33,7 @@ export function convertToInterferenceSite(row: interference_site): InterferenceS
     cameraModel1: row.camera_model_1,
     cameraModel2: row.camera_model_2,
     notes: row.notes,
+    lawPaperSent: row.law_paper_sent ?? false,
     createdAt: row.created_at,
     updatedAt: row.updated_at,
   };
@@ -82,6 +83,16 @@ export async function fetchInterferenceSites(
         where.AND = [
           ...(where.AND || []),
           { OR: [{ status: null }, { status: { not: 'ตรวจแล้ว' } }] },
+        ];
+      }
+    }
+    if (filters.lawPaperSent) {
+      if (filters.lawPaperSent === 'sent') {
+        where.law_paper_sent = true;
+      } else {
+        where.AND = [
+          ...(where.AND || []),
+          { OR: [{ law_paper_sent: null }, { law_paper_sent: false }] },
         ];
       }
     }

@@ -80,6 +80,7 @@ export function createSectorSVG(
     isSelected?: boolean;
     isInspected?: boolean;
     rankingColor?: string;
+    lawPaperSent?: boolean;
   }
 ): string {
   const center = size / 2;
@@ -119,10 +120,22 @@ export function createSectorSVG(
        <path d="M${center - 3.5} ${center} l2.5 2.5 4.5-5" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>`
     : `<circle cx="${center}" cy="${center}" r="${centerR}" fill="${centerColor}" stroke="white" stroke-width="2"/>`;
 
+  // Law paper sent badge: small envelope icon at top-right
+  let lawBadge = '';
+  if (options?.lawPaperSent) {
+    const bx = size - 10;
+    const by = 2;
+    lawBadge = `
+      <circle cx="${bx}" cy="${by + 5}" r="7" fill="#F59E0B" stroke="white" stroke-width="1.5"/>
+      <path d="M${bx - 3.5} ${by + 3} l3.5 3 3.5-3 M${bx - 3.5} ${by + 3} v4.5 h7 v-4.5" fill="none" stroke="white" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"/>
+    `;
+  }
+
   return `<svg width="${size}" height="${size}" viewBox="0 0 ${size} ${size}" xmlns="http://www.w3.org/2000/svg">
     ${outerRing}
     ${paths}
     ${centerDot}
+    ${lawBadge}
   </svg>`;
 }
 

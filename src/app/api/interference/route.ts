@@ -16,6 +16,7 @@ export async function GET(request: NextRequest) {
     if (searchParams.get('status')) filters.status = searchParams.get('status')!;
     if (searchParams.get('noiseMin')) filters.noiseMin = parseFloat(searchParams.get('noiseMin')!);
     if (searchParams.get('noiseMax')) filters.noiseMax = parseFloat(searchParams.get('noiseMax')!);
+    if (searchParams.get('lawPaperSent')) filters.lawPaperSent = searchParams.get('lawPaperSent')!;
 
     const sites = await fetchInterferenceSites(
       Object.keys(filters).length > 0 ? filters : undefined

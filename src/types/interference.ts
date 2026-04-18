@@ -30,6 +30,7 @@ export interface InterferenceSite {
   cameraModel1: string | null;
   cameraModel2: string | null;
   notes: string | null;
+  lawPaperSent: boolean | null;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -45,6 +46,7 @@ export interface InterferenceFilter {
   noiseMin?: number;
   noiseMax?: number;
   directionMatch?: 'match' | 'mismatch';
+  lawPaperSent?: string; // 'sent' | 'not_sent'
 }
 
 export interface PropagationOverlay {

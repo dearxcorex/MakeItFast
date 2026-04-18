@@ -7,7 +7,7 @@ import { getCompassDirection } from '@/utils/bearingUtils';
 
 interface InterferenceSiteDetailProps {
   site: InterferenceSite;
-  onUpdateSite?: (siteId: number, updates: { status?: string }) => void;
+  onUpdateSite?: (siteId: number, updates: { status?: string; lawPaperSent?: boolean }) => void;
 }
 
 export default function InterferenceSiteDetail({ site, onUpdateSite }: InterferenceSiteDetailProps) {
@@ -126,6 +126,41 @@ export default function InterferenceSiteDetail({ site, onUpdateSite }: Interfere
           </button>
         )}
       </div>
+
+      {/* Law Paper Status + Action */}
+      {(() => {
+        const isSent = site.lawPaperSent === true;
+        return (
+          <div className="flex items-center justify-between gap-3 p-3 rounded-lg" style={{
+            background: isSent ? 'rgba(34, 197, 94, 0.08)' : 'rgba(245, 158, 11, 0.06)',
+            border: `1px solid ${isSent ? 'rgba(34, 197, 94, 0.2)' : 'rgba(245, 158, 11, 0.15)'}`,
+          }}>
+            <div className="flex items-center gap-2">
+              <div className="w-2 h-2 rounded-full" style={{ background: isSent ? 'var(--if-success)' : 'var(--if-warning)' }} />
+              <span className="text-xs font-medium" style={{ color: isSent ? 'var(--if-success)' : 'var(--if-warning)' }}>
+                {isSent ? 'ส่งหนังสือแล้ว' : 'ยังไม่ส่งหนังสือ'}
+              </span>
+            </div>
+            {onUpdateSite && (
+              <button
+                onClick={() => onUpdateSite(site.id, { lawPaperSent: !isSent })}
+                className="px-3 py-1.5 text-xs font-medium rounded-md transition-all"
+                style={isSent ? {
+                  background: 'var(--if-surface-elevated)',
+                  color: 'var(--if-text-secondary)',
+                  border: '1px solid var(--if-border)',
+                } : {
+                  background: 'var(--if-accent)',
+                  color: '#0F1117',
+                  border: 'none',
+                }}
+              >
+                {isSent ? 'Undo' : 'Mark Sent'}
+              </button>
+            )}
+          </div>
+        );
+      })()}
 
       {/* Source Location */}
       {site.sourceLat && site.sourceLong && (
