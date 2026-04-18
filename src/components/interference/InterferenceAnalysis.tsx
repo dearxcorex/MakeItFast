@@ -209,6 +209,7 @@ export default function InterferenceAnalysis({ userLocation, onStatsChange }: In
                 onClick={() => setShowDetail(false)}
                 className="text-xs flex items-center gap-1 mb-1"
                 style={{ color: 'var(--if-text-tertiary)' }}
+                aria-label="Back to filters"
               >
                 <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />

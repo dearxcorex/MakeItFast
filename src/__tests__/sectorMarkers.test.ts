@@ -189,7 +189,9 @@ describe('siteToSectors', () => {
 // ---------------------------------------------------------------------------
 
 describe('groupSiteSectors', () => {
+  let nextId = 1;
   const makeSite = (siteCode: string | null, direction: number | null, sectorName = 'A') => ({
+    id: nextId++,
     siteCode,
     direction,
     sectorName,

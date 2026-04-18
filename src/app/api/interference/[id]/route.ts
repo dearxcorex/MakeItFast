@@ -53,7 +53,7 @@ export async function PATCH(
     if ('status' in body && typeof body.status === 'string' && ALLOWED_STATUSES.includes(body.status)) {
       updateData.status = body.status;
     }
-    if ('notes' in body && typeof body.notes === 'string') {
+    if ('notes' in body && typeof body.notes === 'string' && body.notes.length <= 4000) {
       updateData.notes = body.notes;
     }
     if ('ranking' in body && typeof body.ranking === 'string' && ALLOWED_RANKINGS.includes(body.ranking)) {

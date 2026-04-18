@@ -112,6 +112,7 @@ export default function InterferenceSiteDetail({ site, onUpdateSite }: Interfere
               onUpdateSite(site.id, { status: newStatus });
             }}
             className="px-3 py-1.5 text-xs font-medium rounded-md transition-all"
+            aria-label={isInspected ? 'Undo inspection status' : 'Mark site as inspected'}
             style={isInspected ? {
               background: 'var(--if-surface-elevated)',
               color: 'var(--if-text-secondary)',
@@ -145,6 +146,7 @@ export default function InterferenceSiteDetail({ site, onUpdateSite }: Interfere
               <button
                 onClick={() => onUpdateSite(site.id, { lawPaperSent: !isSent })}
                 className="px-3 py-1.5 text-xs font-medium rounded-md transition-all"
+                aria-label={isSent ? 'Undo law paper sent' : 'Mark law paper as sent'}
                 style={isSent ? {
                   background: 'var(--if-surface-elevated)',
                   color: 'var(--if-text-secondary)',

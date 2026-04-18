@@ -14,8 +14,10 @@ export async function GET(request: NextRequest) {
     if (searchParams.get('hasSource') === 'true') filters.hasSource = true;
     if (searchParams.get('search')) filters.search = searchParams.get('search')!;
     if (searchParams.get('status')) filters.status = searchParams.get('status')!;
-    if (searchParams.get('noiseMin')) filters.noiseMin = parseFloat(searchParams.get('noiseMin')!);
-    if (searchParams.get('noiseMax')) filters.noiseMax = parseFloat(searchParams.get('noiseMax')!);
+    const rawMin = parseFloat(searchParams.get('noiseMin') ?? '');
+    if (!isNaN(rawMin)) filters.noiseMin = rawMin;
+    const rawMax = parseFloat(searchParams.get('noiseMax') ?? '');
+    if (!isNaN(rawMax)) filters.noiseMax = rawMax;
     if (searchParams.get('lawPaperSent')) filters.lawPaperSent = searchParams.get('lawPaperSent')!;
 
     const sites = await fetchInterferenceSites(

@@ -46,7 +46,7 @@ export interface InterferenceFilter {
   noiseMin?: number;
   noiseMax?: number;
   directionMatch?: 'match' | 'mismatch';
-  lawPaperSent?: string; // 'sent' | 'not_sent'
+  lawPaperSent?: 'sent' | 'not_sent';
 }
 
 export interface PropagationOverlay {

@@ -8,6 +8,10 @@ import type { UserLocation } from '@/types/station';
 import { createSectorSVG, siteToSectors, groupSiteSectors, getRankingColor } from '@/utils/sectorMarkers';
 import { calculateEndpoint, validateBearing } from '@/utils/bearingUtils';
 
+function escapeHtml(s: string): string {
+  return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+}
+
 interface MapLibreMapProps {
   sites: InterferenceSite[];
   selectedSite: InterferenceSite | null;
@@ -268,9 +272,9 @@ export default function MapLibreMap({
                 <div style="font-size:12px">
                   <div style="font-weight:600;color:#ef4444;margin-bottom:4px">Interference Source</div>
                   <div style="color:#666">
-                    <div>For: ${site.siteName || site.siteCode || ''}</div>
-                    ${site.sourceLocation1 ? `<div>${site.sourceLocation1}</div>` : ''}
-                    ${site.sourceLocation2 ? `<div>${site.sourceLocation2}</div>` : ''}
+                    <div>For: ${escapeHtml(site.siteName || site.siteCode || '')}</div>
+                    ${site.sourceLocation1 ? `<div>${escapeHtml(site.sourceLocation1)}</div>` : ''}
+                    ${site.sourceLocation2 ? `<div>${escapeHtml(site.sourceLocation2)}</div>` : ''}
                     ${site.estimateDistance != null ? `<div>Distance: ${site.estimateDistance.toFixed(2)} km</div>` : ''}
                   </div>
                 </div>

@@ -150,13 +150,13 @@ export function siteToSectors(direction: number | null): SectorDef[] {
 /**
  * Group interference site records by site_code to reconstruct multi-sector towers.
  */
-export function groupSiteSectors<T extends { siteCode: string | null; direction: number | null; sectorName: string | null }>(
+export function groupSiteSectors<T extends { id?: number; siteCode: string | null; direction: number | null; sectorName: string | null }>(
   sites: T[]
 ): Map<string, { sectors: SectorDef[]; sites: T[] }> {
   const groups = new Map<string, { sectors: SectorDef[]; sites: T[] }>();
 
   for (const site of sites) {
-    const key = site.siteCode ?? `standalone-${Math.random()}`;
+    const key = site.siteCode ?? `standalone-${site.id ?? 'unknown'}`;
     if (!groups.has(key)) {
       groups.set(key, { sectors: [], sites: [] });
     }
