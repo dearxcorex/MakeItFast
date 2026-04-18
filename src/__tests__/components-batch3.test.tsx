@@ -169,10 +169,12 @@ vi.mock('@/components/interference/InterferenceSiteDetail', () => ({
 }));
 
 describe('InterferenceAnalysis', () => {
-  it('renders the Interference Analysis heading', () => {
+  it('renders the summary bar with site counts', () => {
     mockFetch.mockResolvedValue({ json: () => Promise.resolve({ sites: [] }) });
     const { container } = render(<InterferenceAnalysis />);
-    expect(container.textContent).toContain('Interference Analysis');
+    expect(container.textContent).toContain('Sites');
+    expect(container.textContent).toContain('inspected');
+    expect(container.textContent).toContain('critical');
   });
 
   it('renders filter panel by default', () => {

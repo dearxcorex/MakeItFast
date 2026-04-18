@@ -398,10 +398,10 @@ export default function MapLibreMap({
       el.innerHTML = `
         <div style="
           width: 16px; height: 16px;
-          background: #3B82F6;
+          background: #22D3EE;
           border: 3px solid white;
           border-radius: 50%;
-          box-shadow: 0 0 8px rgba(59,130,246,0.5), 0 2px 4px rgba(0,0,0,0.3);
+          box-shadow: 0 0 8px rgba(34,211,238,0.5), 0 2px 4px rgba(0,0,0,0.3);
         "></div>
       `;
 

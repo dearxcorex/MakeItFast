@@ -184,24 +184,24 @@ describe('InterferenceFilterPanel', () => {
     expect(onChange).toHaveBeenCalledWith(expect.objectContaining({ status: 'ยังไม่ตรวจ' }));
   });
 
-  it('shows badge-success class when ตรวจแล้ว status is active', () => {
+  it('shows active class when ตรวจแล้ว status is active', () => {
     const { container } = render(
       <InterferenceFilterPanel filters={{ status: 'ตรวจแล้ว' }} onFiltersChange={vi.fn()} />
     );
     const statusBtn = Array.from(container.querySelectorAll('button')).find(
       (b) => b.textContent?.includes('ตรวจแล้ว') && !b.textContent?.includes('ยังไม่ตรวจ')
     )!;
-    expect(statusBtn.className).toContain('badge-success');
+    expect(statusBtn.className).toContain('active');
   });
 
-  it('shows badge-warning class when ยังไม่ตรวจ status is active', () => {
+  it('shows active class when ยังไม่ตรวจ status is active', () => {
     const { container } = render(
       <InterferenceFilterPanel filters={{ status: 'ยังไม่ตรวจ' }} onFiltersChange={vi.fn()} />
     );
     const statusBtn = Array.from(container.querySelectorAll('button')).find(
       (b) => b.textContent?.includes('ยังไม่ตรวจ')
     )!;
-    expect(statusBtn.className).toContain('badge-warning');
+    expect(statusBtn.className).toContain('active');
   });
 
   it('includes status in clear all filters', () => {

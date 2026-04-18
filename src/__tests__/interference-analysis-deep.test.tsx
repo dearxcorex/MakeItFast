@@ -78,7 +78,7 @@ describe('InterferenceAnalysis - fetchSites', () => {
 
     await waitFor(() => {
       // Should still render without crashing
-      expect(container.textContent).toContain('Interference Analysis');
+      expect(container.textContent).toContain('Sites');
     });
   });
 

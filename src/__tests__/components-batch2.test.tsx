@@ -426,7 +426,7 @@ describe('InterferenceFilterPanel', () => {
         onFiltersChange={vi.fn()}
       />
     );
-    expect(container.textContent).toContain('Clear all filters');
+    expect(container.textContent).toContain('Clear all');
   });
 
   it('does not show Clear all filters when no filters active', () => {
@@ -436,7 +436,7 @@ describe('InterferenceFilterPanel', () => {
         onFiltersChange={vi.fn()}
       />
     );
-    expect(container.textContent).not.toContain('Clear all filters');
+    expect(container.textContent).not.toContain('Clear all');
   });
 
   it('calls onFiltersChange when ranking badge is clicked', () => {

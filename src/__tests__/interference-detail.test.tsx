@@ -154,11 +154,11 @@ describe('InterferenceSiteDetail', () => {
     expect(container.textContent).toContain('Minor');
   });
 
-  it('renders N/A for null ranking', () => {
+  it('hides ranking badge when ranking is null', () => {
     const { container } = render(
       <InterferenceSiteDetail site={makeSite({ ranking: null })} />
     );
-    expect(container.textContent).toContain('N/A');
+    expect(container.querySelector('.if-badge')).toBeNull();
   });
 
   it('hides cellName when null', () => {

@@ -82,10 +82,12 @@ describe('InterferenceAnalysis', () => {
     });
   });
 
-  it('renders heading', async () => {
+  it('renders summary bar', async () => {
     const { container } = render(<InterferenceAnalysis />);
     await waitFor(() => {
-      expect(container.textContent).toContain('Interference Analysis');
+      expect(container.textContent).toContain('Sites');
+      expect(container.textContent).toContain('inspected');
+      expect(container.textContent).toContain('critical');
     });
   });
 
@@ -111,7 +113,7 @@ describe('InterferenceAnalysis', () => {
     const { container } = render(<InterferenceAnalysis />);
     // Should still render without crashing
     await waitFor(() => {
-      expect(container.textContent).toContain('Interference Analysis');
+      expect(container.textContent).toContain('Sites');
     });
   });
 

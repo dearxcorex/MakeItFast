@@ -139,122 +139,153 @@ export default function InterferenceAnalysis({ userLocation, onStatsChange }: In
     }
   }, [selectedSite, fetchSites]);
 
-  return (
-    <div className="flex-1 flex flex-col lg:flex-row gap-4 min-h-0">
-      {/* Left Panel - Filters + Stats (always visible) */}
-      <div className="w-full lg:w-96 flex flex-col gap-3 min-h-0 flex-shrink-0 lg:flex-shrink">
-        <button
-          type="button"
-          data-testid="filter-toggle"
-          onClick={() => setMobileFiltersOpen((v) => !v)}
-          className="flex items-center justify-between w-full lg:pointer-events-none lg:cursor-default"
-          aria-expanded={mobileFiltersOpen}
-          aria-controls="filter-panel-wrapper"
-        >
-          <div className="flex items-center gap-2">
-            <h2 className="font-heading text-lg gradient-text">Interference Analysis</h2>
-            {activeFilterCount > 0 && (
-              <span
-                data-testid="filter-count-badge"
-                className="lg:hidden inline-flex items-center justify-center min-w-[20px] h-5 px-1.5 rounded-full bg-primary text-xs font-bold shadow-sm"
-                style={{ color: '#ffffff', WebkitTextFillColor: '#ffffff' }}
-              >
-                {activeFilterCount}
-              </span>
-            )}
-          </div>
-          <svg
-            className={`lg:hidden w-5 h-5 text-muted-foreground transition-transform ${
-              mobileFiltersOpen ? 'rotate-180' : ''
-            }`}
-            fill="none"
-            stroke="currentColor"
-            viewBox="0 0 24 24"
-          >
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-          </svg>
-        </button>
+  const inspectedCount = sites.filter(s => s.status === 'ตรวจแล้ว').length;
+  const criticalCount = sites.filter(s => s.ranking?.toLowerCase() === 'critical').length;
 
-        {/* Desktop: detail panel inline */}
-        {showDetail && selectedSite ? (
-          <div className="hidden lg:flex flex-1 min-h-0 flex-col gap-3">
-            <button
-              onClick={() => setShowDetail(false)}
-              className="text-sm text-muted-foreground hover:text-foreground flex items-center gap-1"
+  return (
+    <div className="interference-theme flex-1 flex flex-col min-h-0">
+      {/* Summary Bar */}
+      <div className="if-summary-bar">
+        <div className="if-summary-item">
+          <span>Sites</span>
+          <span className="if-summary-value">{sites.length}</span>
+        </div>
+        <div className="if-summary-item">
+          <span className="if-summary-dot" style={{ background: 'var(--if-success)' }} />
+          <span className="if-summary-value" style={{ color: 'var(--if-success)' }}>{inspectedCount}</span>
+          <span>inspected</span>
+        </div>
+        <div className="if-summary-item">
+          <span className="if-summary-dot" style={{ background: 'var(--if-critical)' }} />
+          <span className="if-summary-value" style={{ color: 'var(--if-critical)' }}>{criticalCount}</span>
+          <span>critical</span>
+        </div>
+        {activeFilterCount > 0 && (
+          <div className="if-summary-item">
+            <span
+              data-testid="filter-count-badge"
+              className="if-badge"
+              style={{ background: 'var(--if-accent-muted)', color: 'var(--if-accent)' }}
             >
-              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
-              </svg>
-              Back to filters
-            </button>
-            <div className="flex-1 overflow-y-auto space-y-3 scrollbar-stable">
-              <InterferenceSiteDetail site={selectedSite} onUpdateSite={handleUpdateSite} />
-              <CloudRFControls
-                site={selectedSite}
-                onResult={handlePropagationResult}
-                onClearOverlays={handleClearOverlays}
-                overlayCount={propagationOverlays.length}
-              />
-            </div>
-          </div>
-        ) : (
-          <div
-            id="filter-panel-wrapper"
-            data-testid="filter-panel-wrapper"
-            className={`${mobileFiltersOpen ? 'block max-h-[55vh] overflow-y-auto' : 'hidden'} lg:block lg:max-h-none lg:overflow-visible`}
-          >
-            <InterferenceFilterPanel filters={filters} onFiltersChange={setFilters} directionStats={directionStats} onRefreshSites={fetchSites} />
+              {activeFilterCount} filter{activeFilterCount > 1 ? 's' : ''}
+            </span>
           </div>
         )}
       </div>
 
-      {/* Right Panel - Map */}
-      <div className="flex-1 relative min-h-[300px]">
-        <div className="absolute inset-0 rounded-2xl overflow-hidden glass-card">
-          <InterferenceMap
-            sites={displaySites}
-            selectedSite={selectedSite}
-            onSiteSelect={handleSiteSelect}
-            propagationOverlays={propagationOverlays}
-            flyToSite={flyToSite}
-            userLocation={userLocation}
-          />
-        </div>
+      {/* Main Content */}
+      <div className="flex-1 flex flex-col lg:flex-row min-h-0">
+        {/* Left Panel — Compact Filter Sidebar */}
+        <div className="w-full lg:w-72 flex flex-col min-h-0 flex-shrink-0 lg:flex-shrink-0 if-panel">
+          <button
+            type="button"
+            data-testid="filter-toggle"
+            onClick={() => setMobileFiltersOpen((v) => !v)}
+            className="flex items-center justify-between w-full lg:hidden mb-2"
+          >
+            <span className="if-panel-heading" style={{ marginBottom: 0 }}>Filters</span>
+            <svg
+              className={`w-4 h-4 transition-transform ${mobileFiltersOpen ? 'rotate-180' : ''}`}
+              style={{ color: 'var(--if-text-tertiary)' }}
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+            </svg>
+          </button>
 
-        {/* Mobile: bottom sheet overlay on top of map */}
-        {showDetail && selectedSite && (
-          <div className="lg:hidden absolute inset-x-0 bottom-0 z-[1000] max-h-[60vh] flex flex-col bg-background/95 backdrop-blur-md rounded-t-2xl shadow-2xl border-t border-border/50">
-            {/* Drag handle + close */}
-            <div className="flex items-center justify-between px-4 py-2 border-b border-border/30 flex-shrink-0">
-              <div className="flex items-center gap-2">
-                <div className="w-8 h-1 bg-muted-foreground/30 rounded-full" />
-                <span className="text-xs font-medium text-foreground truncate max-w-[200px]">
-                  {selectedSite.siteName || selectedSite.siteCode || `Site #${selectedSite.id}`}
-                </span>
-              </div>
+          {/* Desktop: detail panel inline */}
+          {showDetail && selectedSite ? (
+            <div className="hidden lg:flex flex-1 min-h-0 flex-col gap-2">
               <button
                 onClick={() => setShowDetail(false)}
-                className="p-1.5 rounded-lg hover:bg-secondary/50 transition-colors"
+                className="text-xs flex items-center gap-1 mb-1"
+                style={{ color: 'var(--if-text-tertiary)' }}
               >
-                <svg className="w-5 h-5 text-muted-foreground" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
                 </svg>
+                Back to filters
               </button>
+              <div className="flex-1 overflow-y-auto space-y-3 scrollbar-stable">
+                <InterferenceSiteDetail site={selectedSite} onUpdateSite={handleUpdateSite} />
+                <CloudRFControls
+                  site={selectedSite}
+                  onResult={handlePropagationResult}
+                  onClearOverlays={handleClearOverlays}
+                  overlayCount={propagationOverlays.length}
+                />
+              </div>
             </div>
-            {/* Scrollable content */}
-            <div className="flex-1 overflow-y-auto p-3 space-y-3">
-              <InterferenceSiteDetail site={selectedSite} onUpdateSite={handleUpdateSite} />
-              <CloudRFControls
-                site={selectedSite}
-                onResult={handlePropagationResult}
-                onClearOverlays={handleClearOverlays}
-                overlayCount={propagationOverlays.length}
-              />
+          ) : (
+            <div
+              id="filter-panel-wrapper"
+              data-testid="filter-panel-wrapper"
+              className={`${mobileFiltersOpen ? 'block max-h-[55vh] overflow-y-auto' : 'hidden'} lg:block lg:max-h-none lg:overflow-visible`}
+            >
+              <InterferenceFilterPanel filters={filters} onFiltersChange={setFilters} directionStats={directionStats} onRefreshSites={fetchSites} />
             </div>
-          </div>
-        )}
-      </div>
+          )}
+        </div>
 
+        {/* Right Panel — Map (dominant) */}
+        <div className="flex-1 relative min-h-[300px]">
+          <div className="absolute inset-0">
+            <InterferenceMap
+              sites={displaySites}
+              selectedSite={selectedSite}
+              onSiteSelect={handleSiteSelect}
+              propagationOverlays={propagationOverlays}
+              flyToSite={flyToSite}
+              userLocation={userLocation}
+            />
+          </div>
+
+          {/* Mobile: bottom sheet overlay on top of map */}
+          {showDetail && selectedSite && (
+            <div className="lg:hidden absolute inset-x-0 bottom-0 z-[1000] max-h-[60vh] flex flex-col"
+              style={{ background: 'var(--if-surface)', boxShadow: '0 -4px 24px rgba(0,0,0,0.5)' }}
+            >
+              {/* Header bar */}
+              <div className="flex items-center justify-between px-4 py-3 flex-shrink-0" style={{ borderBottom: '1px solid var(--if-border)' }}>
+                <div className="flex items-center gap-3 min-w-0 flex-1">
+                  {selectedSite.ranking && (
+                    <span className={`if-badge ${
+                      selectedSite.ranking.toLowerCase() === 'critical' ? 'if-badge-critical' :
+                      selectedSite.ranking.toLowerCase() === 'major' ? 'if-badge-major' : 'if-badge-minor'
+                    }`}>
+                      {selectedSite.ranking}
+                    </span>
+                  )}
+                  <span className="text-sm font-medium truncate" style={{ color: 'var(--if-text-primary)', fontFamily: "'Prompt', system-ui" }}>
+                    {selectedSite.siteName || selectedSite.siteCode || `Site #${selectedSite.id}`}
+                  </span>
+                </div>
+                <button
+                  onClick={() => setShowDetail(false)}
+                  className="p-2 rounded-md transition-colors flex-shrink-0"
+                  style={{ color: 'var(--if-text-tertiary)', background: 'var(--if-surface-elevated)' }}
+                >
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                  </svg>
+                </button>
+              </div>
+              {/* Content */}
+              <div className="flex-1 overflow-y-auto p-4 space-y-4">
+                <InterferenceSiteDetail site={selectedSite} onUpdateSite={handleUpdateSite} />
+                <CloudRFControls
+                  site={selectedSite}
+                  onResult={handlePropagationResult}
+                  onClearOverlays={handleClearOverlays}
+                  overlayCount={propagationOverlays.length}
+                />
+              </div>
+            </div>
+          )}
+        </div>
+      </div>
     </div>
   );
 }

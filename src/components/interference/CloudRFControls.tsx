@@ -126,15 +126,14 @@ export default function CloudRFControls({ site, onResult, onClearOverlays, overl
   };
 
   return (
-    <div className="glass-card p-3 space-y-3">
+    <div className="space-y-3 pt-3" style={{ borderTop: '1px solid var(--if-border, #2A2F3E)' }}>
       <div className="flex items-center justify-between">
-        <div className="text-xs font-medium text-muted-foreground uppercase tracking-wider">
-          CloudRF Analysis
-        </div>
+        <div className="if-filter-label" style={{ marginBottom: 0 }}>CloudRF Analysis</div>
         {overlayCount > 0 && onClearOverlays && (
           <button
             onClick={onClearOverlays}
-            className="text-[10px] text-destructive hover:text-destructive/80 transition-colors"
+            className="text-[10px] transition-colors"
+            style={{ color: '#F87171' }}
           >
             Clear {overlayCount} overlay{overlayCount > 1 ? 's' : ''}
           </button>
@@ -143,11 +142,11 @@ export default function CloudRFControls({ site, onResult, onClearOverlays, overl
 
       {/* Deployment type selector */}
       <div>
-        <label className="text-[10px] text-muted-foreground">Deployment Type</label>
+        <label className="text-[10px]" style={{ color: 'var(--if-text-tertiary, #555B6E)' }}>Deployment Type</label>
         <select
           value={deploymentType}
           onChange={(e) => setDeploymentType(e.target.value as DeploymentType)}
-          className="w-full px-2 py-1 rounded bg-input text-foreground text-xs border border-border/50"
+          className="if-select" style={{ padding: '6px 10px', fontSize: '0.75rem' }}
         >
           <option value="macro_urban">Macro Urban (30m, 20W, 17dBi)</option>
           <option value="macro_suburban">Macro Suburban (45m, 20W, 18dBi)</option>
@@ -158,40 +157,40 @@ export default function CloudRFControls({ site, onResult, onClearOverlays, overl
       {/* Parameter overrides */}
       <div className="grid grid-cols-2 gap-2">
         <div>
-          <label className="text-[10px] text-muted-foreground">Power (W)</label>
+          <label className="text-[10px]" style={{ color: 'var(--if-text-tertiary, #555B6E)' }}>Power (W)</label>
           <input
             type="number"
             value={power}
             onChange={(e) => setPower(Number(e.target.value))}
-            className="w-full px-2 py-1 rounded bg-input text-foreground text-xs border border-border/50"
+            className="if-select" style={{ padding: '6px 10px', fontSize: '0.75rem' }}
             min={0.001}
             max={200}
           />
         </div>
         <div>
-          <label className="text-[10px] text-muted-foreground">Height (m)</label>
+          <label className="text-[10px]" style={{ color: 'var(--if-text-tertiary, #555B6E)' }}>Height (m)</label>
           <input
             type="number"
             value={height}
             onChange={(e) => setHeight(Number(e.target.value))}
-            className="w-full px-2 py-1 rounded bg-input text-foreground text-xs border border-border/50"
+            className="if-select" style={{ padding: '6px 10px', fontSize: '0.75rem' }}
             min={1}
             max={200}
           />
         </div>
         <div>
-          <label className="text-[10px] text-muted-foreground">Radius (km)</label>
+          <label className="text-[10px]" style={{ color: 'var(--if-text-tertiary, #555B6E)' }}>Radius (km)</label>
           <input
             type="number"
             value={radius}
             onChange={(e) => setRadius(Number(e.target.value))}
-            className="w-full px-2 py-1 rounded bg-input text-foreground text-xs border border-border/50"
+            className="if-select" style={{ padding: '6px 10px', fontSize: '0.75rem' }}
             min={0.1}
             max={100}
           />
         </div>
         <div>
-          <label className="text-[10px] text-muted-foreground">Azimuth ({azimuth}°)</label>
+          <label className="text-[10px]" style={{ color: 'var(--if-text-tertiary, #555B6E)' }}>Azimuth ({azimuth}°)</label>
           <input
             type="range"
             value={azimuth}
@@ -207,7 +206,8 @@ export default function CloudRFControls({ site, onResult, onClearOverlays, overl
       {/* Advanced Settings */}
       <button
         onClick={() => setShowAdvanced(!showAdvanced)}
-        className="w-full text-[10px] text-muted-foreground hover:text-foreground transition-colors flex items-center gap-1"
+        className="w-full text-[10px] transition-colors flex items-center gap-1"
+        style={{ color: 'var(--if-text-tertiary, #555B6E)' }}
       >
         <svg className={`w-3 h-3 transition-transform ${showAdvanced ? 'rotate-90' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
@@ -215,22 +215,22 @@ export default function CloudRFControls({ site, onResult, onClearOverlays, overl
         Advanced Settings
       </button>
       {showAdvanced && (
-        <div className="space-y-2 p-2 rounded-lg bg-muted/30 border border-border/30">
+        <div className="space-y-2 p-2 rounded-lg" style={{ background: 'var(--if-bg, #0F1117)', border: '1px solid var(--if-border, #2A2F3E)' }}>
           <div className="grid grid-cols-2 gap-2">
             <div>
-              <label className="text-[10px] text-muted-foreground">Antenna Gain (dBi)</label>
+              <label className="text-[10px]" style={{ color: 'var(--if-text-tertiary, #555B6E)' }}>Antenna Gain (dBi)</label>
               <input
                 type="number"
                 value={antennaGain}
                 onChange={(e) => setAntennaGain(Number(e.target.value))}
-                className="w-full px-2 py-1 rounded bg-input text-foreground text-xs border border-border/50"
+                className="if-select" style={{ padding: '6px 10px', fontSize: '0.75rem' }}
                 min={0}
                 max={30}
                 step={0.5}
               />
             </div>
             <div>
-              <label className="text-[10px] text-muted-foreground">Downtilt ({downtilt}°)</label>
+              <label className="text-[10px]" style={{ color: 'var(--if-text-tertiary, #555B6E)' }}>Downtilt ({downtilt}°)</label>
               <input
                 type="range"
                 value={downtilt}
@@ -242,7 +242,7 @@ export default function CloudRFControls({ site, onResult, onClearOverlays, overl
               />
             </div>
             <div>
-              <label className="text-[10px] text-muted-foreground">H-Beamwidth ({hBeamwidth}°)</label>
+              <label className="text-[10px]" style={{ color: 'var(--if-text-tertiary, #555B6E)' }}>H-Beamwidth ({hBeamwidth}°)</label>
               <input
                 type="range"
                 value={hBeamwidth}
@@ -255,11 +255,11 @@ export default function CloudRFControls({ site, onResult, onClearOverlays, overl
             </div>
           </div>
           <div>
-            <label className="text-[10px] text-muted-foreground">Propagation Model</label>
+            <label className="text-[10px]" style={{ color: 'var(--if-text-tertiary, #555B6E)' }}>Propagation Model</label>
             <select
               value={propagationModel}
               onChange={(e) => setPropagationModel(Number(e.target.value))}
-              className="w-full px-2 py-1 rounded bg-input text-foreground text-xs border border-border/50"
+              className="if-select" style={{ padding: '6px 10px', fontSize: '0.75rem' }}
             >
               {Object.entries(PROPAGATION_MODELS).map(([value, label]) => (
                 <option key={value} value={value}>{label}</option>
@@ -291,9 +291,9 @@ export default function CloudRFControls({ site, onResult, onClearOverlays, overl
 
       {/* Scan Direction hint for sites without source */}
       {site.direction != null && !site.sourceLat && !site.sourceLong && (
-        <div className="p-2 rounded-lg bg-blue-500/10 border border-blue-500/20 text-xs text-blue-400">
+        <div className="p-2 rounded-lg text-xs" style={{ background: 'rgba(34, 211, 238, 0.06)', border: '1px solid rgba(34, 211, 238, 0.15)', color: 'var(--if-accent, #22D3EE)' }}>
           <div className="font-medium mb-1">No known source location</div>
-          <div className="text-muted-foreground">
+          <div style={{ color: 'var(--if-text-secondary, #8B92A5)' }}>
             Run propagation along antenna direction ({site.direction}°) to identify potential interference sources.
           </div>
         </div>
@@ -304,7 +304,8 @@ export default function CloudRFControls({ site, onResult, onClearOverlays, overl
         <button
           onClick={() => handleCalculate()}
           disabled={loading || !site.lat || !site.long}
-          className="flex-1 px-3 py-2 rounded-lg bg-primary text-primary-foreground text-xs font-medium hover:bg-primary/90 disabled:opacity-50 transition-colors"
+          className="flex-1 px-3 py-2 rounded-md text-xs font-medium disabled:opacity-50 transition-colors"
+          style={{ background: 'var(--if-accent, #22D3EE)', color: '#0F1117' }}
         >
           {loading ? 'Calculating...' : 'Run Propagation'}
         </button>
@@ -315,7 +316,8 @@ export default function CloudRFControls({ site, onResult, onClearOverlays, overl
               handleCalculate(site.direction!); // uses aziOverride, not stale state
             }}
             disabled={loading || !site.lat || !site.long}
-            className="flex-1 px-3 py-2 rounded-lg bg-blue-600 text-white text-xs font-medium hover:bg-blue-700 disabled:opacity-50 transition-colors"
+            className="flex-1 px-3 py-2 rounded-md text-xs font-medium disabled:opacity-50 transition-colors"
+            style={{ background: 'var(--if-surface-elevated, #232838)', color: 'var(--if-accent, #22D3EE)', border: '1px solid rgba(34, 211, 238, 0.3)' }}
           >
             {loading ? 'Scanning...' : 'Scan Direction'}
           </button>
@@ -324,7 +326,8 @@ export default function CloudRFControls({ site, onResult, onClearOverlays, overl
           <button
             onClick={handlePathAnalysis}
             disabled={pathLoading}
-            className="flex-1 px-3 py-2 rounded-lg bg-accent text-accent-foreground text-xs font-medium hover:bg-accent/90 disabled:opacity-50 transition-colors"
+            className="flex-1 px-3 py-2 rounded-md text-xs font-medium disabled:opacity-50 transition-colors"
+            style={{ background: 'var(--if-surface-elevated, #232838)', color: 'var(--if-text-primary, #F0F0F0)', border: '1px solid var(--if-border, #2A2F3E)' }}
           >
             {pathLoading ? 'Analyzing...' : 'Point-to-Point'}
           </button>
@@ -333,32 +336,32 @@ export default function CloudRFControls({ site, onResult, onClearOverlays, overl
 
       {/* Error messages */}
       {error && (
-        <div className="p-2 rounded-lg bg-destructive/10 border border-destructive/20 text-xs text-destructive">
+        <div className="p-2 rounded-lg text-xs" style={{ background: 'rgba(239, 68, 68, 0.08)', border: '1px solid rgba(239, 68, 68, 0.15)', color: '#F87171' }}>
           {error}
         </div>
       )}
       {pathError && (
-        <div className="p-2 rounded-lg bg-destructive/10 border border-destructive/20 text-xs text-destructive">
+        <div className="p-2 rounded-lg text-xs" style={{ background: 'rgba(239, 68, 68, 0.08)', border: '1px solid rgba(239, 68, 68, 0.15)', color: '#F87171' }}>
           {pathError}
         </div>
       )}
 
       {/* Path result */}
       {pathResult && (
-        <div className="p-2 rounded-lg bg-accent/10 border border-accent/20 text-xs">
-          <div className="font-medium text-accent mb-1">Path Analysis Result</div>
+        <div className="p-2 rounded-lg text-xs" style={{ background: 'rgba(34, 211, 238, 0.06)', border: '1px solid rgba(34, 211, 238, 0.15)' }}>
+          <div className="font-medium mb-1" style={{ color: 'var(--if-accent, #22D3EE)' }}>Path Analysis Result</div>
           <div className="grid grid-cols-3 gap-2 text-center">
             <div>
-              <div className="font-bold text-foreground">{pathResult.pathLoss?.toFixed(1) ?? 'N/A'}</div>
-              <div className="text-muted-foreground">Path Loss (dB)</div>
+              <div className="font-bold" style={{ color: 'var(--if-text-primary)', fontFamily: "'JetBrains Mono', monospace" }}>{pathResult.pathLoss?.toFixed(1) ?? 'N/A'}</div>
+              <div style={{ color: 'var(--if-text-tertiary)', fontSize: '9px' }}>Path Loss (dB)</div>
             </div>
             <div>
-              <div className="font-bold text-foreground">{pathResult.signalLevel?.toFixed(1) ?? 'N/A'}</div>
-              <div className="text-muted-foreground">Signal (dBm)</div>
+              <div className="font-bold" style={{ color: 'var(--if-text-primary)', fontFamily: "'JetBrains Mono', monospace" }}>{pathResult.signalLevel?.toFixed(1) ?? 'N/A'}</div>
+              <div style={{ color: 'var(--if-text-tertiary)', fontSize: '9px' }}>Signal (dBm)</div>
             </div>
             <div>
-              <div className="font-bold text-foreground">{pathResult.distance?.toFixed(2) ?? 'N/A'}</div>
-              <div className="text-muted-foreground">Dist. (km)</div>
+              <div className="font-bold" style={{ color: 'var(--if-text-primary)', fontFamily: "'JetBrains Mono', monospace" }}>{pathResult.distance?.toFixed(2) ?? 'N/A'}</div>
+              <div style={{ color: 'var(--if-text-tertiary)', fontSize: '9px' }}>Dist. (km)</div>
             </div>
           </div>
         </div>

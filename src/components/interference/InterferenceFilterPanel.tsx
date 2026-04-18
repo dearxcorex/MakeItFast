@@ -5,7 +5,7 @@ import type { InterferenceFilter } from '@/types/interference';
 import KmlImportDialog from './KmlImportDialog';
 
 interface DirectionMatchStats {
-  total: number;    // sites with both direction and source
+  total: number;
   match: number;
   mismatch: number;
 }
@@ -24,7 +24,6 @@ export default function InterferenceFilterPanel({
   onRefreshSites,
 }: InterferenceFilterPanelProps) {
   const [changwats, setChangwats] = useState<string[]>([]);
-  const [rankings] = useState<string[]>(['Critical', 'Major', 'Minor']);
 
   useEffect(() => {
     fetch('/api/interference/stats')
@@ -37,132 +36,86 @@ export default function InterferenceFilterPanel({
       .catch(console.error);
   }, []);
 
-  const rankingColor = (r: string) => {
-    switch (r.toLowerCase()) {
-      case 'critical': return 'badge-error';
-      case 'major': return 'badge-warning';
-      case 'minor': return 'badge-peach';
-      default: return 'badge-info';
-    }
-  };
+  const hasActiveFilters = Object.values(filters).some(Boolean);
 
   return (
-    <div className="glass-card p-3 space-y-3">
+    <div className="space-y-4">
       {/* Province */}
-      <select
-        value={filters.changwat || ''}
-        onChange={(e) => onFiltersChange({ ...filters, changwat: e.target.value || undefined })}
-        className="w-full px-2 py-1.5 rounded-lg bg-input text-foreground text-xs border border-border/50"
-      >
-        <option value="">All Provinces</option>
-        {changwats.map((c) => (
-          <option key={c} value={c}>{c}</option>
-        ))}
-      </select>
+      <div className="if-filter-group">
+        <div className="if-filter-label">Province</div>
+        <select
+          value={filters.changwat || ''}
+          onChange={(e) => onFiltersChange({ ...filters, changwat: e.target.value || undefined })}
+          className="if-select"
+        >
+          <option value="">All Provinces</option>
+          {changwats.map((c) => (
+            <option key={c} value={c}>{c}</option>
+          ))}
+        </select>
+      </div>
 
-      {/* Ranking badges + source toggle + status filter */}
-      <div className="flex items-center gap-2 flex-wrap">
-        {rankings.map((r) => (
+      {/* Ranking */}
+      <div className="if-filter-group">
+        <div className="if-filter-label">Ranking</div>
+        <div className="flex items-center gap-1.5 flex-wrap">
+          {['Critical', 'Major', 'Minor'].map((r) => {
+            const isActive = filters.ranking === r;
+            const pillClass = r === 'Critical' ? 'if-pill-critical' : r === 'Major' ? 'if-pill-warning' : '';
+            return (
+              <button
+                key={r}
+                onClick={() => onFiltersChange({ ...filters, ranking: isActive ? undefined : r })}
+                className={`if-pill ${pillClass} ${isActive ? 'active' : ''}`}
+              >
+                {r}
+              </button>
+            );
+          })}
           <button
-            key={r}
-            onClick={() =>
-              onFiltersChange({
-                ...filters,
-                ranking: filters.ranking === r ? undefined : r,
-              })
-            }
-            className={`px-2 py-0.5 rounded-full text-xs font-medium transition-all ${
-              filters.ranking === r
-                ? rankingColor(r)
-                : 'bg-secondary text-muted-foreground'
-            }`}
+            onClick={() => onFiltersChange({ ...filters, hasSource: !filters.hasSource })}
+            className={`if-pill ${filters.hasSource ? 'active' : ''}`}
           >
-            {r}
+            Has Source
           </button>
-        ))}
-        <button
-          onClick={() =>
-            onFiltersChange({ ...filters, hasSource: !filters.hasSource })
-          }
-          className={`px-2 py-0.5 rounded-full text-xs font-medium transition-all ${
-            filters.hasSource
-              ? 'badge-purple'
-              : 'bg-secondary text-muted-foreground'
-          }`}
-        >
-          Has Source
-        </button>
+        </div>
       </div>
 
-      {/* Status filter */}
-      <div className="flex items-center gap-2">
-        <span className="text-xs text-muted-foreground">Status:</span>
-        <button
-          onClick={() =>
-            onFiltersChange({
-              ...filters,
-              status: filters.status === 'ตรวจแล้ว' ? undefined : 'ตรวจแล้ว',
-            })
-          }
-          className={`px-2 py-0.5 rounded-full text-xs font-medium transition-all ${
-            filters.status === 'ตรวจแล้ว'
-              ? 'badge-success'
-              : 'bg-secondary text-muted-foreground'
-          }`}
-        >
-          ✅ ตรวจแล้ว
-        </button>
-        <button
-          onClick={() =>
-            onFiltersChange({
-              ...filters,
-              status: filters.status === 'ยังไม่ตรวจ' ? undefined : 'ยังไม่ตรวจ',
-            })
-          }
-          className={`px-2 py-0.5 rounded-full text-xs font-medium transition-all ${
-            filters.status === 'ยังไม่ตรวจ'
-              ? 'badge-warning'
-              : 'bg-secondary text-muted-foreground'
-          }`}
-        >
-          ⏳ ยังไม่ตรวจ
-        </button>
+      {/* Status */}
+      <div className="if-filter-group">
+        <div className="if-filter-label">Status</div>
+        <div className="flex items-center gap-1.5">
+          <button
+            onClick={() => onFiltersChange({ ...filters, status: filters.status === 'ตรวจแล้ว' ? undefined : 'ตรวจแล้ว' })}
+            className={`if-pill if-pill-success ${filters.status === 'ตรวจแล้ว' ? 'active' : ''}`}
+          >
+            ตรวจแล้ว
+          </button>
+          <button
+            onClick={() => onFiltersChange({ ...filters, status: filters.status === 'ยังไม่ตรวจ' ? undefined : 'ยังไม่ตรวจ' })}
+            className={`if-pill if-pill-warning ${filters.status === 'ยังไม่ตรวจ' ? 'active' : ''}`}
+          >
+            ยังไม่ตรวจ
+          </button>
+        </div>
       </div>
 
-      {/* Direction match filter */}
+      {/* Direction Validation */}
       {directionStats && directionStats.total > 0 && (
-        <div>
-          <div className="text-[10px] text-muted-foreground mb-1">
-            Direction Validation ({directionStats.match}/{directionStats.total} match)
+        <div className="if-filter-group">
+          <div className="if-filter-label">
+            Direction ({directionStats.match}/{directionStats.total} match)
           </div>
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-1.5">
             <button
-              onClick={() =>
-                onFiltersChange({
-                  ...filters,
-                  directionMatch: filters.directionMatch === 'match' ? undefined : 'match',
-                })
-              }
-              className={`px-2 py-0.5 rounded-full text-xs font-medium transition-all ${
-                filters.directionMatch === 'match'
-                  ? 'bg-green-500/20 text-green-500 border border-green-500/30'
-                  : 'bg-secondary text-muted-foreground'
-              }`}
+              onClick={() => onFiltersChange({ ...filters, directionMatch: filters.directionMatch === 'match' ? undefined : 'match' })}
+              className={`if-pill if-pill-success ${filters.directionMatch === 'match' ? 'active' : ''}`}
             >
               Match ({directionStats.match})
             </button>
             <button
-              onClick={() =>
-                onFiltersChange({
-                  ...filters,
-                  directionMatch: filters.directionMatch === 'mismatch' ? undefined : 'mismatch',
-                })
-              }
-              className={`px-2 py-0.5 rounded-full text-xs font-medium transition-all ${
-                filters.directionMatch === 'mismatch'
-                  ? 'bg-red-500/20 text-red-500 border border-red-500/30'
-                  : 'bg-secondary text-muted-foreground'
-              }`}
+              onClick={() => onFiltersChange({ ...filters, directionMatch: filters.directionMatch === 'mismatch' ? undefined : 'mismatch' })}
+              className={`if-pill if-pill-critical ${filters.directionMatch === 'mismatch' ? 'active' : ''}`}
             >
               Mismatch ({directionStats.mismatch})
             </button>
@@ -170,15 +123,18 @@ export default function InterferenceFilterPanel({
         </div>
       )}
 
-      {/* Import KML + Clear filters */}
-      <div className="flex items-center justify-between">
+      {/* Actions */}
+      <div className="flex items-center justify-between pt-1" style={{ borderTop: '1px solid var(--if-border)' }}>
         <KmlImportDialog onImportComplete={() => onRefreshSites?.()} />
-        {Object.values(filters).some(Boolean) && (
+        {hasActiveFilters && (
           <button
             onClick={() => onFiltersChange({})}
-            className="text-xs text-muted-foreground hover:text-foreground"
+            className="text-xs transition-colors"
+            style={{ color: 'var(--if-text-tertiary)' }}
+            onMouseEnter={(e) => (e.currentTarget.style.color = 'var(--if-accent)')}
+            onMouseLeave={(e) => (e.currentTarget.style.color = 'var(--if-text-tertiary)')}
           >
-            Clear all filters
+            Clear all
           </button>
         )}
       </div>

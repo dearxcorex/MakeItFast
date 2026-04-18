@@ -53,39 +53,7 @@ export default function AppHeader({ filteredStations, userLocation, activeTab, i
 
         {/* Right: Desktop Stats */}
         <div className="hidden lg:flex items-center gap-3">
-          {isInterference && interferenceStats ? (
-            <>
-              <div className="flex items-center gap-2 px-3 py-2 glass-card rounded-xl">
-                <div className="text-center">
-                  <div className="text-lg font-bold text-primary">{interferenceStats.total}</div>
-                  <div className="text-[10px] text-muted-foreground uppercase tracking-wider">Sites</div>
-                </div>
-              </div>
-
-              <div className="flex items-center gap-2 px-3 py-2 glass-card rounded-xl">
-                <div className="flex items-center gap-1.5">
-                  <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse" />
-                  <span className="text-sm font-bold text-green-400">{interferenceStats.inspected}</span>
-                </div>
-                <div className="w-px h-4 bg-border" />
-                <div className="flex items-center gap-1.5">
-                  <div className="w-2 h-2 bg-amber-500 rounded-full" />
-                  <span className="text-sm font-bold text-amber-400">{interferenceStats.pending}</span>
-                </div>
-              </div>
-
-              <div className="flex items-center gap-1.5 px-3 py-2 glass-card rounded-xl">
-                <div className="w-2.5 h-2.5 rounded-full bg-red-500" title="Critical" />
-                <span className="text-xs font-bold text-red-400">{interferenceStats.critical}</span>
-                <div className="w-px h-4 bg-border mx-0.5" />
-                <div className="w-2.5 h-2.5 rounded-full bg-amber-500" title="Major" />
-                <span className="text-xs font-bold text-amber-400">{interferenceStats.major}</span>
-                <div className="w-px h-4 bg-border mx-0.5" />
-                <div className="w-2.5 h-2.5 rounded-full bg-yellow-400" title="Minor" />
-                <span className="text-xs font-bold text-yellow-400">{interferenceStats.minor}</span>
-              </div>
-            </>
-          ) : !isInterference && (
+          {!isInterference && activeTab !== 'analytics' && (
             <>
               <div className="flex items-center gap-2 px-3 py-2 glass-card rounded-xl">
                 <div className="text-center">

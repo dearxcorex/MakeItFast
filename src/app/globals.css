@@ -2,24 +2,24 @@
 @import 'leaflet/dist/leaflet.css';
 
 :root {
-  /* Light Theme */
+  /* Light Theme — Unified: Cyan primary + Gold accent */
   --background: #F8FAFC;
   --foreground: #0F172A;
   --card: rgba(255, 255, 255, 0.9);
   --card-foreground: #0F172A;
-  --primary: #F59E0B;
+  --primary: #0E9AA7;
   --primary-foreground: #FFFFFF;
   --secondary: rgba(241, 245, 249, 0.8);
   --secondary-foreground: #334155;
   --muted: rgba(241, 245, 249, 0.6);
   --muted-foreground: #64748B;
-  --accent: #8B5CF6;
+  --accent: #D4A017;
   --accent-foreground: #FFFFFF;
   --destructive: #EF4444;
   --destructive-foreground: #FFFFFF;
   --border: rgba(148, 163, 184, 0.3);
   --input: rgba(241, 245, 249, 0.8);
-  --ring: #F59E0B;
+  --ring: #0E9AA7;
   --sidebar-bg: rgba(255, 255, 255, 0.95);
   --sidebar-border: rgba(148, 163, 184, 0.2);
 
@@ -60,24 +60,24 @@
 }
 
 .dark {
-  /* Dark mode */
+  /* Dark mode — Unified: Cyan primary + Gold accent */
   --background: #0F172A;
   --foreground: #F8FAFC;
   --card: rgba(30, 41, 59, 0.8);
   --card-foreground: #F8FAFC;
-  --primary: #F59E0B;
+  --primary: #22D3EE;
   --primary-foreground: #0F172A;
   --secondary: rgba(51, 65, 85, 0.6);
   --secondary-foreground: #F8FAFC;
   --muted: rgba(51, 65, 85, 0.4);
   --muted-foreground: #94A3B8;
-  --accent: #8B5CF6;
+  --accent: #D4A017;
   --accent-foreground: #F8FAFC;
   --destructive: #EF4444;
   --destructive-foreground: #F8FAFC;
   --border: rgba(148, 163, 184, 0.2);
   --input: rgba(51, 65, 85, 0.6);
-  --ring: #F59E0B;
+  --ring: #22D3EE;
   --sidebar-bg: rgba(15, 23, 42, 0.95);
   --sidebar-border: rgba(148, 163, 184, 0.1);
 
@@ -176,22 +176,22 @@ h1, h2, h3, .font-heading {
   box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
 }
 
-/* Gold Glow Effect */
+/* Cyan Glow Effect */
 .glow-gold {
-  box-shadow: 0 0 16px rgba(245, 158, 11, 0.25);
+  box-shadow: 0 0 16px rgba(14, 154, 167, 0.25);
 }
 
 .dark .glow-gold {
-  box-shadow: 0 0 20px rgba(245, 158, 11, 0.3);
+  box-shadow: 0 0 20px rgba(34, 211, 238, 0.3);
 }
 
-/* Purple Glow Effect */
+/* Gold Glow Effect */
 .glow-purple {
-  box-shadow: 0 0 16px rgba(139, 92, 246, 0.25);
+  box-shadow: 0 0 16px rgba(212, 160, 23, 0.25);
 }
 
 .dark .glow-purple {
-  box-shadow: 0 0 20px rgba(139, 92, 246, 0.3);
+  box-shadow: 0 0 20px rgba(212, 160, 23, 0.3);
 }
 
 /* Gradient Text */
@@ -1079,11 +1079,212 @@ input[type="checkbox"][role="switch"]:focus {
   color: var(--tt-brown);
 }
 
+/* ============================================
+   Interference Tab — Dark Monitoring Theme
+   ============================================ */
+
+/* Light mode */
+.interference-theme {
+  --if-bg: #F8FAFC;
+  --if-surface: #FFFFFF;
+  --if-surface-elevated: #F1F5F9;
+  --if-border: #E2E8F0;
+  --if-text-primary: #0F172A;
+  --if-text-secondary: #64748B;
+  --if-text-tertiary: #94A3B8;
+  --if-accent: #0E9AA7;
+  --if-accent-muted: rgba(14, 154, 167, 0.1);
+  --if-critical: #DC2626;
+  --if-warning: #D97706;
+  --if-success: #16A34A;
+
+  background: var(--if-bg);
+  color: var(--if-text-primary);
+  border-radius: 12px;
+  overflow: hidden;
+}
+
+/* Dark mode */
+.dark .interference-theme {
+  --if-bg: #0F1117;
+  --if-surface: #1A1E2E;
+  --if-surface-elevated: #232838;
+  --if-border: #2A2F3E;
+  --if-text-primary: #F0F0F0;
+  --if-text-secondary: #8B92A5;
+  --if-text-tertiary: #555B6E;
+  --if-accent: #22D3EE;
+  --if-accent-muted: rgba(34, 211, 238, 0.12);
+  --if-critical: #EF4444;
+  --if-warning: #F59E0B;
+  --if-success: #22C55E;
+}
+
+.if-panel {
+  background: var(--if-surface);
+  color: var(--if-text-primary);
+  padding: 14px;
+  overflow-y: auto;
+}
+
+.if-panel-heading {
+  font-family: 'Prompt', 'Inter', system-ui, sans-serif;
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: var(--if-text-secondary);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  margin-bottom: 10px;
+}
+
+.if-summary-bar {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 10px 16px;
+  background: var(--if-surface);
+  border-bottom: 1px solid var(--if-border);
+  font-family: 'Prompt', 'Inter', system-ui, sans-serif;
+  flex-shrink: 0;
+}
+
+.if-summary-item {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.75rem;
+  color: var(--if-text-secondary);
+}
+
+.if-summary-value {
+  font-weight: 700;
+  font-size: 0.875rem;
+  color: var(--if-text-primary);
+  font-family: 'JetBrains Mono', 'SF Mono', monospace;
+}
+
+.if-summary-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.if-filter-group {
+  margin-bottom: 12px;
+}
+
+.if-filter-label {
+  font-size: 0.7rem;
+  font-weight: 500;
+  color: var(--if-text-tertiary);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  margin-bottom: 6px;
+}
+
+.if-pill {
+  display: inline-flex;
+  align-items: center;
+  padding: 4px 10px;
+  border-radius: 6px;
+  font-size: 0.7rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  background: transparent;
+  color: var(--if-text-secondary);
+  border: 1px solid var(--if-border);
+}
+
+.if-pill:hover {
+  background: var(--if-surface-elevated);
+  color: var(--if-text-primary);
+}
+
+.if-pill.active {
+  background: var(--if-accent-muted);
+  color: var(--if-accent);
+  border-color: rgba(34, 211, 238, 0.3);
+}
+
+.if-pill-critical.active {
+  background: rgba(239, 68, 68, 0.12);
+  color: var(--if-critical);
+  border-color: rgba(239, 68, 68, 0.3);
+}
+
+.if-pill-warning.active {
+  background: rgba(245, 158, 11, 0.12);
+  color: var(--if-warning);
+  border-color: rgba(245, 158, 11, 0.3);
+}
+
+.if-pill-success.active {
+  background: rgba(34, 197, 94, 0.12);
+  color: var(--if-success);
+  border-color: rgba(34, 197, 94, 0.3);
+}
+
+.if-select {
+  width: 100%;
+  padding: 8px 10px;
+  border-radius: 6px;
+  border: 1px solid var(--if-border);
+  background: var(--if-bg);
+  color: var(--if-text-primary);
+  font-size: 0.8rem;
+  font-family: 'Prompt', 'Inter', system-ui, sans-serif;
+  cursor: pointer;
+  appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%238B92A5' stroke-width='2'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 10px center;
+}
+
+.if-select:focus {
+  outline: none;
+  border-color: var(--if-accent);
+  box-shadow: 0 0 0 1px var(--if-accent);
+}
+
+.if-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 2px 8px;
+  border-radius: 4px;
+  font-size: 0.65rem;
+  font-weight: 600;
+  font-family: 'JetBrains Mono', 'SF Mono', monospace;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.if-badge-critical {
+  background: rgba(239, 68, 68, 0.15);
+  color: #F87171;
+}
+
+.if-badge-major {
+  background: rgba(245, 158, 11, 0.15);
+  color: #FBBF24;
+}
+
+.if-badge-minor {
+  background: rgba(234, 179, 8, 0.15);
+  color: #FDE047;
+}
+
+.if-badge-inspected {
+  background: rgba(34, 197, 94, 0.15);
+  color: #4ADE80;
+}
+
 /* Location marker styles */
 .location-marker {
   width: 20px;
   height: 20px;
-  background: #4285F4;
+  background: #22D3EE;
   border: 3px solid #ffffff;
   border-radius: 50%;
   box-shadow: 0 2px 6px rgba(0, 0, 0, 0.3);
@@ -1093,7 +1294,7 @@ input[type="checkbox"][role="switch"]:focus {
 .location-pulse {
   width: 40px;
   height: 40px;
-  background: rgba(66, 133, 244, 0.2);
+  background: rgba(34, 211, 238, 0.2);
   border-radius: 50%;
   position: absolute;
   top: -13px;
