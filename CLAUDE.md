@@ -2,6 +2,10 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
+## Wiki (Project Knowledge Base)
+
+A persistent wiki lives at `wiki/`. At session start, read `wiki/index.md` and `tail wiki/log.md` to load accumulated project knowledge. After implementing features or learning something new, update the wiki per `wiki/SCHEMA.md`. See the schema for full rules on ingest, query, lint, and implement operations.
+
 ## Commands
 
 - `npm run dev` - Start dev server with Turbopack at http://localhost:3000

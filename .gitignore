@@ -97,3 +97,6 @@ data_interference/
 
 # Backend folder (separate project)
 /backend/
+
+# LLM Wiki (local knowledge base)
+/wiki/
