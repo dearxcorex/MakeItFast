@@ -101,23 +101,9 @@ export default function AppHeader({ filteredStations, userLocation, activeTab, i
           </button>
         </div>
 
-        {/* Mobile Stats */}
+        {/* Mobile Stats — only show on stations/intermod tabs */}
         <div className="flex lg:hidden items-center gap-2">
-          {isInterference && interferenceStats ? (
-            <>
-              <span className="text-xs font-bold text-primary">{interferenceStats.total}</span>
-              <div className="w-px h-3 bg-border" />
-              <div className="flex items-center gap-1">
-                <div className="w-1.5 h-1.5 bg-green-500 rounded-full" />
-                <span className="text-xs text-green-400">{interferenceStats.inspected}</span>
-              </div>
-              <div className="flex items-center gap-1">
-                <div className="w-1.5 h-1.5 bg-amber-500 rounded-full" />
-                <span className="text-xs text-amber-400">{interferenceStats.pending}</span>
-              </div>
-              <div className="w-px h-3 bg-border" />
-            </>
-          ) : !isInterference && (
+          {!isInterference && activeTab !== 'analytics' && (
             <>
               <span className="text-xs font-bold text-primary">{filteredStations.length}</span>
               <div className="w-px h-3 bg-border" />
