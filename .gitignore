@@ -100,3 +100,8 @@ data_interference/
 
 # LLM Wiki (local knowledge base)
 /wiki/
+
+# Database dumps
+/backup/
+*.sql
+*.dump
