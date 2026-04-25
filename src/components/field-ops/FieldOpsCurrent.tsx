@@ -2,6 +2,7 @@
 
 import type { FMStation } from "@/types/station";
 import type { InterferenceSite } from "@/types/interference";
+import { computeDestination } from "@/utils/bearing";
 
 interface CommonAction {
   label: string;
@@ -274,6 +275,55 @@ export function FieldOpsCurrentINT({
         ]}
         loading={pending}
       />
+
+      <button
+        type="button"
+        onClick={() => {
+          let target: { lat: number; lng: number } | null = null;
+          if (
+            site.sourceLat !== null &&
+            site.sourceLat !== undefined &&
+            site.sourceLong !== null &&
+            site.sourceLong !== undefined
+          ) {
+            target = { lat: site.sourceLat, lng: site.sourceLong };
+          } else if (
+            site.lat !== null &&
+            site.long !== null &&
+            site.direction !== null &&
+            site.direction !== undefined
+          ) {
+            const distKm = site.estimateDistance ?? 3;
+            target = computeDestination(site.lat, site.long, site.direction, distKm);
+          }
+          if (target) {
+            window.open(googleMapsUrl(target.lat, target.lng), "_blank");
+          }
+        }}
+        disabled={
+          site.direction === null ||
+          site.direction === undefined ||
+          site.lat === null ||
+          site.long === null
+        }
+        className="fo-mono"
+        style={{
+          padding: "12px 14px",
+          background: "transparent",
+          color: "var(--fo-accent)",
+          border: "1px solid var(--fo-accent)",
+          borderRadius: 999,
+          fontSize: 11,
+          fontWeight: 700,
+          letterSpacing: "0.2em",
+          cursor:
+            site.direction === null || site.direction === undefined ? "not-allowed" : "pointer",
+          opacity:
+            site.direction === null || site.direction === undefined ? 0.5 : 1,
+        }}
+      >
+        🎯 FIND SOURCE
+      </button>
 
       <button
         type="button"

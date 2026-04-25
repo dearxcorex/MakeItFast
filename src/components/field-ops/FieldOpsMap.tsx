@@ -1,11 +1,12 @@
 "use client";
 
 import { useEffect, useMemo, useRef } from "react";
-import { MapContainer, TileLayer, Marker, useMap } from "react-leaflet";
+import { MapContainer, TileLayer, Marker, Polyline, CircleMarker, useMap } from "react-leaflet";
 import L from "leaflet";
 import "leaflet/dist/leaflet.css";
 import type { FMStation } from "@/types/station";
 import type { InterferenceSite } from "@/types/interference";
+import { computeDestination } from "@/utils/bearing";
 
 export type FieldSelection =
   | { kind: "fm"; id: string | number }
@@ -230,6 +231,36 @@ export function FieldOpsMap({
   const fmIconCache = useRef<Map<string, L.DivIcon>>(new Map());
   const intIconCache = useRef<Map<string, L.DivIcon>>(new Map());
 
+  // Bearing ray for the currently selected interference site
+  const bearingRay = useMemo(() => {
+    if (selection?.kind !== "int") return null;
+    const site = intMarkers.find((s) => s.id === selection.id);
+    if (
+      !site ||
+      site.lat === null ||
+      site.long === null ||
+      site.direction === null ||
+      site.direction === undefined
+    ) {
+      return null;
+    }
+    const distKm = Math.min(site.estimateDistance ?? 5, 30);
+    const end = computeDestination(site.lat, site.long, site.direction, distKm);
+    const ranking = (site.ranking || "").toLowerCase();
+    const color =
+      ranking === "critical" ? "#ff5b4a" : ranking === "major" ? "#ffb800" : "#ff8b7e";
+    return {
+      from: [site.lat, site.long] as [number, number],
+      to: [end.lat, end.lng] as [number, number],
+      color,
+      // explicit source pin (if known) — overrides the projection
+      sourcePin:
+        site.sourceLat !== null && site.sourceLong !== null
+          ? ([site.sourceLat, site.sourceLong] as [number, number])
+          : null,
+    };
+  }, [selection, intMarkers]);
+
   const tileUrl =
     theme === "light"
       ? "https://tile.openstreetmap.org/{z}/{x}/{y}.png"
@@ -285,6 +316,55 @@ export function FieldOpsMap({
           />
         );
       })}
+
+      {bearingRay && (
+        <>
+          <Polyline
+            positions={[bearingRay.from, bearingRay.to]}
+            pathOptions={{
+              color: bearingRay.color,
+              weight: 3,
+              opacity: 0.75,
+              dashArray: "6 8",
+            }}
+          />
+          {/* Projected source — concentric ring at the ray endpoint */}
+          <CircleMarker
+            center={bearingRay.to}
+            radius={9}
+            pathOptions={{
+              color: bearingRay.color,
+              weight: 2,
+              fillColor: "transparent",
+              fillOpacity: 0,
+              dashArray: "2 4",
+            }}
+          />
+          <CircleMarker
+            center={bearingRay.to}
+            radius={3}
+            pathOptions={{
+              color: bearingRay.color,
+              weight: 1,
+              fillColor: bearingRay.color,
+              fillOpacity: 0.9,
+            }}
+          />
+          {/* Confirmed source pin (if DB has explicit sourceLat/sourceLong) */}
+          {bearingRay.sourcePin && (
+            <CircleMarker
+              center={bearingRay.sourcePin}
+              radius={7}
+              pathOptions={{
+                color: "#00ed64",
+                weight: 2.5,
+                fillColor: "#00ed64",
+                fillOpacity: 0.6,
+              }}
+            />
+          )}
+        </>
+      )}
 
       <FlyTo target={flyTarget} />
     </MapContainer>
