@@ -1,17 +1,19 @@
 "use client";
 
 export type TypeFilter = "ALL" | "FM" | "INT";
-export type StatusFilter =
-  | "ALL"
-  | "PENDING"
-  | "INSPECTED"
-  | "LAW_SENT"
-  | "OFF_AIR";
+export type StatusFilter = "ALL" | "PENDING" | "INSPECTED";
+export type SeverityFilter = "ALL" | "Critical" | "Major" | "Minor";
 
 export interface FieldFilters {
   type: TypeFilter;
   province: string;
   status: StatusFilter;
+  /** Interference ranking — INT-only. Ignored when type=FM. */
+  severity: SeverityFilter;
+  /** FM "off air" toggle — FM-only. Ignored when type=INT. */
+  offAir: boolean;
+  /** INT "law paper sent" toggle — INT-only. Ignored when type=FM. */
+  lawSent: boolean;
   search: string;
 }
 
@@ -19,6 +21,9 @@ export const DEFAULT_FILTERS: FieldFilters = {
   type: "ALL",
   province: "All",
   status: "ALL",
+  severity: "ALL",
+  offAir: false,
+  lawSent: false,
   search: "",
 };
 
@@ -35,23 +40,23 @@ export function FieldOpsFilters({
 }) {
   const provinceOptions = ["All", ...provinces];
   const types: TypeFilter[] = ["ALL", "FM", "INT"];
-  // FM has no "law paper sent"; INT has no "on air" — chip set depends on type
-  const statuses: Array<{ id: StatusFilter; label: string }> = (() => {
-    const base: Array<{ id: StatusFilter; label: string }> = [
-      { id: "ALL", label: "ALL" },
-      { id: "PENDING", label: "PENDING" },
-      { id: "INSPECTED", label: "INSPECTED" },
-    ];
-    if (filters.type !== "INT") base.push({ id: "OFF_AIR", label: "OFF AIR" });
-    if (filters.type !== "FM") base.push({ id: "LAW_SENT", label: "LAW SENT" });
-    return base;
-  })();
+  const statuses: StatusFilter[] = ["ALL", "PENDING", "INSPECTED"];
+  const severities: SeverityFilter[] = ["ALL", "Critical", "Major", "Minor"];
+
+  const showSeverity = filters.type !== "FM";
+  const showOffAir = filters.type !== "INT";
+  const showLawSent = filters.type !== "FM";
 
   const handleTypeChange = (v: TypeFilter) => {
     const next: FieldFilters = { ...filters, type: v };
-    // Cascade: drop the status if it's not valid for the new type
-    if (v === "FM" && next.status === "LAW_SENT") next.status = "ALL";
-    if (v === "INT" && next.status === "OFF_AIR") next.status = "ALL";
+    // Cascade: drop filters that don't apply to the new type
+    if (v === "FM") {
+      next.severity = "ALL";
+      next.lawSent = false;
+    }
+    if (v === "INT") {
+      next.offAir = false;
+    }
     onChange(next);
   };
 
@@ -81,17 +86,7 @@ export function FieldOpsFilters({
         className="fo-mono"
         value={filters.province}
         onChange={(e) => onChange({ ...filters, province: e.target.value })}
-        style={{
-          padding: "6px 10px",
-          borderRadius: 999,
-          border: "1px solid var(--fo-divider)",
-          background: "var(--fo-band-inset)",
-          color: "var(--fo-band-text)",
-          fontSize: 11,
-          letterSpacing: "0.16em",
-          textTransform: "uppercase",
-          cursor: "pointer",
-        }}
+        style={selectStyle}
       >
         {provinceOptions.map((p) => (
           <option key={p} value={p}>
@@ -100,18 +95,49 @@ export function FieldOpsFilters({
         ))}
       </select>
 
+      {showSeverity && (
+        <select
+          aria-label="Severity filter"
+          className="fo-mono"
+          value={filters.severity}
+          onChange={(e) =>
+            onChange({ ...filters, severity: e.target.value as SeverityFilter })
+          }
+          style={selectStyle}
+        >
+          {severities.map((s) => (
+            <option key={s} value={s}>
+              {s === "ALL" ? "ALL SEVERITY" : s.toUpperCase()}
+            </option>
+          ))}
+        </select>
+      )}
+
       <Divider />
 
       <ChipGroup
         label="STATUS"
-        options={statuses.map((s) => s.id)}
-        labels={statuses.reduce<Record<string, string>>((acc, s) => {
-          acc[s.id] = s.label;
-          return acc;
-        }, {})}
+        options={statuses}
         value={filters.status}
-        onChange={(v) => onChange({ ...filters, status: v as StatusFilter })}
+        onChange={(v) => onChange({ ...filters, status: v })}
       />
+
+      <Divider />
+
+      {showOffAir && (
+        <Toggle
+          label="OFF AIR"
+          active={filters.offAir}
+          onChange={(v) => onChange({ ...filters, offAir: v })}
+        />
+      )}
+      {showLawSent && (
+        <Toggle
+          label="LAW SENT"
+          active={filters.lawSent}
+          onChange={(v) => onChange({ ...filters, lawSent: v })}
+        />
+      )}
 
       <div style={{ flex: 1 }} />
 
@@ -137,8 +163,51 @@ export function FieldOpsFilters({
   );
 }
 
+const selectStyle: React.CSSProperties = {
+  padding: "6px 10px",
+  borderRadius: 999,
+  border: "1px solid var(--fo-divider)",
+  background: "var(--fo-band-inset)",
+  color: "var(--fo-band-text)",
+  fontSize: 11,
+  letterSpacing: "0.16em",
+  textTransform: "uppercase",
+  cursor: "pointer",
+};
+
 function Divider() {
   return <div style={{ width: 1, height: 22, background: "var(--fo-divider)" }} />;
+}
+
+function Toggle({
+  label,
+  active,
+  onChange,
+}: {
+  label: string;
+  active: boolean;
+  onChange: (v: boolean) => void;
+}) {
+  return (
+    <button
+      type="button"
+      className="fo-mono"
+      onClick={() => onChange(!active)}
+      style={{
+        padding: "5px 12px",
+        borderRadius: 999,
+        border: `1px solid ${active ? "var(--fo-accent)" : "var(--fo-divider)"}`,
+        background: active ? "var(--fo-accent)" : "transparent",
+        color: active ? "#001e2b" : "var(--fo-band-text)",
+        fontSize: 10,
+        cursor: "pointer",
+        letterSpacing: "0.16em",
+      }}
+      aria-pressed={active}
+    >
+      {label}
+    </button>
+  );
 }
 
 function ChipGroup<T extends string>({
@@ -146,13 +215,11 @@ function ChipGroup<T extends string>({
   options,
   value,
   onChange,
-  labels,
 }: {
   label: string;
   options: readonly T[];
   value: T;
   onChange: (v: T) => void;
-  labels?: Record<string, string>;
 }) {
   return (
     <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
@@ -185,7 +252,7 @@ function ChipGroup<T extends string>({
                 fontSize: 10,
               }}
             >
-              {labels?.[opt] ?? opt}
+              {opt}
             </button>
           );
         })}

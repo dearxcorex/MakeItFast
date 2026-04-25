@@ -8,6 +8,9 @@ const baseFilters: FieldFilters = {
   type: 'ALL',
   province: 'All',
   status: 'ALL',
+  severity: 'ALL',
+  offAir: false,
+  lawSent: false,
   search: '',
 };
 
@@ -24,44 +27,42 @@ function renderFilters(overrides: Partial<FieldFilters> = {}) {
   return { onChange, ...utils };
 }
 
-describe('FieldOpsFilters status chips · type-aware', () => {
-  it('type=ALL shows ALL · PENDING · INSPECTED · LAW SENT', () => {
-    const { getByText } = renderFilters({ type: 'ALL' });
-    expect(getByText('LAW SENT')).toBeTruthy();
-    expect(getByText('PENDING')).toBeTruthy();
-    expect(getByText('INSPECTED')).toBeTruthy();
+describe('FieldOpsFilters · status chips', () => {
+  it('always shows the same 3 status chips regardless of type', () => {
+    for (const type of ['ALL', 'FM', 'INT'] as const) {
+      const { getByText, queryByText } = renderFilters({ type });
+      expect(getByText('PENDING')).toBeTruthy();
+      expect(getByText('INSPECTED')).toBeTruthy();
+      // CRITICAL/LAW SENT/OFF AIR no longer live in the status row
+      // (they're separate severity dropdown + toggles now)
+      expect(queryByText('LAW SENT')).not.toBe(getByText('PENDING'));
+      cleanup();
+    }
+  });
+});
+
+describe('FieldOpsFilters · severity dropdown', () => {
+  it('is shown for type=ALL and type=INT; hidden for type=FM', () => {
+    const all = renderFilters({ type: 'ALL' });
+    expect(all.queryByLabelText('Severity filter')).toBeTruthy();
+    cleanup();
+    const intView = renderFilters({ type: 'INT' });
+    expect(intView.queryByLabelText('Severity filter')).toBeTruthy();
+    cleanup();
+    const fm = renderFilters({ type: 'FM' });
+    expect(fm.queryByLabelText('Severity filter')).toBeNull();
   });
 
-  it('type=INT shows LAW SENT', () => {
-    const { getByText } = renderFilters({ type: 'INT' });
-    expect(getByText('LAW SENT')).toBeTruthy();
+  it('exposes ALL · Critical · Major · Minor as options', () => {
+    const { getByLabelText } = renderFilters({ type: 'ALL' });
+    const select = getByLabelText('Severity filter') as HTMLSelectElement;
+    const values = Array.from(select.options).map((o) => o.value);
+    expect(values).toEqual(['ALL', 'Critical', 'Major', 'Minor']);
   });
+});
 
-  it('type=FM hides LAW SENT chip (FM has no law-paper concept)', () => {
-    const { queryByText } = renderFilters({ type: 'FM' });
-    expect(queryByText('LAW SENT')).toBeNull();
-  });
-
-  it('switching type to FM while status=LAW_SENT cascades status back to ALL', () => {
-    const { onChange, getAllByText } = renderFilters({ type: 'ALL', status: 'LAW_SENT' });
-    // Click the FM chip in the TYPE row (TYPE chip group is first; "FM" appears once)
-    const fmChip = getAllByText('FM')[0];
-    fireEvent.click(fmChip);
-    expect(onChange).toHaveBeenCalled();
-    const next = onChange.mock.calls[0][0];
-    expect(next.type).toBe('FM');
-    expect(next.status).toBe('ALL');
-  });
-
-  it('switching type to FM while status=PENDING leaves status untouched', () => {
-    const { onChange, getAllByText } = renderFilters({ type: 'ALL', status: 'PENDING' });
-    fireEvent.click(getAllByText('FM')[0]);
-    const next = onChange.mock.calls[0][0];
-    expect(next.type).toBe('FM');
-    expect(next.status).toBe('PENDING');
-  });
-
-  it('OFF AIR chip is shown for type=ALL and type=FM, hidden for type=INT', () => {
+describe('FieldOpsFilters · OFF AIR / LAW SENT toggles', () => {
+  it('OFF AIR toggle is shown for type=ALL/FM and hidden for INT', () => {
     const all = renderFilters({ type: 'ALL' });
     expect(all.queryByText('OFF AIR')).toBeTruthy();
     cleanup();
@@ -72,11 +73,56 @@ describe('FieldOpsFilters status chips · type-aware', () => {
     expect(int.queryByText('OFF AIR')).toBeNull();
   });
 
-  it('switching type to INT while status=OFF_AIR cascades back to ALL', () => {
-    const { onChange, getAllByText } = renderFilters({ type: 'ALL', status: 'OFF_AIR' });
+  it('LAW SENT toggle is shown for type=ALL/INT and hidden for FM', () => {
+    const all = renderFilters({ type: 'ALL' });
+    expect(all.queryByText('LAW SENT')).toBeTruthy();
+    cleanup();
+    const intView = renderFilters({ type: 'INT' });
+    expect(intView.queryByText('LAW SENT')).toBeTruthy();
+    cleanup();
+    const fm = renderFilters({ type: 'FM' });
+    expect(fm.queryByText('LAW SENT')).toBeNull();
+  });
+
+  it('clicking OFF AIR flips the filter flag', () => {
+    const { onChange, getByText } = renderFilters({ type: 'ALL', offAir: false });
+    fireEvent.click(getByText('OFF AIR'));
+    expect(onChange.mock.calls[0][0]).toMatchObject({ offAir: true });
+  });
+});
+
+describe('FieldOpsFilters · type-change cascade', () => {
+  it('switching to FM clears severity and lawSent', () => {
+    const { onChange, getAllByText } = renderFilters({
+      type: 'ALL',
+      severity: 'Critical',
+      lawSent: true,
+    });
+    fireEvent.click(getAllByText('FM')[0]);
+    const next = onChange.mock.calls[0][0];
+    expect(next.type).toBe('FM');
+    expect(next.severity).toBe('ALL');
+    expect(next.lawSent).toBe(false);
+  });
+
+  it('switching to INT clears offAir', () => {
+    const { onChange, getAllByText } = renderFilters({
+      type: 'ALL',
+      offAir: true,
+    });
     fireEvent.click(getAllByText('INT')[0]);
     const next = onChange.mock.calls[0][0];
     expect(next.type).toBe('INT');
-    expect(next.status).toBe('ALL');
+    expect(next.offAir).toBe(false);
+  });
+
+  it('switching type=FM with status=PENDING preserves status', () => {
+    const { onChange, getAllByText } = renderFilters({
+      type: 'ALL',
+      status: 'PENDING',
+    });
+    fireEvent.click(getAllByText('FM')[0]);
+    const next = onChange.mock.calls[0][0];
+    expect(next.status).toBe('PENDING');
   });
 });

@@ -70,8 +70,7 @@ export default function FieldOpsClient({
       if (filters.province !== "All" && s.state !== filters.province) return false;
       if (filters.status === "PENDING" && s.inspection69 === "ตรวจแล้ว") return false;
       if (filters.status === "INSPECTED" && s.inspection69 !== "ตรวจแล้ว") return false;
-      if (filters.status === "LAW_SENT") return false;
-      if (filters.status === "OFF_AIR" && s.onAir !== false) return false;
+      if (filters.offAir && s.onAir !== false) return false;
       if (filters.search) {
         const q = filters.search.toLowerCase();
         const hay = `${s.name} ${s.frequency} ${s.city} ${s.state} ${s.id}`.toLowerCase();
@@ -87,8 +86,8 @@ export default function FieldOpsClient({
       if (filters.province !== "All" && s.changwat !== filters.province) return false;
       if (filters.status === "PENDING" && s.status === "ตรวจแล้ว") return false;
       if (filters.status === "INSPECTED" && s.status !== "ตรวจแล้ว") return false;
-      if (filters.status === "LAW_SENT" && !s.lawPaperSent) return false;
-      if (filters.status === "OFF_AIR") return false;
+      if (filters.severity !== "ALL" && s.ranking !== filters.severity) return false;
+      if (filters.lawSent && !s.lawPaperSent) return false;
       if (filters.search) {
         const q = filters.search.toLowerCase();
         const hay = `${s.siteName ?? ""} ${s.siteCode ?? ""} ${s.cellName ?? ""} ${s.changwat ?? ""} ${s.id}`.toLowerCase();

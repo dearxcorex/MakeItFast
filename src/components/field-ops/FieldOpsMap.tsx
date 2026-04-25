@@ -35,15 +35,16 @@ function fmIcon(
   const offAir = !station.onAir;
   const main = isMainStation(station);
 
-  // Solid fills — readable on dark and light basemaps
-  const bodyFill = offAir ? "#5c6c75" : inspected ? "#00684a" : "#00ed64";
+  // Solid fills — three maximally distinct hues so PENDING vs INSPECTED is
+  // unmistakable at a glance (amber = needs attention, green = done, grey = off air).
+  const bodyFill = offAir ? "#5c6c75" : inspected ? "#00684a" : "#f5a623";
 
   // Glyph centered at the pin head (cx=12, cy=12 in 24-unit viewBox)
   const innerGlyph = offAir
     ? `<path d="M9 9 l6 6 M15 9 l-6 6" stroke="#ffffff" stroke-width="2" stroke-linecap="round"/>`
     : inspected
       ? `<path d="M8.5 12.5 l2.5 2.5 l5 -5" stroke="#ffffff" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" fill="none"/>`
-      : `<circle cx="12" cy="12" r="2.6" fill="#001e2b"/>`;
+      : `<g><line x1="12" y1="8" x2="12" y2="13" stroke="#ffffff" stroke-width="2.2" stroke-linecap="round"/><circle cx="12" cy="16" r="1.3" fill="#ffffff"/></g>`;
 
   const baseSize = selected ? 30 : 24;
   const wrapW = baseSize + 14;
@@ -92,37 +93,69 @@ function fmIcon(
   });
 }
 
+/**
+ * INT marker — same clean teardrop language as FM, with state on top:
+ *  - PIN COLOR = ranking severity (Critical=red, Major=amber, Minor=light orange)
+ *  - GLYPH = inspection status (✓ inspected, ! pending)
+ *  - GOLD ★ in upper-right when LAW PAPER SENT
+ *  - SECTOR WEDGE behind the pin when direction is known
+ */
 function intIcon(site: InterferenceSite, selected: boolean) {
   const ranking = (site.ranking || "").toLowerCase();
-  const fill = ranking === "critical" ? "#ff5b4a" : ranking === "major" ? "#ffb800" : "#ff8b7e";
-  const ringColor = selected ? "#ff5b4a" : "#001e2b";
-  const ringWidth = selected ? 3 : 2;
-  const size = selected ? 22 : 16;
+  const bodyFill =
+    ranking === "critical" ? "#ff5b4a" : ranking === "major" ? "#ffb800" : "#ff8b7e";
+  const inspected = site.status === "ตรวจแล้ว";
+  const lawSent = site.lawPaperSent === true;
   const direction = site.direction ?? null;
-  const wedgeSvg =
+
+  const innerGlyph = inspected
+    ? `<path d="M8.5 12.5 l2.5 2.5 l5 -5" stroke="#ffffff" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" fill="none"/>`
+    : `<g><line x1="12" y1="8" x2="12" y2="13" stroke="#ffffff" stroke-width="2.2" stroke-linecap="round"/><circle cx="12" cy="16" r="1.3" fill="#ffffff"/></g>`;
+
+  const baseSize = selected ? 30 : 24;
+  const wrapW = baseSize + 14;
+  const wrapH = Math.round(baseSize * 1.35) + 6;
+
+  const pinPath =
+    "M12 32 C 12 32 22 22 22 11 A 10 10 0 1 0 2 11 C 2 22 12 32 12 32 Z";
+
+  const haloRing = selected
+    ? `<circle cx="12" cy="11" r="13" fill="none" stroke="#ff5b4a" stroke-width="2" opacity="0.55"/>`
+    : "";
+
+  // Direction wedge — extends from the pin head outward toward `direction` degrees
+  const wedge =
     direction !== null
-      ? `<svg width="48" height="48" style="position:absolute;left:50%;top:50%;transform:translate(-50%,-50%) rotate(${direction}deg);pointer-events:none;">
-           <path d="M 24 24 L 12 0 L 36 0 Z" fill="#ff5b4a" opacity="${selected ? 0.55 : 0.3}" />
-         </svg>`
+      ? `<g transform="translate(12, 11)" style="transform-origin:0 0;">
+           <g transform="rotate(${direction})">
+             <path d="M 0 0 L -10 -28 L 10 -28 Z" fill="${bodyFill}" opacity="${selected ? 0.45 : 0.25}"/>
+           </g>
+         </g>`
       : "";
+
+  const lawBadge = lawSent
+    ? `<g transform="translate(16, -3)">
+         <circle cx="6" cy="6" r="6" fill="#ffd24a" stroke="#001e2b" stroke-width="1"/>
+         <path d="M6 1.8 L7.2 4.6 L10.2 5 L8 7.1 L8.6 10 L6 8.5 L3.4 10 L4 7.1 L1.8 5 L4.8 4.6 Z" fill="#001e2b"/>
+       </g>`
+    : "";
+
+  const html = `<div style="position:relative;width:${wrapW}px;height:${wrapH}px;transition:all 120ms ease;">
+    <svg width="${wrapW}" height="${wrapH}" viewBox="-7 -3 ${24 + 14} ${32 + 6}" style="position:absolute;left:0;top:0;overflow:visible;">
+      ${wedge}
+      ${haloRing}
+      <path d="${pinPath}" fill="${bodyFill}" stroke="#ffffff" stroke-width="1.8" stroke-linejoin="round" filter="drop-shadow(0 1px 2px rgba(0,30,43,0.4))"/>
+      ${innerGlyph}
+      ${lawBadge}
+    </svg>
+  </div>`;
+
   return L.divIcon({
-    className: "fo-marker fo-marker--int",
-    html: `<div style="position:relative;width:${size}px;height:${size}px;display:flex;align-items:center;justify-content:center;">
-      ${wedgeSvg}
-      <div style="
-        width:${size}px;height:${size}px;
-        border-radius:50% 50% 50% 0;
-        background:${fill};
-        border:${ringWidth}px solid ${ringColor};
-        transform:rotate(-45deg);
-        position:relative;
-        z-index:2;
-        box-shadow:0 2px 6px rgba(0,30,43,0.3);
-      "></div>
-    </div>`,
-    iconSize: [size, size],
-    iconAnchor: [size / 2, size],
-    popupAnchor: [0, -size],
+    className: `fo-marker fo-marker--int ${selected ? "is-selected" : ""}`,
+    html,
+    iconSize: [wrapW, wrapH],
+    iconAnchor: [wrapW / 2, wrapH - 3],
+    popupAnchor: [0, -wrapH + 10],
   });
 }
 
@@ -231,7 +264,7 @@ export function FieldOpsMap({
 
       {intMarkers.map((site) => {
         const isSelected = selection?.kind === "int" && selection.id === site.id;
-        const cacheKey = `${site.id}-${isSelected}-${site.ranking}-${site.direction}`;
+        const cacheKey = `${site.id}-${isSelected}-${site.ranking}-${site.direction}-${site.status}-${site.lawPaperSent ? "L" : "x"}`;
         if (!intIconCache.current.has(cacheKey)) {
           intIconCache.current.set(cacheKey, intIcon(site, isSelected));
         }
