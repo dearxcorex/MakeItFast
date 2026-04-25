@@ -139,6 +139,18 @@
   color: #5c6c75 !important;
 }
 
+/* Cluster bubble — strip the default beige/orange leaflet.markercluster
+ * skin and let our themed `fo-cluster` divIcon do the visuals. */
+.field-ops-root .marker-cluster,
+.field-ops-root .marker-cluster div {
+  background: transparent !important;
+  border: 0 !important;
+  box-shadow: none !important;
+}
+.field-ops-root .leaflet-marker-icon.marker-cluster {
+  background: transparent !important;
+}
+
 /* ─── Pane surface — used by Analytics dashboard + Intermod calculator
  *    (named `fo-light` for legacy reasons but theme-responsive when nested
  *    inside .field-ops-root[data-theme="..."]).

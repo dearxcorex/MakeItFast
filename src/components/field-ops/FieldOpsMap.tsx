@@ -2,10 +2,14 @@
 
 import { useEffect, useMemo, useRef } from "react";
 import { MapContainer, TileLayer, Marker, useMap } from "react-leaflet";
+import MarkerClusterGroup from "react-leaflet-cluster";
 import L from "leaflet";
 import "leaflet/dist/leaflet.css";
+import "leaflet.markercluster/dist/MarkerCluster.css";
+import "leaflet.markercluster/dist/MarkerCluster.Default.css";
 import type { FMStation } from "@/types/station";
 import type { InterferenceSite } from "@/types/interference";
+import { makeClusterIcon } from "@/utils/clusterIcon";
 
 export type FieldSelection =
   | { kind: "fm"; id: string | number }
@@ -319,6 +323,15 @@ export function FieldOpsMap({
     >
       <TileLayer key={theme} url={tileUrl} attribution={tileAttribution} maxZoom={19} />
 
+      <MarkerClusterGroup
+        chunkedLoading
+        maxClusterRadius={45}
+        spiderfyOnMaxZoom
+        showCoverageOnHover={false}
+        iconCreateFunction={(c: { getChildCount: () => number }) =>
+          makeClusterIcon(c.getChildCount())
+        }
+      >
       {Array.from(fmGroups.entries()).map(([coordKey, group]) => {
         const head = group[0];
         const stackCount = group.length;
@@ -366,6 +379,7 @@ export function FieldOpsMap({
           />
         );
       })}
+      </MarkerClusterGroup>
 
       <FlyTo target={flyTarget} />
     </MapContainer>
