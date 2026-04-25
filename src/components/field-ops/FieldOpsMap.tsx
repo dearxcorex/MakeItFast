@@ -102,9 +102,13 @@ function fmIcon(
  */
 function intIcon(site: InterferenceSite, selected: boolean) {
   const ranking = (site.ranking || "").toLowerCase();
-  const bodyFill =
-    ranking === "critical" ? "#ff5b4a" : ranking === "major" ? "#ffb800" : "#ff8b7e";
   const inspected = site.status === "ตรวจแล้ว";
+  // Inspected sites = green (matches FM's "done" semantics).
+  // Pending sites = ranking severity color so the user can see what's open.
+  const rankingColor =
+    ranking === "critical" ? "#ff5b4a" : ranking === "major" ? "#ffb800" : "#ff8b7e";
+  const bodyFill = inspected ? "#00684a" : rankingColor;
+  const wedgeColor = rankingColor;
   const lawSent = site.lawPaperSent === true;
   const direction = site.direction ?? null;
 
@@ -123,12 +127,14 @@ function intIcon(site: InterferenceSite, selected: boolean) {
     ? `<circle cx="12" cy="11" r="13" fill="none" stroke="#ff5b4a" stroke-width="2" opacity="0.55"/>`
     : "";
 
-  // Direction wedge — extends from the pin head outward toward `direction` degrees
+  // Direction wedge — extends from the pin head outward toward `direction` degrees.
+  // Wedge keeps the ranking-severity color so the field worker can still see
+  // severity at a glance even when the pin head turns green after inspection.
   const wedge =
     direction !== null
       ? `<g transform="translate(12, 11)" style="transform-origin:0 0;">
            <g transform="rotate(${direction})">
-             <path d="M 0 0 L -10 -28 L 10 -28 Z" fill="${bodyFill}" opacity="${selected ? 0.45 : 0.25}"/>
+             <path d="M 0 0 L -10 -28 L 10 -28 Z" fill="${wedgeColor}" opacity="${selected ? 0.45 : 0.25}"/>
            </g>
          </g>`
       : "";
