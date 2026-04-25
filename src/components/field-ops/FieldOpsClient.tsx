@@ -315,9 +315,6 @@ export default function FieldOpsClient({
                       <span className="fo-mono" style={{ color: "var(--fo-accent)" }}>
                         {selection ? "CURRENT" : "SELECT A SITE"}
                       </span>
-                      <span className="fo-mono" style={{ color: "var(--fo-rail-mute)" }}>
-                        {visibleCount} VISIBLE
-                      </span>
                     </div>
 
                     {selection?.kind === "fm" && selectedStation && (
