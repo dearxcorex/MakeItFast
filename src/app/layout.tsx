@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
-import { Exo_2, Orbitron, Prompt, Noto_Sans_Thai } from "next/font/google";
+import { Exo_2, Orbitron, Prompt, Noto_Sans_Thai, Inter, Playfair_Display, Source_Code_Pro, Kalam } from "next/font/google";
 import "./globals.css";
+import "./field-ops.css";
 import { ThemeProvider } from "@/contexts/ThemeContext";
 
 const exo2 = Exo_2({
@@ -29,10 +30,37 @@ const notoSansThai = Noto_Sans_Thai({
   variable: "--font-noto-thai",
 });
 
+const inter = Inter({
+  subsets: ["latin"],
+  display: "swap",
+  variable: "--fo-font-inter",
+});
+
+const playfair = Playfair_Display({
+  subsets: ["latin"],
+  weight: ["400", "500"],
+  display: "swap",
+  variable: "--fo-font-serif",
+});
+
+const sourceCodePro = Source_Code_Pro({
+  subsets: ["latin"],
+  weight: ["400", "500", "600"],
+  display: "swap",
+  variable: "--fo-font-mono",
+});
+
+const kalam = Kalam({
+  subsets: ["latin"],
+  weight: ["400", "700"],
+  display: "swap",
+  variable: "--fo-font-kalam",
+});
+
 export const metadata: Metadata = {
-  title: "Task Tracker | NBTC FM Monitoring",
-  description: "Track FM radio stations and calculate intermodulation with an interactive dashboard",
-  keywords: "FM radio, stations, map, tracker, intermodulation, NBTC",
+  title: "Field Ops | NBTC FM + Interference Tracker",
+  description: "Unified field operations surface for FM station inspection and interference site monitoring",
+  keywords: "FM radio, interference, NBTC, field ops, inspection, intermodulation",
 };
 
 export default function RootLayout({
@@ -40,9 +68,20 @@ export default function RootLayout({
 }: Readonly<{
   children: React.ReactNode;
 }>) {
+  const fontVars = [
+    exo2.variable,
+    orbitron.variable,
+    prompt.variable,
+    notoSansThai.variable,
+    inter.variable,
+    playfair.variable,
+    sourceCodePro.variable,
+    kalam.variable,
+  ].join(" ");
+
   return (
     <html lang="en" className="dark" suppressHydrationWarning>
-      <body className={`${exo2.variable} ${orbitron.variable} ${prompt.variable} ${notoSansThai.variable} font-sans antialiased`} suppressHydrationWarning>
+      <body className={`${fontVars} font-sans antialiased`} suppressHydrationWarning>
         <ThemeProvider>
           {children}
         </ThemeProvider>

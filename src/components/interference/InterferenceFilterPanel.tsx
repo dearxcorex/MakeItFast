@@ -2,7 +2,6 @@
 
 import { useState, useEffect } from 'react';
 import type { InterferenceFilter } from '@/types/interference';
-import KmlImportDialog from './KmlImportDialog';
 
 interface DirectionMatchStats {
   total: number;
@@ -143,8 +142,7 @@ export default function InterferenceFilterPanel({
       )}
 
       {/* Actions */}
-      <div className="flex items-center justify-between pt-1" style={{ borderTop: '1px solid var(--if-border)' }}>
-        <KmlImportDialog onImportComplete={() => onRefreshSites?.()} />
+      <div className="flex items-center justify-end pt-1" style={{ borderTop: '1px solid var(--if-border)' }}>
         {hasActiveFilters && (
           <button
             onClick={() => onFiltersChange({})}

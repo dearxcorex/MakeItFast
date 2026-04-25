@@ -1,0 +1,89 @@
+/* Field Ops design tokens — scoped to .field-ops-root so they only apply on the new homepage */
+.field-ops-root {
+  --fo-ink: #001e2b;
+  --fo-ink-2: #1c2d38;
+  --fo-ink-3: #3d4f58;
+  --fo-mute: #5c6c75;
+  --fo-line: #b8c4c2;
+  --fo-paper: #edeae3;
+  --fo-paper-2: #f5f3ef;
+  --fo-white: #ffffff;
+  --fo-note: #fff6c8;
+
+  --fo-accent: #00ed64;
+  --fo-accent-2: #00684a;
+  --fo-warn: #ffb800;
+  --fo-crit: #ff5b4a;
+  --fo-ok: #00ed64;
+
+  --fo-serif: var(--fo-font-serif), 'Playfair Display', Georgia, serif;
+  --fo-body: var(--fo-font-inter), 'Inter', -apple-system, system-ui, sans-serif;
+  --fo-mono: var(--fo-font-mono), 'Source Code Pro', ui-monospace, monospace;
+  --fo-sketch: var(--fo-font-kalam), 'Kalam', cursive;
+
+  background: var(--fo-paper);
+  color: var(--fo-ink);
+  font-family: var(--fo-body);
+  min-height: 100vh;
+}
+
+.field-ops-root *,
+.field-ops-root *::before,
+.field-ops-root *::after {
+  box-sizing: border-box;
+}
+
+.field-ops-root .fo-mono {
+  font-family: var(--fo-mono);
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  font-size: 10px;
+  color: var(--fo-mute);
+  font-weight: 500;
+}
+
+.field-ops-root .fo-serif {
+  font-family: var(--fo-serif);
+  letter-spacing: -0.01em;
+}
+
+.field-ops-root .fo-sketch {
+  font-family: var(--fo-sketch);
+}
+
+.field-ops-root .fo-underline-accent {
+  border-bottom: 3px solid var(--fo-accent);
+  padding-bottom: 1px;
+}
+
+.field-ops-root button:focus-visible,
+.field-ops-root a:focus-visible {
+  outline: 2px solid var(--fo-accent);
+  outline-offset: 2px;
+}
+
+/* Field-ops Leaflet popup styling — overrides default white popup look */
+.field-ops-root .leaflet-popup-content-wrapper {
+  background: var(--fo-ink);
+  color: var(--fo-white);
+  border-radius: 12px;
+  border: 1px solid var(--fo-ink-3);
+  padding: 0;
+}
+.field-ops-root .leaflet-popup-content {
+  margin: 0;
+  min-width: 240px;
+}
+.field-ops-root .leaflet-popup-tip {
+  background: var(--fo-ink);
+  border: 1px solid var(--fo-ink-3);
+}
+.field-ops-root .leaflet-popup-close-button {
+  color: var(--fo-line) !important;
+  font-size: 22px !important;
+  padding: 6px 8px 0 0 !important;
+}
+.field-ops-root .leaflet-container {
+  background: #001216;
+  font-family: var(--fo-body);
+}

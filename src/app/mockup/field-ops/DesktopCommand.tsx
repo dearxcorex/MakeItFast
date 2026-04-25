@@ -3,10 +3,10 @@
 import { useState } from "react";
 import { IconRail } from "./components/IconRail";
 import { SummaryStrip } from "./components/SummaryStrip";
-import { TaskCard } from "./components/TaskCard";
 import { FilterChips } from "./components/FilterChips";
 import { TypeBadge } from "./components/TypeBadge";
 import { StatusPill } from "./components/StatusPill";
+import { StatsPanel } from "./components/StatsPanel";
 import { SAMPLE_TASKS, PROVINCES } from "./sample-tasks";
 import type { FieldTask } from "./types";
 import { googleMapsUrl } from "./types";
@@ -25,7 +25,6 @@ export function DesktopCommand() {
   });
 
   const current = filtered[0];
-  const queue = filtered.slice(1, 5);
 
   return (
     <div
@@ -107,28 +106,7 @@ export function DesktopCommand() {
 
           {current && <CurrentBlock task={current} />}
 
-          <div
-            style={{
-              padding: "14px 20px",
-              borderTop: "1px solid #3d4f58",
-              borderBottom: "1px solid #3d4f58",
-            }}
-          >
-            <div className="fo-mono" style={{ color: "#b8c4c2" }}>UP NEXT</div>
-          </div>
-
-          <div style={{ flex: 1, overflowY: "auto", padding: "12px 16px", display: "flex", flexDirection: "column", gap: 10 }}>
-            {queue.map((t) => (
-              <QueueRow key={t.id} task={t} />
-            ))}
-            {queue.length === 0 && (
-              <div className="fo-mono" style={{ color: "#5c6c75", textAlign: "center", padding: 20 }}>
-                NO MORE TASKS
-              </div>
-            )}
-          </div>
-
-          <LiveFeed />
+          <StatsPanel />
         </aside>
       </div>
     </div>
@@ -318,59 +296,3 @@ function Meter({ label, value }: { label: string; value: string }) {
   );
 }
 
-function QueueRow({ task }: { task: FieldTask }) {
-  return (
-    <div
-      style={{
-        padding: 12,
-        border: "1px solid #3d4f58",
-        borderRadius: 10,
-        background: "#1c2d38",
-        display: "flex",
-        alignItems: "center",
-        gap: 10,
-      }}
-    >
-      <TypeBadge type={task.type} />
-      <div style={{ flex: 1, minWidth: 0 }}>
-        <div
-          className="fo-serif"
-          style={{ fontSize: 15, color: "#ffffff", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}
-        >
-          {task.title}
-        </div>
-        <div className="fo-mono" style={{ color: "#b8c4c2" }}>
-          {task.district} · {task.etaMinutes}min
-        </div>
-      </div>
-    </div>
-  );
-}
-
-function LiveFeed() {
-  const items = [
-    { t: "14:08", msg: "T-118 · crew on site", color: "#00ed64" },
-    { t: "14:02", msg: "T-117 · completed", color: "#00ed64" },
-    { t: "13:44", msg: "T-119 · N/I spike", color: "#ff5b4a" },
-    { t: "13:30", msg: "T-116 · dispatched", color: "#b8c4c2" },
-  ];
-  return (
-    <div
-      style={{
-        padding: "12px 20px 16px",
-        borderTop: "1px solid #3d4f58",
-        background: "#001216",
-        maxHeight: 160,
-        overflow: "auto",
-      }}
-    >
-      <div className="fo-mono" style={{ color: "#b8c4c2", marginBottom: 8 }}>LIVE FEED</div>
-      {items.map((i, idx) => (
-        <div key={idx} style={{ display: "flex", gap: 10, padding: "4px 0", fontSize: 12 }}>
-          <span className="fo-mono" style={{ color: "#5c6c75", minWidth: 40 }}>{i.t}</span>
-          <span style={{ color: i.color }}>{i.msg}</span>
-        </div>
-      ))}
-    </div>
-  );
-}
