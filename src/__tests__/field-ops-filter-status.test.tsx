@@ -60,4 +60,23 @@ describe('FieldOpsFilters status chips · type-aware', () => {
     expect(next.type).toBe('FM');
     expect(next.status).toBe('PENDING');
   });
+
+  it('OFF AIR chip is shown for type=ALL and type=FM, hidden for type=INT', () => {
+    const all = renderFilters({ type: 'ALL' });
+    expect(all.queryByText('OFF AIR')).toBeTruthy();
+    cleanup();
+    const fm = renderFilters({ type: 'FM' });
+    expect(fm.queryByText('OFF AIR')).toBeTruthy();
+    cleanup();
+    const int = renderFilters({ type: 'INT' });
+    expect(int.queryByText('OFF AIR')).toBeNull();
+  });
+
+  it('switching type to INT while status=OFF_AIR cascades back to ALL', () => {
+    const { onChange, getAllByText } = renderFilters({ type: 'ALL', status: 'OFF_AIR' });
+    fireEvent.click(getAllByText('INT')[0]);
+    const next = onChange.mock.calls[0][0];
+    expect(next.type).toBe('INT');
+    expect(next.status).toBe('ALL');
+  });
 });

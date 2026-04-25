@@ -6,7 +6,6 @@ import type { FMStation } from "@/types/station";
 import type { InterferenceSite } from "@/types/interference";
 import { FieldOpsNav, type FieldOpsTab } from "./FieldOpsNav";
 import { FieldOpsHeader } from "./FieldOpsHeader";
-import { FieldOpsStats } from "./FieldOpsStats";
 import { FieldOpsFilters, DEFAULT_FILTERS, type FieldFilters } from "./FieldOpsFilters";
 import { FieldOpsCurrentFM, FieldOpsCurrentINT } from "./FieldOpsCurrent";
 import { FieldOpsBottomSheet } from "./FieldOpsBottomSheet";
@@ -72,6 +71,7 @@ export default function FieldOpsClient({
       if (filters.status === "PENDING" && s.inspection69 === "ตรวจแล้ว") return false;
       if (filters.status === "INSPECTED" && s.inspection69 !== "ตรวจแล้ว") return false;
       if (filters.status === "LAW_SENT") return false;
+      if (filters.status === "OFF_AIR" && s.onAir !== false) return false;
       if (filters.search) {
         const q = filters.search.toLowerCase();
         const hay = `${s.name} ${s.frequency} ${s.city} ${s.state} ${s.id}`.toLowerCase();
@@ -88,6 +88,7 @@ export default function FieldOpsClient({
       if (filters.status === "PENDING" && s.status === "ตรวจแล้ว") return false;
       if (filters.status === "INSPECTED" && s.status !== "ตรวจแล้ว") return false;
       if (filters.status === "LAW_SENT" && !s.lawPaperSent) return false;
+      if (filters.status === "OFF_AIR") return false;
       if (filters.search) {
         const q = filters.search.toLowerCase();
         const hay = `${s.siteName ?? ""} ${s.siteCode ?? ""} ${s.cellName ?? ""} ${s.changwat ?? ""} ${s.id}`.toLowerCase();
@@ -103,6 +104,16 @@ export default function FieldOpsClient({
     selection?.kind === "fm" ? stations.find((s) => s.id === selection.id) ?? null : null;
   const selectedSite =
     selection?.kind === "int" ? interference.find((s) => s.id === selection.id) ?? null : null;
+
+  const coLocatedStations = useMemo(() => {
+    if (!selectedStation) return [] as FMStation[];
+    const { latitude: lat, longitude: lng } = selectedStation;
+    const round = (n: number) => n.toFixed(5);
+    const key = `${round(lat)},${round(lng)}`;
+    return filteredStations.filter(
+      (s) => `${round(s.latitude)},${round(s.longitude)}` === key
+    );
+  }, [filteredStations, selectedStation]);
 
   const handleSelect = (sel: FieldSelection) => {
     setSelection(sel);
@@ -149,6 +160,37 @@ export default function FieldOpsClient({
           body: JSON.stringify({ status: next }),
         });
         if (!res.ok) throw new Error("Interference update failed");
+      }
+    } catch (err) {
+      console.error(err);
+      window.location.reload();
+    } finally {
+      setPending(false);
+    }
+  };
+
+  const handleToggleOnAir = async () => {
+    if (!selection || selection.kind !== "fm" || !selectedStation) return;
+    setPending(true);
+    const prev = selectedStation.onAir;
+    const next = !prev;
+    try {
+      setStations((all) =>
+        all.map((s) => (s.id === selectedStation.id ? { ...s, onAir: next } : s))
+      );
+      const res = await fetch(`/api/stations/${selectedStation.id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ onAir: next }),
+      });
+      if (!res.ok) {
+        // Roll back optimistic update + surface server-side reason
+        const json = await res.json().catch(() => ({}));
+        setStations((all) =>
+          all.map((s) => (s.id === selectedStation.id ? { ...s, onAir: prev } : s))
+        );
+        alert(json?.error ?? "On-air update failed");
+        return;
       }
     } catch (err) {
       console.error(err);
@@ -258,7 +300,10 @@ export default function FieldOpsClient({
                     {selection?.kind === "fm" && selectedStation && (
                       <FieldOpsCurrentFM
                         station={selectedStation}
+                        coLocated={coLocatedStations}
+                        onSelectStation={(id) => handleSelect({ kind: "fm", id })}
                         onToggleInspection={handleToggleInspection}
+                        onToggleOnAir={handleToggleOnAir}
                         pending={pending}
                       />
                     )}
@@ -271,7 +316,7 @@ export default function FieldOpsClient({
                       />
                     )}
                     {!selection && (
-                      <div style={{ padding: 20 }}>
+                      <div style={{ padding: 20, flex: 1 }}>
                         <div className="fo-serif" style={{ fontSize: 18, color: "var(--fo-rail-text)", marginBottom: 6 }}>
                           Tap a marker
                         </div>
@@ -280,8 +325,6 @@ export default function FieldOpsClient({
                         </div>
                       </div>
                     )}
-
-                    <FieldOpsStats stations={filteredStations} interference={filteredInterference} />
                   </aside>
                 )}
               </div>

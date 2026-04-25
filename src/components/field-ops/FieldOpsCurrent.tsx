@@ -16,21 +16,52 @@ function googleMapsUrl(lat: number, lng: number) {
   return `https://www.google.com/maps/dir/?api=1&destination=${lat},${lng}&travelmode=driving`;
 }
 
+function isMain(s: FMStation): boolean {
+  return s.type === "สถานีหลัก" || s.genre === "สถานีหลัก";
+}
+
 export function FieldOpsCurrentFM({
   station,
+  coLocated,
+  onSelectStation,
   onToggleInspection,
+  onToggleOnAir,
   pending,
 }: {
   station: FMStation;
+  coLocated?: FMStation[];
+  onSelectStation?: (id: string | number) => void;
   onToggleInspection: () => void;
+  onToggleOnAir?: () => void;
   pending: boolean;
 }) {
   const inspected = station.inspection69 === "ตรวจแล้ว";
+  const main = isMain(station);
+  const others = (coLocated ?? []).filter((s) => s.id !== station.id);
 
   return (
     <div style={{ padding: "20px 20px", display: "flex", flexDirection: "column", gap: 12 }}>
-      <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+      <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
         <Badge tone="fm">FM</Badge>
+        {main && (
+          <span
+            className="fo-mono"
+            style={{
+              padding: "2px 8px",
+              borderRadius: 999,
+              background: "#ffd24a",
+              color: "#001e2b",
+              fontSize: 9,
+              display: "inline-flex",
+              alignItems: "center",
+              gap: 4,
+              fontWeight: 700,
+            }}
+            title="สถานีหลัก · main station"
+          >
+            ★ MAIN
+          </span>
+        )}
         <span
           className="fo-mono"
           style={{
@@ -75,6 +106,80 @@ export function FieldOpsCurrentFM({
         ]}
         loading={pending}
       />
+
+      {onToggleOnAir && (
+        <ButtonRow
+          actions={[
+            {
+              label: station.onAir ? "📡 ON AIR · STOP" : "📡 OFF AIR · GO LIVE",
+              pending: "...",
+              onClick: onToggleOnAir,
+              variant: station.onAir ? "warn" : "primary",
+              disabled: pending,
+              inverse: station.onAir,
+            },
+          ]}
+          loading={pending}
+        />
+      )}
+
+      {others.length > 0 && (
+        <div
+          style={{
+            marginTop: 4,
+            paddingTop: 12,
+            borderTop: "1px solid var(--fo-rail-border)",
+            display: "flex",
+            flexDirection: "column",
+            gap: 6,
+          }}
+        >
+          <div className="fo-mono" style={{ color: "var(--fo-rail-mute)" }}>
+            ALSO AT THIS LOCATION · {others.length}
+          </div>
+          {others.map((s) => {
+            const sInsp = s.inspection69 === "ตรวจแล้ว";
+            const sMain = isMain(s);
+            return (
+              <button
+                key={String(s.id)}
+                type="button"
+                onClick={() => onSelectStation?.(s.id)}
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  gap: 8,
+                  padding: "8px 10px",
+                  borderRadius: 8,
+                  background: "transparent",
+                  border: "1px solid var(--fo-rail-border)",
+                  cursor: onSelectStation ? "pointer" : "default",
+                  color: "var(--fo-rail-text)",
+                  fontFamily: "var(--fo-body)",
+                  textAlign: "left",
+                }}
+              >
+                <span
+                  style={{
+                    width: 8,
+                    height: 8,
+                    borderRadius: 999,
+                    background: sInsp ? "var(--fo-accent-2)" : "var(--fo-accent)",
+                    flexShrink: 0,
+                  }}
+                />
+                {sMain && <span style={{ color: "#ffd24a", fontSize: 12 }}>★</span>}
+                <span style={{ flex: 1, fontSize: 13, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                  {s.name}
+                </span>
+                <span className="fo-mono" style={{ color: "var(--fo-rail-mute)" }}>
+                  {s.frequency.toFixed(2)}
+                </span>
+              </button>
+            );
+          })}
+        </div>
+      )}
     </div>
   );
 }
@@ -258,26 +363,33 @@ function ButtonRow({ actions, loading }: { actions: CommonAction[]; loading: boo
           opacity: a.disabled ? 0.6 : 1,
         };
         const style: React.CSSProperties =
-          a.variant === "primary"
+          a.variant === "warn"
             ? {
                 ...baseStyle,
-                background: "var(--fo-accent)",
+                background: "var(--fo-warn)",
                 color: "var(--fo-ink)",
-                borderColor: "var(--fo-accent)",
+                borderColor: "var(--fo-warn)",
               }
-            : a.inverse
+            : a.variant === "primary"
               ? {
                   ...baseStyle,
-                  background: "var(--fo-ink)",
-                  color: "var(--fo-accent)",
+                  background: "var(--fo-accent)",
+                  color: "var(--fo-ink)",
                   borderColor: "var(--fo-accent)",
                 }
-              : {
-                  ...baseStyle,
-                  background: "transparent",
-                  color: "var(--fo-rail-mute)",
-                  borderColor: "var(--fo-ink-3)",
-                };
+              : a.inverse
+                ? {
+                    ...baseStyle,
+                    background: "var(--fo-ink)",
+                    color: "var(--fo-accent)",
+                    borderColor: "var(--fo-accent)",
+                  }
+                : {
+                    ...baseStyle,
+                    background: "transparent",
+                    color: "var(--fo-rail-mute)",
+                    borderColor: "var(--fo-ink-3)",
+                  };
         return (
           <button
             key={i}

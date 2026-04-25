@@ -14,27 +14,81 @@ export type FieldSelection =
 
 const THAILAND_CENTER: [number, number] = [13.7563, 100.5018];
 
-function fmIcon(station: FMStation, selected: boolean) {
+function isMainStation(s: FMStation): boolean {
+  return s.type === "สถานีหลัก" || s.genre === "สถานีหลัก";
+}
+
+/**
+ * FM marker — clean teardrop pin, ~24px tall, with distinct glyphs per state.
+ *  - PENDING (not inspected): solid neon green + white ring + tiny inner dot
+ *  - INSPECTED: solid dark green + white ring + white ✓ glyph
+ *  - OFF-AIR: solid grey + white ring + ⊘ glyph
+ *  - MAIN STATION (สถานีหลัก): gold ★ badge upper-right
+ *  - STACKED (multiple stations at same coords): "+N" badge upper-left
+ */
+function fmIcon(
+  station: FMStation,
+  selected: boolean,
+  stackCount: number
+) {
   const inspected = station.inspection69 === "ตรวจแล้ว";
   const offAir = !station.onAir;
-  const fill = offAir ? "#5c6c75" : inspected ? "#00684a" : "#00ed64";
-  const ringColor = selected ? "#00ed64" : "#001e2b";
-  const ringWidth = selected ? 3 : 2;
-  const size = selected ? 22 : 16;
+  const main = isMainStation(station);
+
+  // Solid fills — readable on dark and light basemaps
+  const bodyFill = offAir ? "#5c6c75" : inspected ? "#00684a" : "#00ed64";
+
+  // Glyph centered at the pin head (cx=12, cy=12 in 24-unit viewBox)
+  const innerGlyph = offAir
+    ? `<path d="M9 9 l6 6 M15 9 l-6 6" stroke="#ffffff" stroke-width="2" stroke-linecap="round"/>`
+    : inspected
+      ? `<path d="M8.5 12.5 l2.5 2.5 l5 -5" stroke="#ffffff" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" fill="none"/>`
+      : `<circle cx="12" cy="12" r="2.6" fill="#001e2b"/>`;
+
+  const baseSize = selected ? 30 : 24;
+  const wrapW = baseSize + 14;
+  const wrapH = Math.round(baseSize * 1.35) + 6;
+
+  // Standard teardrop pin (head + tail), drawn as a single path inside a 24x32 viewBox.
+  // Centered on x=12; tip at y=32; head circle radius ~10 around (12, 11).
+  const pinPath =
+    "M12 32 C 12 32 22 22 22 11 A 10 10 0 1 0 2 11 C 2 22 12 32 12 32 Z";
+
+  const haloRing = selected
+    ? `<circle cx="12" cy="11" r="13" fill="none" stroke="#00ed64" stroke-width="2" opacity="0.55"/>`
+    : "";
+
+  const starBadge = main
+    ? `<g transform="translate(16, -3)">
+         <circle cx="6" cy="6" r="6" fill="#ffd24a" stroke="#001e2b" stroke-width="1"/>
+         <path d="M6 1.8 L7.2 4.6 L10.2 5 L8 7.1 L8.6 10 L6 8.5 L3.4 10 L4 7.1 L1.8 5 L4.8 4.6 Z" fill="#001e2b"/>
+       </g>`
+    : "";
+
+  const stackBadge =
+    stackCount > 1
+      ? `<g transform="translate(-3, -3)">
+           <circle cx="6" cy="6" r="6" fill="#001e2b" stroke="#ffffff" stroke-width="1.2"/>
+           <text x="6" y="9" text-anchor="middle" font-size="9" font-family="ui-monospace,monospace" font-weight="700" fill="#ffffff">+${stackCount - 1}</text>
+         </g>`
+      : "";
+
+  const html = `<div style="position:relative;width:${wrapW}px;height:${wrapH}px;transition:all 120ms ease;">
+    <svg width="${wrapW}" height="${wrapH}" viewBox="-7 -3 ${24 + 14} ${32 + 6}" style="position:absolute;left:0;top:0;overflow:visible;">
+      ${haloRing}
+      <path d="${pinPath}" fill="${bodyFill}" stroke="#ffffff" stroke-width="1.8" stroke-linejoin="round" filter="drop-shadow(0 1px 2px rgba(0,30,43,0.4))"/>
+      ${innerGlyph}
+      ${starBadge}
+      ${stackBadge}
+    </svg>
+  </div>`;
+
   return L.divIcon({
-    className: "fo-marker fo-marker--fm",
-    html: `<div style="
-      width:${size}px;height:${size}px;
-      border-radius:50% 50% 50% 0;
-      background:${fill};
-      border:${ringWidth}px solid ${ringColor};
-      transform:rotate(-45deg);
-      box-shadow:0 2px 6px rgba(0,30,43,0.3);
-      transition: all 120ms ease;
-    "></div>`,
-    iconSize: [size, size],
-    iconAnchor: [size / 2, size],
-    popupAnchor: [0, -size],
+    className: `fo-marker fo-marker--fm ${main ? "is-main" : ""} ${selected ? "is-selected" : ""}`,
+    html,
+    iconSize: [wrapW, wrapH],
+    iconAnchor: [wrapW / 2, wrapH - 3],
+    popupAnchor: [0, -wrapH + 10],
   });
 }
 
@@ -109,6 +163,31 @@ export function FieldOpsMap({
     [interference]
   );
 
+  // Group FM stations by identical coordinates so we can show a "+N" badge
+  // and prefer the main station as the visible representative.
+  const fmGroups = useMemo(() => {
+    const groups = new Map<string, FMStation[]>();
+    for (const s of fmMarkers) {
+      const key = `${s.latitude.toFixed(5)},${s.longitude.toFixed(5)}`;
+      const arr = groups.get(key);
+      if (arr) arr.push(s);
+      else groups.set(key, [s]);
+    }
+    // Sort each group: main station first, then inspected, then by id
+    for (const arr of groups.values()) {
+      arr.sort((a, b) => {
+        const am = isMainStation(a) ? 0 : 1;
+        const bm = isMainStation(b) ? 0 : 1;
+        if (am !== bm) return am - bm;
+        const ai = a.inspection69 === "ตรวจแล้ว" ? 0 : 1;
+        const bi = b.inspection69 === "ตรวจแล้ว" ? 0 : 1;
+        if (ai !== bi) return ai - bi;
+        return String(a.id).localeCompare(String(b.id));
+      });
+    }
+    return groups;
+  }, [fmMarkers]);
+
   const fmIconCache = useRef<Map<string, L.DivIcon>>(new Map());
   const intIconCache = useRef<Map<string, L.DivIcon>>(new Map());
 
@@ -130,19 +209,21 @@ export function FieldOpsMap({
     >
       <TileLayer key={theme} url={tileUrl} attribution={tileAttribution} maxZoom={19} />
 
-      {fmMarkers.map((station) => {
-        const isSelected = selection?.kind === "fm" && selection.id === station.id;
-        const cacheKey = `${station.id}-${isSelected}-${station.inspection69}-${station.onAir}`;
+      {Array.from(fmGroups.entries()).map(([coordKey, group]) => {
+        const head = group[0];
+        const stackCount = group.length;
+        const isSelected = selection?.kind === "fm" && group.some((s) => s.id === selection.id);
+        const cacheKey = `${head.id}-${isSelected}-${head.inspection69}-${head.onAir}-${isMainStation(head) ? "M" : "x"}-${stackCount}`;
         if (!fmIconCache.current.has(cacheKey)) {
-          fmIconCache.current.set(cacheKey, fmIcon(station, isSelected));
+          fmIconCache.current.set(cacheKey, fmIcon(head, isSelected, stackCount));
         }
         return (
           <Marker
-            key={`fm-${station.id}`}
-            position={[station.latitude, station.longitude]}
+            key={`fm-grp-${coordKey}`}
+            position={[head.latitude, head.longitude]}
             icon={fmIconCache.current.get(cacheKey)!}
             eventHandlers={{
-              click: () => onSelect({ kind: "fm", id: station.id }),
+              click: () => onSelect({ kind: "fm", id: head.id }),
             }}
           />
         );

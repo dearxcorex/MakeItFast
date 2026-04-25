@@ -1,7 +1,12 @@
 "use client";
 
 export type TypeFilter = "ALL" | "FM" | "INT";
-export type StatusFilter = "ALL" | "PENDING" | "INSPECTED" | "LAW_SENT";
+export type StatusFilter =
+  | "ALL"
+  | "PENDING"
+  | "INSPECTED"
+  | "LAW_SENT"
+  | "OFF_AIR";
 
 export interface FieldFilters {
   type: TypeFilter;
@@ -30,25 +35,23 @@ export function FieldOpsFilters({
 }) {
   const provinceOptions = ["All", ...provinces];
   const types: TypeFilter[] = ["ALL", "FM", "INT"];
-  // FM has no "law paper sent" concept — hide LAW_SENT chip when type=FM
-  const statuses: Array<{ id: StatusFilter; label: string }> =
-    filters.type === "FM"
-      ? [
-          { id: "ALL", label: "ALL" },
-          { id: "PENDING", label: "PENDING" },
-          { id: "INSPECTED", label: "INSPECTED" },
-        ]
-      : [
-          { id: "ALL", label: "ALL" },
-          { id: "PENDING", label: "PENDING" },
-          { id: "INSPECTED", label: "INSPECTED" },
-          { id: "LAW_SENT", label: "LAW SENT" },
-        ];
+  // FM has no "law paper sent"; INT has no "on air" — chip set depends on type
+  const statuses: Array<{ id: StatusFilter; label: string }> = (() => {
+    const base: Array<{ id: StatusFilter; label: string }> = [
+      { id: "ALL", label: "ALL" },
+      { id: "PENDING", label: "PENDING" },
+      { id: "INSPECTED", label: "INSPECTED" },
+    ];
+    if (filters.type !== "INT") base.push({ id: "OFF_AIR", label: "OFF AIR" });
+    if (filters.type !== "FM") base.push({ id: "LAW_SENT", label: "LAW SENT" });
+    return base;
+  })();
 
   const handleTypeChange = (v: TypeFilter) => {
     const next: FieldFilters = { ...filters, type: v };
-    // Cascade: LAW_SENT is meaningless for FM-only — fall back to ALL.
+    // Cascade: drop the status if it's not valid for the new type
     if (v === "FM" && next.status === "LAW_SENT") next.status = "ALL";
+    if (v === "INT" && next.status === "OFF_AIR") next.status = "ALL";
     onChange(next);
   };
 
