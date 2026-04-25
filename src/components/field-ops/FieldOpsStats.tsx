@@ -42,7 +42,7 @@ export function FieldOpsStats({
   ).length;
 
   const statusRows = [
-    { key: "pending", label: "PENDING", count: pending, color: "var(--fo-line)" },
+    { key: "pending", label: "PENDING", count: pending, color: "var(--fo-rail-mute)" },
     { key: "inspected", label: "INSPECTED", count: inspected, color: "var(--fo-accent-2)" },
     { key: "law_sent", label: "LAW SENT", count: lawSent, color: "var(--fo-warn)" },
   ];
@@ -53,7 +53,7 @@ export function FieldOpsStats({
       style={{
         flex: 1,
         overflowY: "auto",
-        background: "#001216",
+        background: "var(--fo-rail-bg)",
         display: "flex",
         flexDirection: "column",
       }}
@@ -61,13 +61,13 @@ export function FieldOpsStats({
       <div
         style={{
           padding: "12px 20px",
-          borderBottom: "1px solid var(--fo-ink-3)",
+          borderBottom: "1px solid var(--fo-rail-border)",
           display: "flex",
           alignItems: "center",
           justifyContent: "space-between",
         }}
       >
-        <span className="fo-mono" style={{ color: "var(--fo-line)" }}>OPERATIONS · TODAY</span>
+        <span className="fo-mono" style={{ color: "var(--fo-rail-mute)" }}>OPERATIONS · TODAY</span>
         <span
           className="fo-mono"
           style={{
@@ -88,18 +88,18 @@ export function FieldOpsStats({
           display: "flex",
           flexDirection: "column",
           alignItems: "center",
-          borderBottom: "1px solid var(--fo-ink-3)",
+          borderBottom: "1px solid var(--fo-rail-border)",
         }}
       >
         <ProgressRing pct={pct} size={120} stroke={10} />
-        <div className="fo-mono" style={{ color: "var(--fo-line)", marginTop: 8 }}>INSPECTED</div>
+        <div className="fo-mono" style={{ color: "var(--fo-rail-mute)", marginTop: 8 }}>INSPECTED</div>
         <div className="fo-mono" style={{ color: "var(--fo-mute)", marginTop: 2 }}>
           {inspected} of {totalTasks} tasks
         </div>
       </div>
 
-      <div style={{ padding: "16px 20px", borderBottom: "1px solid var(--fo-ink-3)" }}>
-        <div className="fo-mono" style={{ color: "var(--fo-line)", marginBottom: 12 }}>
+      <div style={{ padding: "16px 20px", borderBottom: "1px solid var(--fo-rail-border)" }}>
+        <div className="fo-mono" style={{ color: "var(--fo-rail-mute)", marginBottom: 12 }}>
           STATUS BREAKDOWN
         </div>
         <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
@@ -109,15 +109,15 @@ export function FieldOpsStats({
         </div>
       </div>
 
-      <div style={{ padding: "16px 20px", borderBottom: "1px solid var(--fo-ink-3)" }}>
-        <div className="fo-mono" style={{ color: "var(--fo-line)", marginBottom: 10 }}>TYPE MIX</div>
+      <div style={{ padding: "16px 20px", borderBottom: "1px solid var(--fo-rail-border)" }}>
+        <div className="fo-mono" style={{ color: "var(--fo-rail-mute)", marginBottom: 10 }}>TYPE MIX</div>
         <div
           style={{
             height: 14,
             display: "flex",
             borderRadius: 999,
             overflow: "hidden",
-            border: "1px solid var(--fo-ink-3)",
+            border: "1px solid var(--fo-rail-border)",
           }}
         >
           <div style={{ width: `${fmPct}%`, background: "var(--fo-accent)" }} />
@@ -137,8 +137,8 @@ export function FieldOpsStats({
       </div>
 
       {topProvinces.length > 0 && (
-        <div style={{ padding: "16px 20px", borderBottom: "1px solid var(--fo-ink-3)" }}>
-          <div className="fo-mono" style={{ color: "var(--fo-line)", marginBottom: 12 }}>
+        <div style={{ padding: "16px 20px", borderBottom: "1px solid var(--fo-rail-border)" }}>
+          <div className="fo-mono" style={{ color: "var(--fo-rail-mute)", marginBottom: 12 }}>
             TOP PROVINCES
           </div>
           <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
@@ -188,7 +188,7 @@ function ProgressRing({ pct, size, stroke }: { pct: number; size: number; stroke
   return (
     <div style={{ position: "relative", width: size, height: size }}>
       <svg width={size} height={size} style={{ transform: "rotate(-90deg)" }}>
-        <circle cx={size / 2} cy={size / 2} r={r} fill="none" stroke="var(--fo-ink-3)" strokeWidth={stroke} />
+        <circle cx={size / 2} cy={size / 2} r={r} fill="none" stroke="var(--fo-rail-border)" strokeWidth={stroke} />
         <circle
           cx={size / 2}
           cy={size / 2}
@@ -223,7 +223,7 @@ function Bar({ label, count, max, color }: { label: string; count: number; max: 
   return (
     <div>
       <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 4 }}>
-        <span className="fo-mono" style={{ color: "var(--fo-line)" }}>{label}</span>
+        <span className="fo-mono" style={{ color: "var(--fo-rail-mute)" }}>{label}</span>
         <span className="fo-mono" style={{ color }}>{count}</span>
       </div>
       <div
@@ -259,7 +259,7 @@ function ProvinceRow({
       </span>
       <div style={{ flex: 1 }}>
         <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 4 }}>
-          <span className="fo-serif" style={{ color: "var(--fo-white)", fontSize: 14 }}>{name}</span>
+          <span className="fo-serif" style={{ color: "var(--fo-rail-text)", fontSize: 14 }}>{name}</span>
           <span className="fo-mono" style={{ color: "var(--fo-accent)" }}>{count}</span>
         </div>
         <div style={{ height: 4, background: "var(--fo-ink-2)", borderRadius: 999, overflow: "hidden" }}>

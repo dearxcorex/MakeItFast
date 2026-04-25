@@ -19,8 +19,8 @@ export function FieldOpsNav({
     <nav
       style={{
         width: 72,
-        background: "#001216",
-        borderRight: "1px solid var(--fo-ink-3)",
+        background: "var(--fo-rail-bg)",
+        borderRight: "1px solid var(--fo-rail-border)",
         display: "flex",
         flexDirection: "column",
         alignItems: "center",
@@ -58,7 +58,7 @@ export function FieldOpsNav({
               border: "none",
               borderRadius: 12,
               background: isActive ? "var(--fo-accent)" : "transparent",
-              color: isActive ? "var(--fo-ink)" : "var(--fo-line)",
+              color: isActive ? "#001e2b" : "var(--fo-rail-mute)",
               cursor: "pointer",
               display: "flex",
               flexDirection: "column",
@@ -81,7 +81,7 @@ export function FieldOpsNav({
               style={{
                 fontSize: 7,
                 letterSpacing: "0.12em",
-                color: isActive ? "var(--fo-ink)" : "var(--fo-mute)",
+                color: isActive ? "#001e2b" : "var(--fo-rail-mute)",
               }}
             >
               {item.label}

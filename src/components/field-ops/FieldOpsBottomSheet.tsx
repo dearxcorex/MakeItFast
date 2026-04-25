@@ -30,8 +30,8 @@ export function FieldOpsBottomSheet({
     return (
       <div
         style={{
-          background: "var(--fo-white)",
-          borderTop: "1px solid var(--fo-line)",
+          background: "var(--fo-band, #ffffff)",
+          borderTop: "1px solid var(--fo-divider)",
           padding: "20px 16px",
           textAlign: "center",
         }}
@@ -55,8 +55,8 @@ export function FieldOpsBottomSheet({
   return (
     <div
       style={{
-        background: "var(--fo-white)",
-        borderTop: "1px solid var(--fo-line)",
+        background: "var(--fo-band, #ffffff)",
+        borderTop: "1px solid var(--fo-divider)",
         borderTopLeftRadius: 20,
         borderTopRightRadius: 20,
         boxShadow: "0 -8px 24px rgba(0,30,43,0.1)",

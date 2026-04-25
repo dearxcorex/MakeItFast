@@ -46,10 +46,10 @@ export function FieldOpsCurrentFM({
         {!station.onAir && <Badge tone="off">OFF AIR</Badge>}
       </div>
 
-      <div className="fo-serif" style={{ fontSize: 24, color: "var(--fo-white)", lineHeight: 1.15 }}>
+      <div className="fo-serif" style={{ fontSize: 24, color: "var(--fo-rail-text)", lineHeight: 1.15 }}>
         {station.name}
       </div>
-      <div className="fo-mono" style={{ color: "var(--fo-line)" }}>
+      <div className="fo-mono" style={{ color: "var(--fo-rail-mute)" }}>
         {(station.state || "").toUpperCase()} · {station.city}
       </div>
 
@@ -125,10 +125,10 @@ export function FieldOpsCurrentINT({
         </span>
       </div>
 
-      <div className="fo-serif" style={{ fontSize: 22, color: "var(--fo-white)", lineHeight: 1.15 }}>
+      <div className="fo-serif" style={{ fontSize: 22, color: "var(--fo-rail-text)", lineHeight: 1.15 }}>
         {site.siteName || site.siteCode || `Site #${site.id}`}
       </div>
-      <div className="fo-mono" style={{ color: "var(--fo-line)" }}>
+      <div className="fo-mono" style={{ color: "var(--fo-rail-mute)" }}>
         {(site.changwat || "").toUpperCase()}
         {site.cellName ? ` · ${site.cellName}` : ""}
         {site.sectorName ? ` · ${site.sectorName}` : ""}
@@ -223,7 +223,7 @@ function Badge({ tone, children }: { tone: "fm" | "int" | "off"; children: React
     tone === "fm"
       ? { background: "var(--fo-ink)", color: "var(--fo-accent)", border: "1px solid var(--fo-accent)" }
       : tone === "int"
-        ? { background: "var(--fo-accent-2)", color: "var(--fo-white)", border: "1px solid var(--fo-accent-2)" }
+        ? { background: "var(--fo-accent-2)", color: "var(--fo-rail-text)", border: "1px solid var(--fo-accent-2)" }
         : { background: "transparent", color: "var(--fo-mute)", border: "1px solid var(--fo-mute)" };
   return (
     <span
@@ -275,7 +275,7 @@ function ButtonRow({ actions, loading }: { actions: CommonAction[]; loading: boo
               : {
                   ...baseStyle,
                   background: "transparent",
-                  color: "var(--fo-line)",
+                  color: "var(--fo-rail-mute)",
                   borderColor: "var(--fo-ink-3)",
                 };
         return (

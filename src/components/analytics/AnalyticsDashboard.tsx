@@ -1,31 +1,54 @@
-'use client';
+"use client";
 
-import { useEffect, useState } from 'react';
-import type { AnalyticsSummary } from '@/types/analytics';
-import StatCard from './StatCard';
-import ChartCard from './ChartCard';
-import ProgressRing from './ProgressRing';
-import ProvinceBarChart from './charts/ProvinceBarChart';
-import RankingDonutChart from './charts/RankingDonutChart';
-import FMProvinceBarChart from './charts/FMProvinceBarChart';
+import { useEffect, useMemo, useState } from "react";
+import type { AnalyticsSummary } from "@/types/analytics";
+import FoKPI from "./FoKPI";
+import FoLineChart from "./charts/FoLineChart";
+import FoBarChart from "./charts/FoBarChart";
+import FoDonut from "./charts/FoDonut";
+
+const RANGES = ["7D", "30D", "90D", "YTD"] as const;
+type Range = (typeof RANGES)[number];
+
+const RANK_COLOR: Record<string, string> = {
+  Critical: "#e34b4b",
+  Major: "#f5a623",
+  Minor: "#d4a017",
+  Unknown: "#b8c4c2",
+};
+
+const SIDEBAR_ANALYZE = [
+  { key: "Overview", active: true },
+  { key: "FM Stations", active: false },
+  { key: "Interference", active: false },
+  { key: "Provinces", active: false },
+] as const;
+
+function provinceShort(name: string): string {
+  if (!name) return "—";
+  const ascii = name.replace(/[^A-Za-z0-9 ]/g, "").trim();
+  if (ascii.length >= 3) return ascii.slice(0, 3).toUpperCase();
+  return name.slice(0, 3);
+}
 
 export default function AnalyticsDashboard() {
   const [data, setData] = useState<AnalyticsSummary | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
+  const [range, setRange] = useState<Range>("30D");
 
   const fetchData = async () => {
     setLoading(true);
     setError(null);
     try {
-      const res = await fetch('/api/analytics/summary');
+      const res = await fetch("/api/analytics/summary");
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
-      const json = await res.json();
+      const json = (await res.json()) as AnalyticsSummary;
       setData(json);
       setLastUpdated(new Date());
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to load');
+      setError(err instanceof Error ? err.message : "Failed to load");
     } finally {
       setLoading(false);
     }
@@ -35,28 +58,168 @@ export default function AnalyticsDashboard() {
     fetchData();
   }, []);
 
+  const handleExport = () => {
+    if (!data) return;
+    const win = window.open("", "_blank");
+    if (!win) {
+      alert("Please allow popups to export the report.");
+      return;
+    }
+    const inspectionRate = data.heroStats.totalStations
+      ? Math.round(
+          (data.heroStats.inspectedStations / data.heroStats.totalStations) * 100
+        )
+      : 0;
+    const html = `<!DOCTYPE html>
+<html><head><title>FM Station Analytics · NBTC Thailand</title>
+<style>
+  body { font-family: 'Inter', sans-serif; padding: 32px; max-width: 920px; margin: 0 auto; color: #001e2b; }
+  h1 { font-family: 'Playfair Display', Georgia, serif; color: #001e2b; border-bottom: 3px solid #00ed64; padding-bottom: 10px; font-weight: 400; }
+  h2 { font-family: 'Source Code Pro', monospace; color: #00684a; text-transform: uppercase; letter-spacing: 0.16em; font-size: 12px; margin-top: 32px; }
+  .grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin: 18px 0; }
+  .kpi { padding: 14px; border: 1px solid #e2dfd8; border-radius: 12px; }
+  .kpi .l { font-family: 'Source Code Pro', monospace; font-size: 9px; letter-spacing: 0.16em; text-transform: uppercase; color: #5c6c75; }
+  .kpi .v { font-family: 'Playfair Display', serif; font-size: 32px; margin-top: 6px; }
+  .kpi .s { font-size: 12px; color: #5c6c75; margin-top: 4px; }
+  table { width: 100%; border-collapse: collapse; margin-top: 12px; }
+  th, td { padding: 8px 10px; text-align: left; border-bottom: 1px solid #e2dfd8; font-size: 13px; }
+  th { font-family: 'Source Code Pro', monospace; font-size: 10px; letter-spacing: 0.16em; text-transform: uppercase; color: #5c6c75; }
+  .footer { margin-top: 36px; padding-top: 14px; border-top: 1px solid #e2dfd8; color: #5c6c75; font-size: 11px; }
+  @media print { body { padding: 0; } }
+</style></head><body>
+  <h1>How the field is performing.</h1>
+  <p style="color:#5c6c75;font-size:12px;">Generated ${new Date().toLocaleString()} · Range ${range}</p>
+
+  <h2>Headline KPIs</h2>
+  <div class="grid">
+    <div class="kpi"><div class="l">FM Stations</div><div class="v">${data.heroStats.totalStations}</div><div class="s">${data.heroStats.inspectedStations} inspected</div></div>
+    <div class="kpi"><div class="l">Inspection Rate</div><div class="v">${inspectionRate}%</div><div class="s">target 100%</div></div>
+    <div class="kpi"><div class="l">Interference Sites</div><div class="v">${data.heroStats.totalInterferenceSites}</div><div class="s">${data.heroStats.pendingInterference} pending</div></div>
+    <div class="kpi"><div class="l">Critical Alerts</div><div class="v" style="color:#e34b4b;">${data.heroStats.criticalInterference}</div><div class="s">requires action</div></div>
+  </div>
+
+  <h2>FM Stations · Top Provinces</h2>
+  <table>
+    <tr><th>Province</th><th>Total</th><th>Inspected (Y69)</th></tr>
+    ${data.fmStationsByProvince
+      .slice(0, 12)
+      .map(
+        (p) =>
+          `<tr><td>${p.name}</td><td>${p.total}</td><td>${p.inspected69}</td></tr>`
+      )
+      .join("")}
+  </table>
+
+  <h2>Interference · Severity Distribution</h2>
+  <table>
+    <tr><th>Ranking</th><th>Count</th></tr>
+    ${data.rankingDistribution
+      .map((r) => `<tr><td>${r.ranking}</td><td>${r.count}</td></tr>`)
+      .join("")}
+  </table>
+
+  <div class="footer">FM Station &amp; Interference Analytics · NBTC Thailand · field-ops dashboard</div>
+</body></html>`;
+    win.document.write(html);
+    win.document.close();
+    win.print();
+  };
+
+  const lineSeries = useMemo(() => {
+    if (!data) return [];
+    const rows = data.byProvince.slice(0, 7);
+    return [
+      {
+        name: "TOTAL",
+        color: "var(--fo-line-2)",
+        points: rows.map((r) => r.total),
+      },
+      {
+        name: "INSPECTED",
+        color: "#00ed64",
+        points: rows.map((r) => r.inspected),
+      },
+    ];
+  }, [data]);
+
+  const lineLabels = useMemo(() => {
+    if (!data) return [];
+    return data.byProvince.slice(0, 7).map((r) => provinceShort(r.name));
+  }, [data]);
+
+  const donutSegments = useMemo(() => {
+    if (!data) return [];
+    return data.rankingDistribution.map((r) => ({
+      label: r.ranking,
+      v: r.count,
+      c: RANK_COLOR[r.ranking] ?? RANK_COLOR.Unknown,
+    }));
+  }, [data]);
+
+  const barData = useMemo(() => {
+    if (!data) return [];
+    const rows = data.fmStationsByProvince.slice(0, 9);
+    return rows.map((r) => ({
+      label: provinceShort(r.name),
+      v: r.total,
+      color: r.total === Math.max(...rows.map((x) => x.total)) ? "#00684a" : undefined,
+    }));
+  }, [data]);
+
   if (loading && !data) {
     return (
-      <div className="analytics-theme flex-1 flex items-center justify-center p-8 rounded-3xl">
-        <div className="text-center">
-          <div className="inline-block w-12 h-12 border-4 border-current border-t-transparent rounded-full animate-spin" style={{ color: 'var(--tt-teal)' }} />
-          <p className="mt-4 text-sm" style={{ color: 'var(--tt-brown)' }}>Loading analytics...</p>
+      <div
+        className="fo-light"
+        style={{
+          flex: 1,
+          minHeight: 480,
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+        }}
+      >
+        <div style={{ textAlign: "center" }}>
+          <div
+            style={{
+              display: "inline-block",
+              width: 36,
+              height: 36,
+              border: "3px solid var(--fo-accent-2)",
+              borderTopColor: "transparent",
+              borderRadius: "50%",
+              animation: "spin 0.8s linear infinite",
+            }}
+          />
+          <div className="fo-mono" style={{ marginTop: 14 }}>
+            LOADING ANALYTICS…
+          </div>
         </div>
+        <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
       </div>
     );
   }
 
   if (error || !data) {
     return (
-      <div className="analytics-theme flex-1 flex items-center justify-center p-8 rounded-3xl">
-        <div className="tt-card max-w-md text-center">
-          <div className="tt-heading text-lg mb-2">Unable to load analytics</div>
-          <p className="text-sm mb-4" style={{ color: 'var(--tt-brown)' }}>{error || 'No data available'}</p>
-          <button
-            onClick={fetchData}
-            className="px-4 py-2 rounded-xl font-medium text-sm"
-            style={{ background: 'var(--tt-teal)', color: '#fff' }}
-          >
+      <div
+        className="fo-light"
+        style={{
+          flex: 1,
+          minHeight: 480,
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          padding: 24,
+        }}
+      >
+        <div className="fo-card" style={{ padding: 24, maxWidth: 420, textAlign: "center" }}>
+          <div className="fo-serif" style={{ fontSize: 22, marginBottom: 6 }}>
+            Unable to load analytics
+          </div>
+          <div className="fo-mono" style={{ marginBottom: 12 }}>
+            {error ?? "NO DATA"}
+          </div>
+          <button onClick={fetchData} className="fo-btn fo-btn-primary">
             Retry
           </button>
         </div>
@@ -64,125 +227,336 @@ export default function AnalyticsDashboard() {
     );
   }
 
+  const inspectionRate = data.heroStats.totalStations
+    ? Math.round((data.heroStats.inspectedStations / data.heroStats.totalStations) * 100)
+    : 0;
+
+  const totalInspected =
+    data.fmStationInspection.inspection69 + data.fmStationInspection.bothYears;
+  const totalStations = data.heroStats.totalStations;
+  const ringPct = totalStations ? Math.round((totalInspected / totalStations) * 100) : 0;
+  const onAir = data.fmStationAirStatus.onAir;
+  const offAir = data.fmStationAirStatus.offAir;
+  const airTotal = onAir + offAir;
+  const submitted = data.fmStationRequests.submitted;
+  const notSubmitted = data.fmStationRequests.notSubmitted;
+  const submitTotal = submitted + notSubmitted;
+
+  const totalInterference = data.heroStats.totalInterferenceSites;
+
   return (
-    <div className="analytics-theme flex-1 overflow-y-auto p-6 lg:p-8 rounded-3xl">
-      {/* Header */}
-      <div className="flex items-start justify-between mb-8 flex-wrap gap-4">
-        <div>
-          <h1 className="tt-heading tt-heading-gradient text-3xl lg:text-4xl font-bold">
-            Analytics Dashboard
-          </h1>
-          <p className="text-sm mt-2" style={{ color: 'var(--tt-brown)' }}>
-            ภาพรวมการตรวจสอบสถานีวิทยุ FM และการวิเคราะห์สัญญาณรบกวน
-          </p>
-          <span className="tt-scallop" aria-hidden="true" />
+    <div className="fo-light" style={{ minHeight: "100%", display: "flex" }}>
+      {/* Sidebar */}
+      <aside
+        style={{
+          width: 200,
+          flexShrink: 0,
+          borderRight: "1px solid var(--fo-line)",
+          padding: "20px 16px",
+          display: "flex",
+          flexDirection: "column",
+          gap: 6,
+          background: "var(--fo-surface)",
+        }}
+      >
+        <div className="fo-mono" style={{ marginBottom: 4 }}>
+          ANALYZE
         </div>
-        <div className="flex items-center gap-3">
-          {lastUpdated && (
-            <span className="text-xs" style={{ color: 'var(--tt-brown)' }}>
-              Updated {lastUpdated.toLocaleTimeString()}
-            </span>
-          )}
-          <button
-            onClick={fetchData}
-            disabled={loading}
-            className="px-4 py-2 rounded-xl font-medium text-sm flex items-center gap-2 disabled:opacity-50"
-            style={{ background: 'var(--tt-teal)', color: '#fff' }}
+        {SIDEBAR_ANALYZE.map(({ key, active }) => (
+          <div
+            key={key}
+            style={{
+              padding: "8px 10px",
+              borderRadius: 8,
+              fontSize: 12,
+              fontWeight: 500,
+              background: active ? "rgba(0,104,74,0.08)" : "transparent",
+              border: active ? "1px solid var(--fo-accent-2)" : "1px solid transparent",
+              color: active ? "var(--fo-accent-2)" : "var(--fo-mute)",
+            }}
           >
-            <svg className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
-            </svg>
-            Refresh
-          </button>
+            {key}
+          </div>
+        ))}
+
+        <div style={{ flex: 1 }} />
+        {lastUpdated && (
+          <div className="fo-mono" style={{ fontSize: 9 }}>
+            UPDATED {lastUpdated.toLocaleTimeString()}
+          </div>
+        )}
+      </aside>
+
+      {/* Main */}
+      <div
+        style={{
+          flex: 1,
+          padding: 24,
+          display: "flex",
+          flexDirection: "column",
+          gap: 16,
+          minWidth: 0,
+        }}
+      >
+        {/* Header */}
+        <div
+          style={{
+            display: "flex",
+            justifyContent: "space-between",
+            alignItems: "flex-end",
+            flexWrap: "wrap",
+            gap: 16,
+          }}
+        >
+          <div>
+            <div className="fo-mono" style={{ color: "var(--fo-accent-2)" }}>
+              ANALYTICS · OVERVIEW · NBTC THAILAND
+            </div>
+            <div
+              className="fo-serif"
+              style={{ fontSize: 42, marginTop: 6, lineHeight: 1.1 }}
+            >
+              How the field is{" "}
+              <span className="fo-underline-accent">performing</span>.
+            </div>
+          </div>
+          <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+            {RANGES.map((r) => (
+              <button
+                key={r}
+                type="button"
+                onClick={() => setRange(r)}
+                className={`fo-pill ${range === r ? "is-active" : ""}`}
+              >
+                {r}
+              </button>
+            ))}
+            <button
+              type="button"
+              onClick={handleExport}
+              className="fo-pill is-solid"
+            >
+              EXPORT
+            </button>
+            <button
+              type="button"
+              onClick={fetchData}
+              disabled={loading}
+              className="fo-pill"
+              aria-label="refresh"
+            >
+              {loading ? "…" : "↻"}
+            </button>
+          </div>
+        </div>
+
+        {/* KPI row */}
+        <div
+          style={{
+            display: "grid",
+            gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))",
+            gap: 14,
+          }}
+        >
+          <FoKPI
+            accent
+            label="FM STATIONS"
+            value={data.heroStats.totalStations.toLocaleString()}
+            sub={`${data.heroStats.inspectedStations.toLocaleString()} inspected`}
+          />
+          <FoKPI
+            label="INSPECTION RATE"
+            value={`${inspectionRate}%`}
+            sub="target 100%"
+          />
+          <FoKPI
+            label="INTERFERENCE SITES"
+            value={data.heroStats.totalInterferenceSites.toLocaleString()}
+            sub={`${data.heroStats.pendingInterference} pending`}
+          />
+          <FoKPI
+            tone="danger"
+            label="CRITICAL ALERTS"
+            value={data.heroStats.criticalInterference.toLocaleString()}
+            sub="requires action"
+          />
+        </div>
+
+        {/* Charts row 1 */}
+        <div
+          style={{
+            display: "grid",
+            gridTemplateColumns: "minmax(0, 1.6fr) minmax(0, 1fr)",
+            gap: 14,
+          }}
+        >
+          <FoLineChart
+            height={260}
+            title="INSPECTION PROGRESS · TOP PROVINCES"
+            xLabels={lineLabels}
+            series={lineSeries}
+          />
+          <FoDonut
+            height={260}
+            title="MIX · BY RANKING"
+            centerLabel={totalInterference.toLocaleString()}
+            centerSub="INTERFERENCE · ALL"
+            segments={donutSegments}
+          />
+        </div>
+
+        {/* Charts row 2 */}
+        <div
+          style={{
+            display: "grid",
+            gridTemplateColumns: "minmax(0, 1.6fr) minmax(0, 1fr)",
+            gap: 14,
+          }}
+        >
+          <FoBarChart
+            height={240}
+            title="VOLUME · FM BY PROVINCE"
+            data={barData}
+          />
+          <div className="fo-card" style={{ padding: 14, display: "flex", flexDirection: "column", gap: 12 }}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline" }}>
+              <span className="fo-mono" style={{ color: "var(--fo-accent-2)" }}>
+                COVERAGE · INSPECTION 69
+              </span>
+              <span className="fo-mono">
+                {totalInspected}/{totalStations}
+              </span>
+            </div>
+
+            <div style={{ display: "flex", justifyContent: "center" }}>
+              <CoverageRing pct={ringPct} />
+            </div>
+
+            <MiniBar
+              label="ON AIR"
+              filled={onAir}
+              total={airTotal}
+              tone="ok"
+            />
+            <MiniBar
+              label="REQUEST SUBMITTED"
+              filled={submitted}
+              total={submitTotal}
+              tone="warn"
+            />
+            <MiniBar
+              label="REQUEST PENDING"
+              filled={notSubmitted}
+              total={submitTotal}
+              tone="crit"
+            />
+          </div>
         </div>
       </div>
+    </div>
+  );
+}
 
-      {/* Row 1: Hero Stats */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
-        <StatCard
-          label="FM Stations"
-          value={data.heroStats.totalStations}
-          tone="teal"
-          subtitle={`${data.heroStats.inspectedStations} inspected`}
-          icon={<svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8.111 16.404a5.5 5.5 0 017.778 0M12 20h.01m-7.08-7.071c3.904-3.905 10.236-3.905 14.141 0M1.394 9.393c5.857-5.857 15.355-5.857 21.213 0" /></svg>}
+function CoverageRing({ pct }: { pct: number }) {
+  const size = 132;
+  const stroke = 12;
+  const r = (size - stroke) / 2;
+  const c = 2 * Math.PI * r;
+  const dash = (pct / 100) * c;
+  return (
+    <div style={{ position: "relative", width: size, height: size }}>
+      <svg width={size} height={size}>
+        <circle
+          cx={size / 2}
+          cy={size / 2}
+          r={r}
+          fill="none"
+          stroke="var(--fo-line)"
+          strokeWidth={stroke}
         />
-        <StatCard
-          label="Interference Sites"
-          value={data.heroStats.totalInterferenceSites}
-          tone="gold"
-          subtitle={`${data.heroStats.pendingInterference} pending inspection`}
-          icon={<svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19.428 15.428a2 2 0 00-1.022-.547l-2.387-.477a6 6 0 00-3.86.517l-.318.158a6 6 0 01-3.86.517L6.05 15.21a2 2 0 00-1.806.547M8 4h8l-1 1v5.172a2 2 0 00.586 1.414l5 5c1.26 1.26.367 3.414-1.415 3.414H4.828c-1.782 0-2.674-2.154-1.414-3.414l5-5A2 2 0 009 10.172V5L8 4z" /></svg>}
+        <circle
+          cx={size / 2}
+          cy={size / 2}
+          r={r}
+          fill="none"
+          stroke="var(--fo-accent-2)"
+          strokeWidth={stroke}
+          strokeDasharray={`${dash} ${c - dash}`}
+          strokeDashoffset={c / 4}
+          strokeLinecap="round"
+          transform={`rotate(-90 ${size / 2} ${size / 2})`}
         />
-        <StatCard
-          label="Critical Alerts"
-          value={data.heroStats.criticalInterference}
-          tone="coral"
-          subtitle="Need immediate action"
-          icon={<svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" /></svg>}
-        />
-        <StatCard
-          label="Direction Match"
-          value={data.heroStats.directionMatchRate}
-          suffix="%"
-          tone="jade"
-          subtitle="Antenna bearing validation"
-          icon={<svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" /></svg>}
-        />
+      </svg>
+      <div
+        style={{
+          position: "absolute",
+          inset: 0,
+          display: "flex",
+          flexDirection: "column",
+          alignItems: "center",
+          justifyContent: "center",
+        }}
+      >
+        <span className="fo-serif" style={{ fontSize: 32, lineHeight: 1 }}>
+          {pct}%
+        </span>
+        <span className="fo-mono" style={{ marginTop: 4 }}>
+          INSPECTED
+        </span>
       </div>
+    </div>
+  );
+}
 
-      {/* Row 2: Charts - Province + Ranking + Inspection Ring */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 mb-6">
-        <ChartCard title="Interference by Province" subtitle="Top provinces by reported sites" className="lg:col-span-2">
-          <ProvinceBarChart data={data.byProvince.slice(0, 8)} />
-        </ChartCard>
-        <ChartCard title="Severity Distribution" subtitle="By ranking">
-          <RankingDonutChart data={data.rankingDistribution} />
-        </ChartCard>
+function MiniBar({
+  label,
+  filled,
+  total,
+  tone,
+}: {
+  label: string;
+  filled: number;
+  total: number;
+  tone: "ok" | "warn" | "crit";
+}) {
+  const pct = total ? Math.round((filled / total) * 100) : 0;
+  const color =
+    tone === "ok"
+      ? "var(--fo-accent)"
+      : tone === "warn"
+        ? "var(--fo-warn-2)"
+        : "var(--fo-crit)";
+  return (
+    <div>
+      <div
+        style={{
+          display: "flex",
+          justifyContent: "space-between",
+          alignItems: "baseline",
+          marginBottom: 4,
+        }}
+      >
+        <span className="fo-mono">{label}</span>
+        <span className="fo-mono" style={{ color: "var(--fo-ink)" }}>
+          {filled}/{total}
+        </span>
       </div>
-
-      {/* Row 3: FM Station Analytics */}
-      <div className="mb-2 mt-2">
-        <h2 className="tt-heading tt-heading-gradient text-xl lg:text-2xl font-bold">FM Station Insights</h2>
-        <p className="text-xs mt-1" style={{ color: 'var(--tt-brown)' }}>
-          ข้อมูลเชิงลึกเกี่ยวกับสถานีวิทยุ FM
-        </p>
-        <span className="tt-scallop" aria-hidden="true" />
-      </div>
-
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 mb-6 mt-4">
-        <ChartCard title="FM Stations by Province" subtitle="ตรวจแล้วปี 69 per province" className="lg:col-span-2">
-          <FMProvinceBarChart data={data.fmStationsByProvince.slice(0, 8)} />
-        </ChartCard>
-        <ChartCard title="Inspection Coverage" subtitle="ตรวจสอบปี 69">
-          {(() => {
-            const inspected = data.fmStationInspection.inspection69 + data.fmStationInspection.bothYears;
-            const total = data.heroStats.totalStations;
-            const notInspected = total - inspected;
-            const percent = total > 0 ? Math.round((inspected / total) * 100) : 0;
-            return (
-              <div className="flex flex-col items-center justify-center py-4">
-                <ProgressRing value={percent} size={160} label="coverage" />
-                <div className="mt-3 text-xs" style={{ color: 'var(--tt-brown)' }}>
-                  {inspected} / {total} stations
-                </div>
-                <div className="mt-4 flex gap-6 text-xs w-full justify-around">
-                  <div className="text-center">
-                    <div className="tt-heading text-2xl" style={{ color: 'var(--tt-jade)' }}>
-                      {inspected}
-                    </div>
-                    <div style={{ color: 'var(--tt-brown)' }}>ตรวจแล้ว</div>
-                  </div>
-                  <div className="text-center">
-                    <div className="tt-heading text-2xl" style={{ color: 'var(--tt-coral)' }}>
-                      {notInspected}
-                    </div>
-                    <div style={{ color: 'var(--tt-brown)' }}>ยังไม่ตรวจ</div>
-                  </div>
-                </div>
-              </div>
-            );
-          })()}
-        </ChartCard>
+      <div
+        style={{
+          height: 8,
+          background: "var(--fo-line)",
+          borderRadius: 999,
+          overflow: "hidden",
+        }}
+      >
+        <div
+          style={{
+            width: `${pct}%`,
+            height: "100%",
+            background: color,
+            transition: "width 320ms ease",
+          }}
+        />
       </div>
     </div>
   );

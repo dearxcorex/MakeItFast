@@ -2,24 +2,33 @@
 
 import type { FMStation } from "@/types/station";
 import type { InterferenceSite } from "@/types/interference";
+import type { TypeFilter } from "./FieldOpsFilters";
+import { computeKpis } from "@/utils/fieldOpsKpi";
 
 export function FieldOpsHeader({
   stations,
   interference,
+  type,
+  theme,
+  onToggleTheme,
 }: {
   stations: FMStation[];
   interference: InterferenceSite[];
+  type: TypeFilter;
+  theme: "dark" | "light";
+  onToggleTheme: () => void;
 }) {
-  const totalTasks = stations.length + interference.length;
+  const kpis = computeKpis(stations, interference, type);
 
-  const inspectedFM = stations.filter((s) => s.inspection69 === "ตรวจแล้ว").length;
-  const inspectedINT = interference.filter((s) => s.status === "ตรวจแล้ว").length;
-  const inspected = inspectedFM + inspectedINT;
+  const isLight = theme === "light";
+  const headerBg = isLight ? "#ffffff" : "var(--fo-ink)";
+  const textColor = isLight ? "#001e2b" : "var(--fo-white)";
+  const borderColor = isLight ? "#e2dfd8" : "var(--fo-ink-3)";
+  const labelColor = isLight ? "#5c6c75" : "var(--fo-line)";
+  const accentText = isLight ? "#00684a" : "var(--fo-accent)";
 
-  const pending = totalTasks - inspected;
-  const critical = interference.filter((s) => s.ranking === "Critical").length;
-
-  const pct = totalTasks > 0 ? Math.round((inspected / totalTasks) * 100) : 0;
+  const scopeLabel =
+    type === "FM" ? "FM ONLY" : type === "INT" ? "INTERFERENCE ONLY" : "ALL";
 
   return (
     <header
@@ -28,19 +37,19 @@ export function FieldOpsHeader({
         alignItems: "center",
         gap: 24,
         padding: "14px 24px",
-        background: "var(--fo-ink)",
-        color: "var(--fo-white)",
-        borderBottom: "1px solid var(--fo-ink-3)",
+        background: headerBg,
+        color: textColor,
+        borderBottom: `1px solid ${borderColor}`,
         flexShrink: 0,
       }}
     >
       <div>
-        <div className="fo-mono" style={{ color: "var(--fo-accent)" }}>
-          NBTC · FIELD OPS
+        <div className="fo-mono" style={{ color: accentText }}>
+          NBTC · FIELD OPS · {scopeLabel}
         </div>
         <div
           className="fo-serif"
-          style={{ fontSize: 20, lineHeight: 1.1, marginTop: 2 }}
+          style={{ fontSize: 20, lineHeight: 1.1, marginTop: 2, color: textColor }}
         >
           Field Operations
         </div>
@@ -48,17 +57,50 @@ export function FieldOpsHeader({
 
       <div style={{ flex: 1 }} />
 
-      <Stat label="TOTAL" value={totalTasks} />
-      <Stat label="INSPECTED" value={inspected} sub={`${pct}%`} accent />
-      <Stat label="PENDING" value={pending} />
-      <Stat label="CRITICAL" value={critical} warn />
+      <Stat label="TOTAL" value={kpis.total} textColor={textColor} labelColor={labelColor} />
+      <Stat
+        label="INSPECTED"
+        value={kpis.inspected}
+        sub={`${kpis.pct}%`}
+        accent
+        textColor={textColor}
+        labelColor={labelColor}
+        accentText={accentText}
+      />
+      <Stat label="PENDING" value={kpis.pending} textColor={textColor} labelColor={labelColor} />
+      <Stat
+        label="CRITICAL"
+        value={kpis.critical}
+        warn
+        textColor={textColor}
+        labelColor={labelColor}
+      />
+
+      <button
+        type="button"
+        onClick={onToggleTheme}
+        className="fo-mono"
+        title={`Switch to ${isLight ? "dark" : "light"} theme`}
+        style={{
+          padding: "6px 12px",
+          border: `1px solid ${accentText}`,
+          color: accentText,
+          background: "transparent",
+          borderRadius: 999,
+          fontSize: 10,
+          cursor: "pointer",
+          letterSpacing: "0.16em",
+        }}
+      >
+        {isLight ? "☀ LIGHT" : "☾ DARK"}
+      </button>
 
       <div
         className="fo-mono"
         style={{
           padding: "6px 12px",
-          border: "1px solid var(--fo-accent)",
-          color: "var(--fo-accent)",
+          border: `1px solid ${accentText}`,
+          color: accentText,
           borderRadius: 999,
           fontSize: 10,
         }}
@@ -75,23 +117,36 @@ function Stat({
   sub,
   accent = false,
   warn = false,
+  textColor,
+  labelColor,
+  accentText,
 }: {
   label: string;
-  value: number;
+  value: number | null;
   sub?: string;
   accent?: boolean;
   warn?: boolean;
+  textColor: string;
+  labelColor: string;
+  accentText?: string;
 }) {
-  const color = accent ? "var(--fo-accent)" : warn ? "var(--fo-crit)" : "var(--fo-white)";
+  const isMissing = value === null;
+  const color = isMissing
+    ? labelColor
+    : accent
+      ? accentText ?? "var(--fo-accent)"
+      : warn
+        ? "var(--fo-crit)"
+        : textColor;
+  const display = isMissing ? "—" : value;
   return (
     <div>
-      <div className="fo-mono" style={{ color: "var(--fo-line)" }}>{label}</div>
-      <div
-        className="fo-serif"
-        style={{ fontSize: 24, lineHeight: 1.1, color }}
-      >
-        {value}
-        {sub && (
+      <div className="fo-mono" style={{ color: labelColor }}>
+        {label}
+      </div>
+      <div className="fo-serif" style={{ fontSize: 24, lineHeight: 1.1, color }}>
+        {display}
+        {!isMissing && sub && (
           <span className="fo-mono" style={{ fontSize: 11, marginLeft: 6, color }}>
             {sub}
           </span>

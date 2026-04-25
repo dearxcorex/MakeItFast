@@ -30,18 +30,33 @@ export function FieldOpsFilters({
 }) {
   const provinceOptions = ["All", ...provinces];
   const types: TypeFilter[] = ["ALL", "FM", "INT"];
-  const statuses: Array<{ id: StatusFilter; label: string }> = [
-    { id: "ALL", label: "ALL" },
-    { id: "PENDING", label: "PENDING" },
-    { id: "INSPECTED", label: "INSPECTED" },
-    { id: "LAW_SENT", label: "LAW SENT" },
-  ];
+  // FM has no "law paper sent" concept — hide LAW_SENT chip when type=FM
+  const statuses: Array<{ id: StatusFilter; label: string }> =
+    filters.type === "FM"
+      ? [
+          { id: "ALL", label: "ALL" },
+          { id: "PENDING", label: "PENDING" },
+          { id: "INSPECTED", label: "INSPECTED" },
+        ]
+      : [
+          { id: "ALL", label: "ALL" },
+          { id: "PENDING", label: "PENDING" },
+          { id: "INSPECTED", label: "INSPECTED" },
+          { id: "LAW_SENT", label: "LAW SENT" },
+        ];
+
+  const handleTypeChange = (v: TypeFilter) => {
+    const next: FieldFilters = { ...filters, type: v };
+    // Cascade: LAW_SENT is meaningless for FM-only — fall back to ALL.
+    if (v === "FM" && next.status === "LAW_SENT") next.status = "ALL";
+    onChange(next);
+  };
 
   return (
     <div
       style={{
-        background: "var(--fo-white)",
-        borderBottom: "1px solid var(--fo-line)",
+        background: "var(--fo-band)",
+        borderBottom: "1px solid var(--fo-divider)",
         padding: "12px 20px",
         display: "flex",
         flexWrap: "wrap",
@@ -53,7 +68,7 @@ export function FieldOpsFilters({
         label="TYPE"
         options={types}
         value={filters.type}
-        onChange={(v) => onChange({ ...filters, type: v })}
+        onChange={handleTypeChange}
       />
 
       <Divider />
@@ -66,9 +81,9 @@ export function FieldOpsFilters({
         style={{
           padding: "6px 10px",
           borderRadius: 999,
-          border: "1px solid var(--fo-line)",
-          background: "var(--fo-white)",
-          color: "var(--fo-ink)",
+          border: "1px solid var(--fo-divider)",
+          background: "var(--fo-band-inset)",
+          color: "var(--fo-band-text)",
           fontSize: 11,
           letterSpacing: "0.16em",
           textTransform: "uppercase",
@@ -105,14 +120,14 @@ export function FieldOpsFilters({
         style={{
           padding: "6px 12px",
           borderRadius: 999,
-          border: "1px solid var(--fo-line)",
-          background: "var(--fo-paper-2)",
-          color: "var(--fo-ink)",
+          border: "1px solid var(--fo-divider)",
+          background: "var(--fo-band-inset)",
+          color: "var(--fo-band-text)",
           fontSize: 12,
           minWidth: 220,
         }}
       />
-      <span className="fo-mono" style={{ color: "var(--fo-mute)" }}>
+      <span className="fo-mono" style={{ color: "var(--fo-band-mute)" }}>
         {visibleCount} VISIBLE
       </span>
     </div>
@@ -120,7 +135,7 @@ export function FieldOpsFilters({
 }
 
 function Divider() {
-  return <div style={{ width: 1, height: 22, background: "var(--fo-line)" }} />;
+  return <div style={{ width: 1, height: 22, background: "var(--fo-divider)" }} />;
 }
 
 function ChipGroup<T extends string>({
@@ -138,14 +153,14 @@ function ChipGroup<T extends string>({
 }) {
   return (
     <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-      <span className="fo-mono" style={{ color: "var(--fo-mute)" }}>{label}</span>
+      <span className="fo-mono" style={{ color: "var(--fo-band-mute)" }}>{label}</span>
       <div
         style={{
           display: "inline-flex",
           padding: 3,
-          background: "var(--fo-paper-2)",
+          background: "var(--fo-band-inset)",
           borderRadius: 999,
-          border: "1px solid var(--fo-line)",
+          border: "1px solid var(--fo-divider)",
           gap: 2,
         }}
       >
@@ -159,8 +174,8 @@ function ChipGroup<T extends string>({
               onClick={() => onChange(opt)}
               style={{
                 padding: "4px 12px",
-                background: active ? "var(--fo-ink)" : "transparent",
-                color: active ? "var(--fo-accent)" : "var(--fo-ink)",
+                background: active ? "var(--fo-accent)" : "transparent",
+                color: active ? "#001e2b" : "var(--fo-band-text)",
                 border: "none",
                 borderRadius: 999,
                 cursor: "pointer",

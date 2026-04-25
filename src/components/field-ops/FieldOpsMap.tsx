@@ -88,12 +88,14 @@ export function FieldOpsMap({
   selection,
   onSelect,
   flyTarget,
+  theme = "dark",
 }: {
   stations: FMStation[];
   interference: InterferenceSite[];
   selection: FieldSelection;
   onSelect: (sel: FieldSelection) => void;
   flyTarget: [number, number] | null;
+  theme?: "dark" | "light";
 }) {
   const fmMarkers = useMemo(
     () => stations.filter((s) => Number.isFinite(s.latitude) && Number.isFinite(s.longitude)),
@@ -110,6 +112,15 @@ export function FieldOpsMap({
   const fmIconCache = useRef<Map<string, L.DivIcon>>(new Map());
   const intIconCache = useRef<Map<string, L.DivIcon>>(new Map());
 
+  const tileUrl =
+    theme === "light"
+      ? "https://tile.openstreetmap.org/{z}/{x}/{y}.png"
+      : "https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png";
+  const tileAttribution =
+    theme === "light"
+      ? '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+      : '&copy; <a href="https://www.openstreetmap.org/copyright">OSM</a> &copy; <a href="https://carto.com/attributions">CARTO</a>';
+
   return (
     <MapContainer
       center={THAILAND_CENTER}
@@ -117,11 +128,7 @@ export function FieldOpsMap({
       style={{ width: "100%", height: "100%" }}
       preferCanvas
     >
-      <TileLayer
-        url="https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png"
-        attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OSM</a> &copy; <a href="https://carto.com/attributions">CARTO</a>'
-        maxZoom={19}
-      />
+      <TileLayer key={theme} url={tileUrl} attribution={tileAttribution} maxZoom={19} />
 
       {fmMarkers.map((station) => {
         const isSelected = selection?.kind === "fm" && selection.id === station.id;

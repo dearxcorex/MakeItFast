@@ -13,13 +13,10 @@ import {
   assessInterferenceRisk,
   calculateThirdOrderProducts,
   formatDistance,
-  getRiskLevelColor,
-  getRiskLevelBgColor,
   summarizeByService,
   filterRiskAssessments,
 } from '@/utils/intermodCalculations';
 
-// Calculator modes
 type CalculatorMode = 'aircraft-check' | 'specific-frequency';
 
 interface IntermodCalculatorProps {
@@ -28,34 +25,30 @@ interface IntermodCalculatorProps {
   onSwitchToStations?: () => void;
 }
 
+const RISK_TONE: Record<RiskLevel, { color: string; pillClass: string }> = {
+  CRITICAL: { color: 'var(--fo-crit)', pillClass: 'fo-risk-critical' },
+  HIGH: { color: 'var(--fo-warn)', pillClass: 'fo-risk-high' },
+  MEDIUM: { color: 'var(--fo-warn-2)', pillClass: 'fo-risk-medium' },
+  LOW: { color: 'var(--fo-accent-2)', pillClass: 'fo-risk-low' },
+};
+
 export default function IntermodCalculator({
   stations,
   onHighlightStations,
   onSwitchToStations,
 }: IntermodCalculatorProps) {
-  // Calculator mode - default to aircraft check
   const [mode, setMode] = useState<CalculatorMode>('aircraft-check');
-
-  // Manual frequency inputs (for specific-frequency mode)
   const [freq1, setFreq1] = useState<string>('');
   const [freq2, setFreq2] = useState<string>('');
-
-  // Aircraft data inputs
   const [aircraftData, setAircraftData] = useState<AircraftInput>({});
   const [customFrequency, setCustomFrequency] = useState<string>('');
-
-  // Results state
   const [calculationResult, setCalculationResult] = useState<IntermodCalculationResult | null>(null);
   const [riskAssessments, setRiskAssessments] = useState<InterferenceRisk[]>([]);
   const [isCalculating, setIsCalculating] = useState(false);
-
-  // Filter state for results
   const [riskFilter, setRiskFilter] = useState<RiskLevel | 'ALL'>('ALL');
 
-  // Get total stations count (including off-air)
   const totalStationsCount = stations.length;
 
-  // Get the target frequency for aircraft mode
   const targetAircraftFrequency = useMemo(() => {
     if (aircraftData.frequency) return aircraftData.frequency;
     if (customFrequency) {
@@ -65,28 +58,20 @@ export default function IntermodCalculator({
     return null;
   }, [aircraftData.frequency, customFrequency]);
 
-  // Run calculation
   const handleCalculate = useCallback(() => {
     setIsCalculating(true);
-
-    // Use setTimeout to allow UI to update before heavy calculation
     setTimeout(() => {
       try {
         if (mode === 'specific-frequency') {
-          // Manual frequency calculation - shows what intermod products they create
           const f1 = parseFloat(freq1);
           const f2 = parseFloat(freq2);
-
           if (isNaN(f1) || isNaN(f2)) {
             alert('Please enter valid frequencies');
             setIsCalculating(false);
             return;
           }
-
           const products = calculateThirdOrderProducts(f1, f2);
           const aviationProducts = products.filter((p) => p.inAviationBand);
-
-          // Create a mock result for display
           setCalculationResult({
             totalPairsChecked: 1,
             dangerousPairs:
@@ -123,18 +108,13 @@ export default function IntermodCalculator({
           });
           setRiskAssessments([]);
         } else {
-          // Aircraft interference check - reverse lookup
           if (!targetAircraftFrequency) {
-            alert('Please select or enter an aircraft frequency');
+            alert('Please enter an aircraft frequency');
             setIsCalculating(false);
             return;
           }
-
-          // Find FM station pairs that would create this aircraft frequency
           const result = findPairsForTargetFrequency(stations, targetAircraftFrequency);
           setCalculationResult(result);
-
-          // Assess risk levels
           const assessments = assessInterferenceRisk(result.dangerousPairs, aircraftData);
           setRiskAssessments(assessments);
         }
@@ -147,7 +127,6 @@ export default function IntermodCalculator({
     }, 50);
   }, [mode, freq1, freq2, stations, aircraftData, targetAircraftFrequency]);
 
-  // Clear results
   const handleClear = useCallback(() => {
     setFreq1('');
     setFreq2('');
@@ -158,7 +137,6 @@ export default function IntermodCalculator({
     setRiskFilter('ALL');
   }, []);
 
-  // Handle clicking on a result to highlight on map
   const handleResultClick = useCallback(
     (risk: InterferenceRisk) => {
       if (onHighlightStations && onSwitchToStations) {
@@ -169,13 +147,11 @@ export default function IntermodCalculator({
     [onHighlightStations, onSwitchToStations]
   );
 
-  // Filter displayed results
   const filteredResults = useMemo(() => {
     if (riskFilter === 'ALL') return riskAssessments;
     return filterRiskAssessments(riskAssessments, { minRiskLevel: riskFilter });
   }, [riskAssessments, riskFilter]);
 
-  // Summary statistics
   const summary = useMemo(() => {
     if (!riskAssessments.length) return null;
     return {
@@ -190,86 +166,59 @@ export default function IntermodCalculator({
     };
   }, [riskAssessments]);
 
-  // Generate PDF report
   const handleExportPDF = useCallback(() => {
     if (!calculationResult || !riskAssessments.length) return;
-
     const printWindow = window.open('', '_blank');
     if (!printWindow) {
       alert('Please allow popups to generate the PDF report');
       return;
     }
+    const htmlContent = `<!DOCTYPE html>
+<html><head><title>Intermodulation Analysis Report</title>
+<style>
+  body { font-family: 'Inter', sans-serif; padding: 32px; max-width: 920px; margin: 0 auto; color: #001e2b; }
+  h1 { font-family: 'Playfair Display', Georgia, serif; color: #001e2b; border-bottom: 3px solid #00ed64; padding-bottom: 10px; font-weight: 400; }
+  h2 { font-family: 'Source Code Pro', monospace; color: #00684a; text-transform: uppercase; letter-spacing: 0.16em; font-size: 12px; margin-top: 28px; }
+  .summary { background: #f5f3ef; padding: 16px; border: 1px solid #e2dfd8; border-radius: 12px; margin: 18px 0; }
+  .summary-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; margin-top: 10px; }
+  .summary-item { text-align: center; padding: 10px; background: #fff; border: 1px solid #e2dfd8; border-radius: 8px; }
+  .summary-value { font-family: 'Playfair Display', serif; font-size: 28px; font-weight: 400; }
+  .critical { color: #e34b4b; }
+  .high { color: #f5a623; }
+  .medium { color: #d4a017; }
+  .low { color: #00684a; }
+  table { width: 100%; border-collapse: collapse; margin-top: 14px; }
+  th, td { padding: 9px 10px; text-align: left; border-bottom: 1px solid #e2dfd8; font-size: 12px; }
+  th { font-family: 'Source Code Pro', monospace; font-size: 10px; letter-spacing: 0.16em; text-transform: uppercase; color: #5c6c75; background: #f5f3ef; }
+  .risk-badge { padding: 2px 8px; border-radius: 999px; font-family: 'Source Code Pro', monospace; font-size: 9px; font-weight: 600; letter-spacing: 0.16em; border: 1px solid currentColor; }
+  .risk-critical { color: #e34b4b; }
+  .risk-high { color: #f5a623; }
+  .risk-medium { color: #d4a017; }
+  .risk-low { color: #00684a; }
+  .footer { margin-top: 36px; padding-top: 14px; border-top: 1px solid #e2dfd8; color: #5c6c75; font-size: 11px; }
+  @media print { body { padding: 0; } }
+</style></head><body>
+  <h1>FM Station Intermodulation Analysis</h1>
+  <p style="color:#5c6c75;font-size:12px;">Generated ${new Date().toLocaleString()} · Target ${targetAircraftFrequency} MHz</p>
 
-    const htmlContent = `
-<!DOCTYPE html>
-<html>
-<head>
-  <title>Intermodulation Analysis Report</title>
-  <style>
-    body { font-family: Arial, sans-serif; padding: 20px; max-width: 800px; margin: 0 auto; }
-    h1 { color: #1a1a1a; border-bottom: 2px solid #3b82f6; padding-bottom: 10px; }
-    h2 { color: #374151; margin-top: 30px; }
-    .summary { background: #f3f4f6; padding: 15px; border-radius: 8px; margin: 20px 0; }
-    .summary-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; margin-top: 10px; }
-    .summary-item { text-align: center; padding: 10px; background: white; border-radius: 4px; }
-    .summary-value { font-size: 24px; font-weight: bold; }
-    .critical { color: #ef4444; }
-    .high { color: #f97316; }
-    .medium { color: #eab308; }
-    .low { color: #22c55e; }
-    table { width: 100%; border-collapse: collapse; margin-top: 20px; }
-    th, td { padding: 10px; text-align: left; border-bottom: 1px solid #e5e7eb; }
-    th { background: #f9fafb; font-weight: 600; }
-    .risk-badge { padding: 2px 8px; border-radius: 4px; font-size: 12px; font-weight: 600; }
-    .risk-critical { background: #fef2f2; color: #ef4444; }
-    .risk-high { background: #fff7ed; color: #f97316; }
-    .risk-medium { background: #fefce8; color: #eab308; }
-    .risk-low { background: #f0fdf4; color: #22c55e; }
-    .footer { margin-top: 40px; padding-top: 20px; border-top: 1px solid #e5e7eb; color: #6b7280; font-size: 12px; }
-    @media print { body { padding: 0; } }
-  </style>
-</head>
-<body>
-  <h1>FM Station Intermodulation Analysis Report</h1>
-  <p>Generated: ${new Date().toLocaleString()}</p>
-  <p><strong>Target Aircraft Frequency: ${targetAircraftFrequency} MHz</strong></p>
-
+  <h2>Analysis Summary</h2>
   <div class="summary">
-    <strong>Analysis Summary</strong>
     <div class="summary-grid">
-      <div class="summary-item">
-        <div class="summary-value critical">${summary?.byRisk.CRITICAL || 0}</div>
-        <div>Critical</div>
-      </div>
-      <div class="summary-item">
-        <div class="summary-value high">${summary?.byRisk.HIGH || 0}</div>
-        <div>High</div>
-      </div>
-      <div class="summary-item">
-        <div class="summary-value medium">${summary?.byRisk.MEDIUM || 0}</div>
-        <div>Medium</div>
-      </div>
-      <div class="summary-item">
-        <div class="summary-value low">${summary?.byRisk.LOW || 0}</div>
-        <div>Low</div>
-      </div>
+      <div class="summary-item"><div class="summary-value critical">${summary?.byRisk.CRITICAL || 0}</div><div>Critical</div></div>
+      <div class="summary-item"><div class="summary-value high">${summary?.byRisk.HIGH || 0}</div><div>High</div></div>
+      <div class="summary-item"><div class="summary-value medium">${summary?.byRisk.MEDIUM || 0}</div><div>Medium</div></div>
+      <div class="summary-item"><div class="summary-value low">${summary?.byRisk.LOW || 0}</div><div>Low</div></div>
     </div>
-    <p style="margin-top: 15px; margin-bottom: 0;">
+    <p style="margin-top: 14px; margin-bottom: 0; font-size: 12px; color:#5c6c75;">
       Total stations analyzed: ${totalStationsCount}<br>
       FM station pairs found: ${calculationResult?.dangerousPairs.length}<br>
       Calculation time: ${calculationResult?.calculationTimeMs.toFixed(2)} ms
     </p>
   </div>
 
-  <h2>FM Station Pairs Causing Interference at ${targetAircraftFrequency} MHz</h2>
+  <h2>FM Station Pairs · Target ${targetAircraftFrequency} MHz</h2>
   <table>
-    <tr>
-      <th>Risk</th>
-      <th>Station 1</th>
-      <th>Station 2</th>
-      <th>Formula</th>
-      <th>Distance</th>
-    </tr>
+    <tr><th>Risk</th><th>Station 1</th><th>Station 2</th><th>Formula</th><th>Distance</th></tr>
     ${riskAssessments
       .slice(0, 100)
       .map(
@@ -280,65 +229,83 @@ export default function IntermodCalculator({
       <td>${r.pair.station2.name} (${r.pair.station2.frequency} MHz)</td>
       <td>${r.pair.aviationProducts[0]?.type || '-'}</td>
       <td>${formatDistance(r.pair.distance)}</td>
-    </tr>
-    `
+    </tr>`
       )
       .join('')}
   </table>
-  ${riskAssessments.length > 100 ? `<p><em>Showing first 100 of ${riskAssessments.length} results</em></p>` : ''}
+  ${riskAssessments.length > 100 ? `<p style="font-size:11px;color:#5c6c75;"><em>Showing first 100 of ${riskAssessments.length} results</em></p>` : ''}
 
   <div class="footer">
-    <p>This report was generated by the FM Station Intermodulation Calculator.<br>
-    Aviation frequency interference analysis for NBTC regulatory compliance.</p>
+    <p>FM Station Intermodulation Calculator · NBTC Thailand · field-ops dashboard</p>
   </div>
-</body>
-</html>
-    `;
-
+</body></html>`;
     printWindow.document.write(htmlContent);
     printWindow.document.close();
     printWindow.print();
   }, [calculationResult, riskAssessments, summary, totalStationsCount, targetAircraftFrequency]);
 
   return (
-    <div className="flex-1 flex flex-col lg:flex-row gap-4 min-h-0">
-      {/* Calculator Input Panel */}
-      <div className="lg:w-[400px] shrink-0 glass-card p-4 sm:p-6 rounded-2xl lg:max-h-[calc(100vh-10rem)] lg:overflow-y-auto">
-        <div className="flex items-center gap-3 mb-4">
-          <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-xl bg-gradient-to-br from-accent to-primary flex items-center justify-center glow-purple shrink-0">
-            <svg
-              className="w-4 h-4 sm:w-5 sm:h-5 text-white"
-              fill="none"
-              stroke="currentColor"
-              viewBox="0 0 24 24"
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={2}
-                d="M9 7h6m0 10v-3m-3 3h.01M9 17h.01M9 14h.01M12 14h.01M15 11h.01M12 11h.01M9 11h.01M7 21h10a2 2 0 002-2V5a2 2 0 00-2-2H7a2 2 0 00-2 2v14a2 2 0 002 2z"
-              />
+    <div
+      className="fo-light"
+      style={{
+        flex: 1,
+        minHeight: 0,
+        display: 'flex',
+        gap: 16,
+        padding: 4,
+        flexDirection: 'row',
+        flexWrap: 'wrap',
+      }}
+    >
+      <style>{`@media (max-width: 900px) { .fo-imc-row { flex-direction: column !important; } .fo-imc-input { width: 100% !important; max-height: none !important; } }`}</style>
+
+      {/* INPUT PANEL */}
+      <aside
+        className="fo-card fo-imc-input"
+        style={{
+          width: 400,
+          flexShrink: 0,
+          padding: 20,
+          maxHeight: 'calc(100vh - 200px)',
+          overflowY: 'auto',
+        }}
+      >
+        <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 16 }}>
+          <div
+            style={{
+              width: 40,
+              height: 40,
+              borderRadius: 10,
+              background: 'var(--fo-accent-2)',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              flexShrink: 0,
+            }}
+          >
+            <svg width={20} height={20} fill="none" stroke="#fff" strokeWidth={2} viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" d="M9 7h6m0 10v-3m-3 3h.01M9 17h.01M9 14h.01M12 14h.01M15 11h.01M12 11h.01M9 11h.01M7 21h10a2 2 0 002-2V5a2 2 0 00-2-2H7a2 2 0 00-2 2v14a2 2 0 002 2z" />
             </svg>
           </div>
           <div>
-            <h2 className="text-base sm:text-lg font-heading font-bold text-foreground">
-              Intermod Calculator
-            </h2>
-            <p className="text-xs text-muted-foreground hidden sm:block">
-              Find FM pairs causing aircraft interference
-            </p>
+            <div className="fo-mono" style={{ color: 'var(--fo-accent-2)' }}>
+              INTERMOD CALCULATOR
+            </div>
+            <div className="fo-serif" style={{ fontSize: 22, marginTop: 2 }}>
+              Aircraft <span className="fo-underline-accent">interference</span>
+            </div>
           </div>
         </div>
 
-        {/* Mode Selection */}
-        <div className="mb-3">
-          <label className="block text-xs sm:text-sm font-medium text-foreground mb-1.5">
-            Mode
+        {/* Mode */}
+        <div style={{ marginBottom: 14 }}>
+          <label className="fo-mono" style={{ display: 'block', marginBottom: 6 }}>
+            MODE
           </label>
           <select
             value={mode}
             onChange={(e) => setMode(e.target.value as CalculatorMode)}
-            className="w-full px-3 py-2 sm:px-4 sm:py-3 rounded-xl bg-secondary/50 border border-border/50 text-foreground text-sm focus:ring-2 focus:ring-primary focus:border-transparent transition-all"
+            className="fo-select"
           >
             <option value="aircraft-check">Find FM Pairs (Aircraft Freq)</option>
             <option value="specific-frequency">Check FM Frequencies</option>
@@ -346,18 +313,17 @@ export default function IntermodCalculator({
         </div>
 
         {/* Mode-specific inputs */}
-        <div className="space-y-4">
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
           {mode === 'specific-frequency' ? (
             <>
-              {/* Manual frequency inputs */}
-              <div className="p-4 rounded-xl bg-secondary/30 border border-border/30">
-                <h4 className="text-sm font-semibold text-foreground mb-3">
-                  Enter two FM frequencies to see their intermod products
-                </h4>
-                <div className="space-y-3">
+              <div className="fo-card" style={{ padding: 14, background: 'var(--fo-canvas)' }}>
+                <div className="fo-mono" style={{ marginBottom: 10 }}>
+                  ENTER TWO FM FREQUENCIES
+                </div>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
                   <div>
-                    <label className="block text-xs font-medium text-muted-foreground mb-1">
-                      FM Frequency 1 (MHz)
+                    <label className="fo-mono" style={{ display: 'block', marginBottom: 4 }}>
+                      FM FREQUENCY 1 (MHZ)
                     </label>
                     <input
                       type="number"
@@ -366,14 +332,13 @@ export default function IntermodCalculator({
                       max="108"
                       value={freq1}
                       onChange={(e) => setFreq1(e.target.value)}
-                      placeholder="e.g., 98.0"
-                      className="w-full px-3 py-2 rounded-lg bg-secondary/50 border border-border/50 text-foreground placeholder-muted-foreground text-sm focus:ring-2 focus:ring-primary focus:border-transparent transition-all"
+                      placeholder="98.0"
+                      className="fo-input"
                     />
                   </div>
-
                   <div>
-                    <label className="block text-xs font-medium text-muted-foreground mb-1">
-                      FM Frequency 2 (MHz)
+                    <label className="fo-mono" style={{ display: 'block', marginBottom: 4 }}>
+                      FM FREQUENCY 2 (MHZ)
                     </label>
                     <input
                       type="number"
@@ -382,35 +347,53 @@ export default function IntermodCalculator({
                       max="108"
                       value={freq2}
                       onChange={(e) => setFreq2(e.target.value)}
-                      placeholder="e.g., 88.0"
-                      className="w-full px-3 py-2 rounded-lg bg-secondary/50 border border-border/50 text-foreground placeholder-muted-foreground text-sm focus:ring-2 focus:ring-primary focus:border-transparent transition-all"
+                      placeholder="88.0"
+                      className="fo-input"
                     />
                   </div>
                 </div>
               </div>
 
-              {/* Show formula explanation */}
-              <div className="p-3 rounded-lg bg-accent/10 border border-accent/20">
-                <p className="text-xs text-muted-foreground">
-                  <strong className="text-accent">3rd Order Products:</strong><br />
-                  2 x f1 - f2 = {freq1 && freq2 ? (2 * parseFloat(freq1) - parseFloat(freq2)).toFixed(2) : '?'} MHz<br />
-                  2 x f2 - f1 = {freq1 && freq2 ? (2 * parseFloat(freq2) - parseFloat(freq1)).toFixed(2) : '?'} MHz
-                </p>
+              <div
+                style={{
+                  padding: 12,
+                  borderRadius: 10,
+                  background: 'rgba(0,237,100,0.06)',
+                  border: '1px solid rgba(0,104,74,0.2)',
+                }}
+              >
+                <div className="fo-mono" style={{ color: 'var(--fo-accent-2)', marginBottom: 4 }}>
+                  3RD ORDER PRODUCTS
+                </div>
+                <div style={{ fontFamily: 'var(--fo-mono)', fontSize: 12, color: 'var(--fo-ink)' }}>
+                  2 × f1 − f2 ={' '}
+                  {freq1 && freq2 ? (2 * parseFloat(freq1) - parseFloat(freq2)).toFixed(2) : '?'} MHz
+                </div>
+                <div style={{ fontFamily: 'var(--fo-mono)', fontSize: 12, color: 'var(--fo-ink)' }}>
+                  2 × f2 − f1 ={' '}
+                  {freq1 && freq2 ? (2 * parseFloat(freq2) - parseFloat(freq1)).toFixed(2) : '?'} MHz
+                </div>
               </div>
             </>
           ) : (
             <>
-              {/* Aircraft frequency input - REQUIRED */}
-              <div className="p-3 rounded-xl bg-primary/10 border border-primary/30">
-                <div className="flex items-center gap-2 mb-2">
-                  <svg className="w-4 h-4 text-primary shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" />
+              <div className="fo-card" style={{ padding: 14, background: 'var(--fo-canvas)' }}>
+                <div
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: 8,
+                    marginBottom: 10,
+                  }}
+                >
+                  <svg width={16} height={16} fill="none" stroke="var(--fo-accent-2)" strokeWidth={2} viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" />
                   </svg>
-                  <span className="text-xs sm:text-sm font-semibold text-foreground">Aircraft Frequency</span>
-                  <span className="text-xs text-primary">(108-137 MHz)</span>
+                  <span className="fo-mono" style={{ color: 'var(--fo-accent-2)' }}>
+                    AIRCRAFT FREQUENCY · 108–137 MHZ
+                  </span>
                 </div>
-
-                <div className="flex gap-2 items-center">
+                <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
                   <input
                     type="number"
                     step="0.1"
@@ -422,41 +405,63 @@ export default function IntermodCalculator({
                       setAircraftData((prev) => ({ ...prev, frequency: undefined }));
                     }}
                     placeholder="121.5"
-                    className="flex-1 px-3 py-2 rounded-lg bg-secondary/50 border border-border/50 text-foreground placeholder-muted-foreground text-sm focus:ring-2 focus:ring-primary focus:border-transparent transition-all"
+                    className="fo-input"
+                    style={{ flex: 1 }}
                   />
-                  <span className="text-sm text-muted-foreground">MHz</span>
+                  <span className="fo-mono">MHZ</span>
                 </div>
-
                 {targetAircraftFrequency && (
-                  <div className="mt-2 p-1.5 rounded-lg bg-primary/20 text-center">
-                    <span className="text-xs font-semibold text-primary">
-                      Target: {targetAircraftFrequency} MHz
-                    </span>
+                  <div
+                    className="fo-mono"
+                    style={{
+                      marginTop: 8,
+                      padding: '6px 10px',
+                      borderRadius: 6,
+                      background: 'rgba(0,104,74,0.1)',
+                      color: 'var(--fo-accent-2)',
+                      textAlign: 'center',
+                    }}
+                  >
+                    TARGET · {targetAircraftFrequency} MHZ
                   </div>
                 )}
               </div>
 
-              {/* Common frequencies reference - collapsible on mobile */}
-              <details className="p-2 rounded-lg bg-secondary/30 border border-border/30">
-                <summary className="text-xs font-medium text-foreground cursor-pointer">
-                  Common Frequencies Reference
+              <details className="fo-card" style={{ padding: 12, background: 'var(--fo-canvas)' }}>
+                <summary
+                  className="fo-mono"
+                  style={{ cursor: 'pointer', color: 'var(--fo-ink)' }}
+                >
+                  COMMON FREQUENCIES REFERENCE
                 </summary>
-                <div className="grid grid-cols-2 gap-x-2 gap-y-0.5 text-xs text-muted-foreground mt-2">
+                <div
+                  style={{
+                    display: 'grid',
+                    gridTemplateColumns: 'repeat(2, 1fr)',
+                    gap: '4px 12px',
+                    marginTop: 8,
+                    fontFamily: 'var(--fo-mono)',
+                    fontSize: 11,
+                    color: 'var(--fo-mute)',
+                    letterSpacing: '0.1em',
+                  }}
+                >
                   <span>108.0 VOR/ILS</span>
-                  <span>121.5 Emergency</span>
+                  <span>121.5 EMERGENCY</span>
                   <span>118.0 ATC</span>
-                  <span>125.0 Approach</span>
+                  <span>125.0 APPROACH</span>
                 </div>
               </details>
 
-              {/* Optional aircraft location - collapsible */}
-              <details className="p-2 rounded-lg bg-secondary/30 border border-border/30">
-                <summary className="text-xs font-medium text-muted-foreground cursor-pointer">
-                  Optional: Aircraft Location
+              <details className="fo-card" style={{ padding: 12, background: 'var(--fo-canvas)' }}>
+                <summary className="fo-mono" style={{ cursor: 'pointer' }}>
+                  OPTIONAL · AIRCRAFT LOCATION
                 </summary>
-                <div className="grid grid-cols-2 gap-2 mt-2">
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8, marginTop: 8 }}>
                   <div>
-                    <label className="block text-xs text-muted-foreground mb-1">Lat</label>
+                    <label className="fo-mono" style={{ display: 'block', marginBottom: 4 }}>
+                      LAT
+                    </label>
                     <input
                       type="number"
                       step="0.0001"
@@ -468,11 +473,14 @@ export default function IntermodCalculator({
                         }))
                       }
                       placeholder="13.75"
-                      className="w-full px-2 py-1.5 rounded-lg bg-secondary/50 border border-border/50 text-foreground placeholder-muted-foreground text-xs focus:ring-2 focus:ring-primary focus:border-transparent transition-all"
+                      className="fo-input"
+                      style={{ fontSize: 12, padding: '7px 10px' }}
                     />
                   </div>
                   <div>
-                    <label className="block text-xs text-muted-foreground mb-1">Lng</label>
+                    <label className="fo-mono" style={{ display: 'block', marginBottom: 4 }}>
+                      LNG
+                    </label>
                     <input
                       type="number"
                       step="0.0001"
@@ -484,165 +492,246 @@ export default function IntermodCalculator({
                         }))
                       }
                       placeholder="100.50"
-                      className="w-full px-2 py-1.5 rounded-lg bg-secondary/50 border border-border/50 text-foreground placeholder-muted-foreground text-xs focus:ring-2 focus:ring-primary focus:border-transparent transition-all"
+                      className="fo-input"
+                      style={{ fontSize: 12, padding: '7px 10px' }}
                     />
                   </div>
                 </div>
               </details>
 
-              {/* Info about reverse lookup */}
-              <div className="p-3 rounded-lg bg-accent/10 border border-accent/20">
-                <p className="text-xs text-muted-foreground">
-                  <strong className="text-accent">Reverse Lookup:</strong> Finds all FM station pairs
-                  from {totalStationsCount} FM stations that could create interference at the
-                  target aircraft frequency.
-                </p>
+              <div
+                style={{
+                  padding: 12,
+                  borderRadius: 10,
+                  background: 'rgba(0,237,100,0.06)',
+                  border: '1px solid rgba(0,104,74,0.2)',
+                  fontSize: 12,
+                  color: 'var(--fo-mute)',
+                  lineHeight: 1.4,
+                }}
+              >
+                <span className="fo-mono" style={{ color: 'var(--fo-accent-2)', marginRight: 4 }}>
+                  REVERSE LOOKUP ·
+                </span>
+                Finds all FM station pairs from {totalStationsCount} stations that could create
+                interference at the target aircraft frequency.
               </div>
             </>
           )}
 
-          {/* Action buttons */}
-          <div className="pt-2">
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 8, paddingTop: 4 }}>
             <button
+              type="button"
               onClick={handleCalculate}
               disabled={isCalculating || (mode === 'aircraft-check' && !targetAircraftFrequency)}
-              className="w-full py-3 px-4 rounded-xl bg-gradient-to-r from-primary to-accent text-primary-foreground font-semibold hover:opacity-90 transition-all glow-gold disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+              className="fo-btn fo-btn-primary"
+              style={{ width: '100%', padding: 14 }}
             >
               {isCalculating ? (
-                <>
-                  <svg className="w-5 h-5 animate-spin" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
-                  </svg>
-                  Searching...
-                </>
+                <span className="fo-mono" style={{ color: '#fff' }}>SEARCHING…</span>
               ) : (
                 <>
-                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                  <svg width={18} height={18} fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
                   </svg>
-                  {mode === 'aircraft-check' ? 'Find FM Pairs' : 'Calculate'}
+                  <span className="fo-mono" style={{ color: '#fff' }}>
+                    {mode === 'aircraft-check' ? 'FIND FM PAIRS' : 'CALCULATE'}
+                  </span>
                 </>
               )}
             </button>
-          </div>
-
-          <div className="pt-2">
             <button
+              type="button"
               onClick={handleClear}
-              className="w-full py-2 px-4 rounded-xl bg-secondary/50 text-muted-foreground font-medium hover:text-foreground hover:bg-secondary transition-all"
+              className="fo-btn"
+              style={{ width: '100%' }}
             >
-              Clear All
+              <span className="fo-mono">CLEAR ALL</span>
             </button>
           </div>
         </div>
 
         {/* Aviation Band Info */}
-        <div className="mt-6 p-4 rounded-xl bg-accent/10 border border-accent/20">
-          <h4 className="text-sm font-semibold text-accent mb-2">Aviation Band (108-137 MHz)</h4>
-          <div className="space-y-1 text-xs text-muted-foreground">
-            <div className="flex justify-between">
+        <div
+          style={{
+            marginTop: 20,
+            padding: 14,
+            borderRadius: 12,
+            background: 'var(--fo-canvas)',
+            border: '1px solid var(--fo-line)',
+          }}
+        >
+          <div className="fo-mono" style={{ color: 'var(--fo-accent-2)', marginBottom: 8 }}>
+            AVIATION BAND · 108–137 MHZ
+          </div>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 4, fontSize: 12 }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', color: 'var(--fo-mute)' }}>
               <span>VOR/ILS Navigation</span>
-              <span>108.0 - 117.95 MHz</span>
+              <span style={{ fontFamily: 'var(--fo-mono)' }}>108.0 – 117.95</span>
             </div>
-            <div className="flex justify-between">
+            <div style={{ display: 'flex', justifyContent: 'space-between', color: 'var(--fo-mute)' }}>
               <span>Emergency</span>
-              <span>121.5 MHz</span>
+              <span style={{ fontFamily: 'var(--fo-mono)' }}>121.5</span>
             </div>
-            <div className="flex justify-between">
+            <div style={{ display: 'flex', justifyContent: 'space-between', color: 'var(--fo-mute)' }}>
               <span>ATC Voice</span>
-              <span>118.0 - 137.0 MHz</span>
+              <span style={{ fontFamily: 'var(--fo-mono)' }}>118.0 – 137.0</span>
             </div>
           </div>
         </div>
-      </div>
+      </aside>
 
-      {/* Results Panel */}
-      <div className="flex-1 glass-card p-6 rounded-2xl flex flex-col">
-        <div className="flex items-center justify-between mb-4">
-          <h3 className="text-lg font-heading font-bold text-foreground">Results</h3>
+      {/* RESULTS PANEL */}
+      <section
+        className="fo-card"
+        style={{
+          flex: 1,
+          minWidth: 0,
+          padding: 20,
+          display: 'flex',
+          flexDirection: 'column',
+          maxHeight: 'calc(100vh - 200px)',
+        }}
+      >
+        <div
+          style={{
+            display: 'flex',
+            justifyContent: 'space-between',
+            alignItems: 'center',
+            marginBottom: 16,
+            gap: 12,
+          }}
+        >
+          <div>
+            <div className="fo-mono" style={{ color: 'var(--fo-accent-2)' }}>
+              RESULTS
+            </div>
+            <div className="fo-serif" style={{ fontSize: 22 }}>
+              Interference pairs
+            </div>
+          </div>
           {calculationResult && riskAssessments.length > 0 && (
             <button
+              type="button"
               onClick={handleExportPDF}
-              className="px-3 py-1.5 rounded-lg bg-secondary/50 text-muted-foreground text-sm font-medium hover:text-foreground hover:bg-secondary transition-all flex items-center gap-1.5"
+              className="fo-pill"
             >
-              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+              <svg width={14} height={14} fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
               </svg>
-              Export PDF
+              EXPORT PDF
             </button>
           )}
         </div>
 
         {!calculationResult ? (
-          /* Empty State */
-          <div className="flex-1 flex flex-col items-center justify-center text-center">
-            <div className="w-20 h-20 rounded-2xl bg-secondary/50 flex items-center justify-center mb-4">
-              <svg
-                className="w-10 h-10 text-muted-foreground"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={1.5}
-                  d="M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
-                />
+          <div
+            style={{
+              flex: 1,
+              display: 'flex',
+              flexDirection: 'column',
+              alignItems: 'center',
+              justifyContent: 'center',
+              textAlign: 'center',
+              padding: 32,
+            }}
+          >
+            <div
+              style={{
+                width: 80,
+                height: 80,
+                borderRadius: 16,
+                background: 'var(--fo-canvas)',
+                border: '1px solid var(--fo-line)',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                marginBottom: 16,
+              }}
+            >
+              <svg width={36} height={36} fill="none" stroke="var(--fo-mute)" strokeWidth={1.5} viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" d="M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
               </svg>
             </div>
-            <h4 className="text-lg font-semibold text-foreground mb-2">No Results Yet</h4>
-            <p className="text-sm text-muted-foreground max-w-md">
+            <div className="fo-serif" style={{ fontSize: 22, marginBottom: 6 }}>
+              No results yet
+            </div>
+            <div className="fo-mono" style={{ maxWidth: 360 }}>
               {mode === 'aircraft-check'
-                ? 'Enter an aircraft frequency to find which FM station pairs could cause interference.'
-                : 'Enter two FM frequencies to see their intermodulation products.'}
-            </p>
+                ? 'ENTER AN AIRCRAFT FREQUENCY TO FIND FM PAIRS THAT COULD CAUSE INTERFERENCE'
+                : 'ENTER TWO FM FREQUENCIES TO SEE THEIR INTERMODULATION PRODUCTS'}
+            </div>
           </div>
         ) : (
           <>
-            {/* Specific Frequency Mode Results */}
-            {mode === 'specific-frequency' && calculationResult && calculationResult.dangerousPairs.length > 0 && (
-              <div className="mb-4">
-                <div className="p-4 rounded-xl bg-secondary/30 border border-border/30">
-                  <h4 className="text-sm font-semibold text-foreground mb-3">3rd Order Intermodulation Products</h4>
-
+            {/* Specific frequency mode results */}
+            {mode === 'specific-frequency' &&
+              calculationResult &&
+              calculationResult.dangerousPairs.length > 0 && (
+                <div
+                  style={{
+                    marginBottom: 16,
+                    padding: 14,
+                    borderRadius: 12,
+                    background: 'var(--fo-canvas)',
+                    border: '1px solid var(--fo-line)',
+                  }}
+                >
+                  <div className="fo-mono" style={{ marginBottom: 10 }}>
+                    3RD ORDER INTERMOD PRODUCTS
+                  </div>
                   {calculationResult.dangerousPairs[0].products.map((product, idx) => {
                     const f1 = parseFloat(freq1);
                     const f2 = parseFloat(freq2);
                     const isInAviation = product.inAviationBand;
-
                     return (
                       <div
                         key={idx}
-                        className={`p-3 rounded-lg mb-2 ${
-                          isInAviation
-                            ? 'bg-red-500/10 border border-red-500/30'
-                            : 'bg-secondary/50 border border-border/30'
-                        }`}
+                        style={{
+                          padding: 12,
+                          borderRadius: 8,
+                          marginBottom: 8,
+                          background: '#fff',
+                          border: `1px solid ${isInAviation ? 'var(--fo-crit)' : 'var(--fo-line)'}`,
+                        }}
                       >
-                        <div className="flex items-center justify-between mb-2">
-                          <span className="font-mono text-sm font-semibold text-foreground">
+                        <div
+                          style={{
+                            display: 'flex',
+                            justifyContent: 'space-between',
+                            alignItems: 'center',
+                            marginBottom: 6,
+                          }}
+                        >
+                          <span style={{ fontFamily: 'var(--fo-mono)', fontWeight: 600 }}>
                             {product.type}
                           </span>
                           {isInAviation && (
-                            <span className="text-xs font-bold px-2 py-0.5 rounded bg-red-500/20 text-red-500">
-                              AVIATION BAND
-                            </span>
+                            <span className="fo-risk-pill fo-risk-critical">AVIATION BAND</span>
                           )}
                         </div>
-
-                        <div className="font-mono text-sm text-muted-foreground mb-1">
+                        <div className="fo-mono" style={{ marginBottom: 4 }}>
                           {product.type === '2f1-f2'
-                            ? `2 × ${f1} - ${f2}`
-                            : `2 × ${f2} - ${f1}`}
+                            ? `2 × ${f1} − ${f2}`
+                            : `2 × ${f2} − ${f1}`}
                         </div>
-
-                        <div className="flex items-center gap-2">
-                          <span className="text-lg font-bold text-primary">
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                          <span
+                            className="fo-serif"
+                            style={{ fontSize: 18, color: 'var(--fo-accent-2)' }}
+                          >
                             = {product.frequency.toFixed(3)} MHz
                           </span>
                           {product.affectedService && (
-                            <span className="text-xs text-accent px-2 py-0.5 rounded bg-accent/10">
+                            <span
+                              className="fo-mono"
+                              style={{
+                                color: 'var(--fo-accent-2)',
+                                background: 'rgba(0,104,74,0.1)',
+                                padding: '2px 6px',
+                                borderRadius: 4,
+                              }}
+                            >
                               {product.affectedService}
                             </span>
                           )}
@@ -650,198 +739,367 @@ export default function IntermodCalculator({
                       </div>
                     );
                   })}
-
                   {calculationResult.dangerousPairs[0].aviationProducts.length > 0 ? (
-                    <div className="mt-3 p-2 rounded-lg bg-red-500/10 border border-red-500/30 text-center">
-                      <span className="text-sm font-semibold text-red-500">
-                        ⚠️ {calculationResult.dangerousPairs[0].aviationProducts.length} product(s) fall within Aviation Band (108-137 MHz)
-                      </span>
+                    <div
+                      style={{
+                        marginTop: 8,
+                        padding: 8,
+                        borderRadius: 8,
+                        background: 'rgba(227,75,75,0.08)',
+                        border: '1px solid rgba(227,75,75,0.3)',
+                        textAlign: 'center',
+                        color: 'var(--fo-crit)',
+                        fontFamily: 'var(--fo-mono)',
+                        fontSize: 11,
+                        letterSpacing: '0.12em',
+                      }}
+                    >
+                      ⚠ {calculationResult.dangerousPairs[0].aviationProducts.length} PRODUCT(S) FALL IN AVIATION BAND
                     </div>
                   ) : (
-                    <div className="mt-3 p-2 rounded-lg bg-green-500/10 border border-green-500/30 text-center">
-                      <span className="text-sm font-semibold text-green-500">
-                        ✓ No products fall within Aviation Band
-                      </span>
+                    <div
+                      style={{
+                        marginTop: 8,
+                        padding: 8,
+                        borderRadius: 8,
+                        background: 'rgba(0,237,100,0.08)',
+                        border: '1px solid rgba(0,104,74,0.3)',
+                        textAlign: 'center',
+                        color: 'var(--fo-accent-2)',
+                        fontFamily: 'var(--fo-mono)',
+                        fontSize: 11,
+                        letterSpacing: '0.12em',
+                      }}
+                    >
+                      ✓ NO PRODUCTS IN AVIATION BAND
                     </div>
                   )}
                 </div>
-              </div>
-            )}
+              )}
 
-            {/* Target frequency display for aircraft mode */}
+            {/* Target frequency for aircraft mode */}
             {mode === 'aircraft-check' && targetAircraftFrequency && (
-              <div className="mb-4 p-3 rounded-xl bg-primary/20 border border-primary/30">
-                <div className="text-center">
-                  <span className="text-sm text-muted-foreground">Searching for FM pairs that create</span>
-                  <div className="text-2xl font-bold text-primary">{targetAircraftFrequency} MHz</div>
+              <div
+                style={{
+                  marginBottom: 16,
+                  padding: 14,
+                  borderRadius: 12,
+                  background: 'rgba(0,104,74,0.06)',
+                  border: '1px solid var(--fo-accent-2)',
+                  textAlign: 'center',
+                }}
+              >
+                <div className="fo-mono">SEARCHING FOR FM PAIRS THAT CREATE</div>
+                <div
+                  className="fo-serif"
+                  style={{ fontSize: 30, color: 'var(--fo-accent-2)', marginTop: 4 }}
+                >
+                  {targetAircraftFrequency} MHz
                 </div>
               </div>
             )}
 
-            {/* Summary Stats */}
+            {/* Summary stats */}
             {summary && riskAssessments.length > 0 && (
-              <div className="mb-4 p-4 rounded-xl bg-secondary/30 border border-border/30">
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-3">
-                  <div className="text-center">
-                    <div className={`text-2xl font-bold ${getRiskLevelColor('CRITICAL')}`}>
-                      {summary.byRisk.CRITICAL}
-                    </div>
-                    <div className="text-xs text-muted-foreground">Critical</div>
-                  </div>
-                  <div className="text-center">
-                    <div className={`text-2xl font-bold ${getRiskLevelColor('HIGH')}`}>
-                      {summary.byRisk.HIGH}
-                    </div>
-                    <div className="text-xs text-muted-foreground">High</div>
-                  </div>
-                  <div className="text-center">
-                    <div className={`text-2xl font-bold ${getRiskLevelColor('MEDIUM')}`}>
-                      {summary.byRisk.MEDIUM}
-                    </div>
-                    <div className="text-xs text-muted-foreground">Medium</div>
-                  </div>
-                  <div className="text-center">
-                    <div className={`text-2xl font-bold ${getRiskLevelColor('LOW')}`}>
-                      {summary.byRisk.LOW}
-                    </div>
-                    <div className="text-xs text-muted-foreground">Low</div>
-                  </div>
-                </div>
-                <div className="text-xs text-muted-foreground text-center">
-                  Found {calculationResult.dangerousPairs.length} FM station pairs in{' '}
-                  {calculationResult.calculationTimeMs.toFixed(2)} ms
-                </div>
-              </div>
-            )}
-
-            {/* Risk Filter */}
-            {riskAssessments.length > 0 && (
-              <div className="flex items-center gap-2 mb-4">
-                <span className="text-sm text-muted-foreground">Filter by risk:</span>
-                <div className="flex gap-1">
-                  {(['ALL', 'CRITICAL', 'HIGH', 'MEDIUM', 'LOW'] as const).map((level) => (
-                    <button
-                      key={level}
-                      onClick={() => setRiskFilter(level)}
-                      className={`px-2 py-1 rounded-lg text-xs font-medium transition-all ${
-                        riskFilter === level
-                          ? level === 'ALL'
-                            ? 'bg-primary text-primary-foreground'
-                            : `${getRiskLevelBgColor(level)} ${getRiskLevelColor(level)}`
-                          : 'bg-secondary/50 text-muted-foreground hover:bg-secondary'
-                      }`}
+              <div
+                style={{
+                  marginBottom: 16,
+                  padding: 14,
+                  borderRadius: 12,
+                  background: 'var(--fo-canvas)',
+                  border: '1px solid var(--fo-line)',
+                }}
+              >
+                <div
+                  style={{
+                    display: 'grid',
+                    gridTemplateColumns: 'repeat(auto-fit, minmax(80px, 1fr))',
+                    gap: 8,
+                    marginBottom: 10,
+                  }}
+                >
+                  {(['CRITICAL', 'HIGH', 'MEDIUM', 'LOW'] as RiskLevel[]).map((lv) => (
+                    <div
+                      key={lv}
+                      style={{
+                        textAlign: 'center',
+                        padding: '8px 4px',
+                        background: '#fff',
+                        border: '1px solid var(--fo-line)',
+                        borderRadius: 8,
+                      }}
                     >
-                      {level}
-                    </button>
+                      <div
+                        className="fo-serif"
+                        style={{ fontSize: 24, color: RISK_TONE[lv].color, lineHeight: 1.1 }}
+                      >
+                        {summary.byRisk[lv]}
+                      </div>
+                      <div className="fo-mono">{lv}</div>
+                    </div>
                   ))}
                 </div>
+                <div className="fo-mono" style={{ textAlign: 'center' }}>
+                  FOUND {calculationResult.dangerousPairs.length} PAIRS · {calculationResult.calculationTimeMs.toFixed(2)} MS
+                </div>
               </div>
             )}
 
-            {/* Results List */}
-            <div className="flex-1 overflow-y-auto space-y-3 pr-2 min-h-0 max-h-[40vh] lg:max-h-[calc(100vh-450px)]">
+            {/* Risk filter */}
+            {riskAssessments.length > 0 && (
+              <div
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: 8,
+                  marginBottom: 14,
+                  flexWrap: 'wrap',
+                }}
+              >
+                <span className="fo-mono">FILTER ·</span>
+                {(['ALL', 'CRITICAL', 'HIGH', 'MEDIUM', 'LOW'] as const).map((lv) => (
+                  <button
+                    key={lv}
+                    type="button"
+                    onClick={() => setRiskFilter(lv)}
+                    className={`fo-pill ${riskFilter === lv ? 'is-active' : ''}`}
+                    style={{ padding: '4px 12px', fontSize: 10 }}
+                  >
+                    {lv}
+                  </button>
+                ))}
+              </div>
+            )}
+
+            {/* Results list */}
+            <div
+              style={{
+                flex: 1,
+                overflowY: 'auto',
+                display: 'flex',
+                flexDirection: 'column',
+                gap: 10,
+                paddingRight: 4,
+                minHeight: 0,
+              }}
+            >
               {calculationResult.dangerousPairs.length === 0 ? (
-                <div className="text-center py-8">
-                  <div className="w-16 h-16 rounded-2xl bg-green-500/20 flex items-center justify-center mx-auto mb-4">
-                    <svg className="w-8 h-8 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                <div style={{ textAlign: 'center', padding: 40 }}>
+                  <div
+                    style={{
+                      width: 64,
+                      height: 64,
+                      borderRadius: 16,
+                      background: 'rgba(0,237,100,0.12)',
+                      border: '1px solid var(--fo-accent-2)',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      margin: '0 auto 12px',
+                    }}
+                  >
+                    <svg width={28} height={28} fill="none" stroke="var(--fo-accent-2)" strokeWidth={2} viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
                     </svg>
                   </div>
-                  <p className="text-foreground font-medium">No Interference Found</p>
-                  <p className="text-sm text-muted-foreground mt-1">
-                    No FM station pairs would create {targetAircraftFrequency} MHz interference.
-                  </p>
+                  <div className="fo-serif" style={{ fontSize: 20, marginBottom: 4 }}>
+                    No interference found
+                  </div>
+                  <div className="fo-mono">
+                    NO FM PAIRS WOULD CREATE {targetAircraftFrequency} MHZ
+                  </div>
                 </div>
               ) : filteredResults.length === 0 ? (
-                <div className="text-center py-8">
-                  <p className="text-muted-foreground">No results match the current filter.</p>
+                <div className="fo-mono" style={{ textAlign: 'center', padding: 32 }}>
+                  NO RESULTS MATCH THE CURRENT FILTER
                 </div>
               ) : (
                 filteredResults.map((risk, index) => {
                   const product = risk.pair.aviationProducts[0];
                   const f1 = risk.pair.station1.frequency;
                   const f2 = risk.pair.station2.frequency;
-
-                  // Calculate the formula display
-                  const formulaDisplay = product?.type === '2f1-f2'
-                    ? `2 × ${f1} - ${f2} = ${(2 * f1 - f2).toFixed(2)} MHz`
-                    : `2 × ${f2} - ${f1} = ${(2 * f2 - f1).toFixed(2)} MHz`;
+                  const formulaDisplay =
+                    product?.type === '2f1-f2'
+                      ? `2 × ${f1} − ${f2} = ${(2 * f1 - f2).toFixed(2)} MHz`
+                      : `2 × ${f2} − ${f1} = ${(2 * f2 - f1).toFixed(2)} MHz`;
+                  const tone = RISK_TONE[risk.riskLevel];
 
                   return (
                     <div
                       key={`${risk.pair.station1.id}-${risk.pair.station2.id}-${index}`}
                       onClick={() => handleResultClick(risk)}
-                      className={`p-4 rounded-xl border cursor-pointer transition-all hover:scale-[1.01] ${getRiskLevelBgColor(
-                        risk.riskLevel
-                      )}`}
+                      style={{
+                        padding: 14,
+                        borderRadius: 12,
+                        background: '#fff',
+                        border: `1px solid var(--fo-line)`,
+                        borderLeft: `3px solid ${tone.color}`,
+                        cursor: onHighlightStations ? 'pointer' : 'default',
+                        transition: 'border-color 120ms ease, transform 120ms ease',
+                      }}
+                      onMouseEnter={(e) => {
+                        if (onHighlightStations)
+                          e.currentTarget.style.borderColor = 'var(--fo-accent-2)';
+                      }}
+                      onMouseLeave={(e) => {
+                        e.currentTarget.style.borderColor = 'var(--fo-line)';
+                      }}
                     >
-                      <div className="flex items-start justify-between mb-3">
-                        <span
-                          className={`text-xs font-bold px-2 py-0.5 rounded ${getRiskLevelColor(
-                            risk.riskLevel
-                          )}`}
-                        >
-                          {risk.riskLevel}
-                        </span>
+                      <div
+                        style={{
+                          display: 'flex',
+                          justifyContent: 'space-between',
+                          alignItems: 'center',
+                          marginBottom: 10,
+                          gap: 8,
+                        }}
+                      >
+                        <span className={`fo-risk-pill ${tone.pillClass}`}>{risk.riskLevel}</span>
                         {product?.affectedService && (
-                          <span className="text-xs text-accent font-medium px-2 py-0.5 rounded bg-accent/10">
+                          <span
+                            className="fo-mono"
+                            style={{
+                              color: 'var(--fo-accent-2)',
+                              background: 'rgba(0,104,74,0.08)',
+                              padding: '2px 8px',
+                              borderRadius: 999,
+                              border: '1px solid rgba(0,104,74,0.2)',
+                            }}
+                          >
                             {product.affectedService}
                           </span>
                         )}
                       </div>
 
-                      {/* Calculation Result - Main Display */}
-                      <div className="mb-3 p-3 rounded-lg bg-background/50 border border-border/50">
-                        <div className="text-xs text-muted-foreground mb-1">Intermod Calculation</div>
-                        <div className="font-mono text-sm text-foreground font-semibold">
+                      <div
+                        style={{
+                          marginBottom: 10,
+                          padding: 10,
+                          borderRadius: 8,
+                          background: 'var(--fo-canvas)',
+                          border: '1px solid var(--fo-line)',
+                        }}
+                      >
+                        <div className="fo-mono" style={{ marginBottom: 4 }}>
+                          INTERMOD CALCULATION
+                        </div>
+                        <div style={{ fontFamily: 'var(--fo-mono)', fontSize: 13, fontWeight: 600 }}>
                           {formulaDisplay}
                         </div>
-                        <div className="flex items-center gap-2 mt-2">
-                          <span className="text-xs text-muted-foreground">Formula:</span>
-                          <span className="text-xs font-mono text-primary">{product?.type}</span>
-                        </div>
-                        {product?.frequency && (
-                          <div className="flex items-center gap-2 mt-1">
-                            <span className="text-xs text-muted-foreground">Result:</span>
-                            <span className="text-sm font-bold text-primary">{product.frequency.toFixed(3)} MHz</span>
-                            <span className="text-xs text-green-500">(matches target)</span>
-                          </div>
-                        )}
-                      </div>
-
-                      {/* Station Details */}
-                      <div className="space-y-2 text-sm">
-                        <div className="flex items-start gap-2 p-2 rounded-lg bg-secondary/30">
-                          <span className="text-xs text-muted-foreground font-mono w-6">f1:</span>
-                          <div className="flex-1">
-                            <div className="text-foreground font-medium">{risk.pair.station1.name}</div>
-                            <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                              <span className="font-mono text-primary">{f1} MHz</span>
-                              <span>•</span>
-                              <span>{risk.pair.station1.city}, {risk.pair.station1.state}</span>
-                            </div>
-                          </div>
-                        </div>
-                        <div className="flex items-start gap-2 p-2 rounded-lg bg-secondary/30">
-                          <span className="text-xs text-muted-foreground font-mono w-6">f2:</span>
-                          <div className="flex-1">
-                            <div className="text-foreground font-medium">{risk.pair.station2.name}</div>
-                            <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                              <span className="font-mono text-primary">{f2} MHz</span>
-                              <span>•</span>
-                              <span>{risk.pair.station2.city}, {risk.pair.station2.state}</span>
-                            </div>
-                          </div>
+                        <div
+                          style={{
+                            marginTop: 6,
+                            display: 'flex',
+                            gap: 12,
+                            alignItems: 'baseline',
+                            flexWrap: 'wrap',
+                          }}
+                        >
+                          <span className="fo-mono">FORMULA · {product?.type ?? '—'}</span>
+                          {product?.frequency !== undefined && (
+                            <span
+                              className="fo-serif"
+                              style={{ fontSize: 16, color: 'var(--fo-accent-2)' }}
+                            >
+                              {product.frequency.toFixed(3)} MHz
+                            </span>
+                          )}
                         </div>
                       </div>
 
-                      <div className="flex items-center justify-between mt-3 pt-2 border-t border-border/30 text-xs text-muted-foreground">
-                        <span>Station distance: {formatDistance(risk.pair.distance)}</span>
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                        <div
+                          style={{
+                            display: 'flex',
+                            alignItems: 'flex-start',
+                            gap: 8,
+                            padding: 8,
+                            borderRadius: 8,
+                            background: 'var(--fo-canvas)',
+                          }}
+                        >
+                          <span className="fo-mono" style={{ width: 24 }}>
+                            f1
+                          </span>
+                          <div style={{ flex: 1, minWidth: 0 }}>
+                            <div style={{ fontWeight: 500 }}>{risk.pair.station1.name}</div>
+                            <div
+                              style={{
+                                display: 'flex',
+                                gap: 6,
+                                fontSize: 12,
+                                color: 'var(--fo-mute)',
+                                flexWrap: 'wrap',
+                              }}
+                            >
+                              <span style={{ fontFamily: 'var(--fo-mono)', color: 'var(--fo-accent-2)' }}>
+                                {f1} MHz
+                              </span>
+                              <span>·</span>
+                              <span>
+                                {risk.pair.station1.city}, {risk.pair.station1.state}
+                              </span>
+                            </div>
+                          </div>
+                        </div>
+                        <div
+                          style={{
+                            display: 'flex',
+                            alignItems: 'flex-start',
+                            gap: 8,
+                            padding: 8,
+                            borderRadius: 8,
+                            background: 'var(--fo-canvas)',
+                          }}
+                        >
+                          <span className="fo-mono" style={{ width: 24 }}>
+                            f2
+                          </span>
+                          <div style={{ flex: 1, minWidth: 0 }}>
+                            <div style={{ fontWeight: 500 }}>{risk.pair.station2.name}</div>
+                            <div
+                              style={{
+                                display: 'flex',
+                                gap: 6,
+                                fontSize: 12,
+                                color: 'var(--fo-mute)',
+                                flexWrap: 'wrap',
+                              }}
+                            >
+                              <span style={{ fontFamily: 'var(--fo-mono)', color: 'var(--fo-accent-2)' }}>
+                                {f2} MHz
+                              </span>
+                              <span>·</span>
+                              <span>
+                                {risk.pair.station2.city}, {risk.pair.station2.state}
+                              </span>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+
+                      <div
+                        style={{
+                          display: 'flex',
+                          justifyContent: 'space-between',
+                          marginTop: 10,
+                          paddingTop: 8,
+                          borderTop: '1px solid var(--fo-line)',
+                          fontFamily: 'var(--fo-mono)',
+                          fontSize: 10,
+                          letterSpacing: '0.12em',
+                          color: 'var(--fo-mute)',
+                          textTransform: 'uppercase',
+                          flexWrap: 'wrap',
+                          gap: 8,
+                        }}
+                      >
+                        <span>STATION DIST · {formatDistance(risk.pair.distance)}</span>
                         {risk.distanceToAircraft !== undefined && (
-                          <span>To aircraft: {formatDistance(risk.distanceToAircraft)}</span>
+                          <span>TO AIRCRAFT · {formatDistance(risk.distanceToAircraft)}</span>
                         )}
                         {onHighlightStations && (
-                          <span className="text-primary">Click to view on map →</span>
+                          <span style={{ color: 'var(--fo-accent-2)' }}>VIEW ON MAP →</span>
                         )}
                       </div>
                     </div>
@@ -851,7 +1109,7 @@ export default function IntermodCalculator({
             </div>
           </>
         )}
-      </div>
+      </section>
     </div>
   );
 }

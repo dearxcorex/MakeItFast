@@ -47,6 +47,7 @@ export default function FieldOpsClient({
   const [pending, setPending] = useState(false);
   const [flyTarget, setFlyTarget] = useState<[number, number] | null>(null);
   const [isMobile, setIsMobile] = useState(false);
+  const [theme, setTheme] = useState<"dark" | "light">("dark");
 
   useEffect(() => {
     const check = () => setIsMobile(window.innerWidth < 900);
@@ -54,6 +55,15 @@ export default function FieldOpsClient({
     window.addEventListener("resize", check);
     return () => window.removeEventListener("resize", check);
   }, []);
+
+  useEffect(() => {
+    const stored = window.localStorage.getItem("fo-theme");
+    if (stored === "light" || stored === "dark") setTheme(stored);
+  }, []);
+
+  useEffect(() => {
+    window.localStorage.setItem("fo-theme", theme);
+  }, [theme]);
 
   const filteredStations = useMemo(() => {
     if (filters.type === "INT") return [];
@@ -173,13 +183,20 @@ export default function FieldOpsClient({
   return (
     <div
       className="field-ops-root"
+      data-theme={theme}
       style={{
         minHeight: "100vh",
         display: "flex",
         flexDirection: "column",
       }}
     >
-      <FieldOpsHeader stations={stations} interference={interference} />
+      <FieldOpsHeader
+        stations={stations}
+        interference={interference}
+        type={filters.type}
+        theme={theme}
+        onToggleTheme={() => setTheme((t) => (t === "dark" ? "light" : "dark"))}
+      />
 
       <div style={{ flex: 1, display: "flex", minHeight: 0 }}>
         {!isMobile && <FieldOpsNav active={tab} onChange={setTab} />}
@@ -204,6 +221,7 @@ export default function FieldOpsClient({
                     selection={selection}
                     onSelect={handleSelect}
                     flyTarget={flyTarget}
+                    theme={theme}
                   />
                 </div>
 
@@ -211,9 +229,9 @@ export default function FieldOpsClient({
                   <aside
                     style={{
                       width: 360,
-                      background: "var(--fo-ink)",
-                      color: "var(--fo-white)",
-                      borderLeft: "1px solid var(--fo-ink-3)",
+                      background: "var(--fo-rail-bg)",
+                      color: "var(--fo-rail-text)",
+                      borderLeft: "1px solid var(--fo-rail-border)",
                       display: "flex",
                       flexDirection: "column",
                       flexShrink: 0,
@@ -223,7 +241,7 @@ export default function FieldOpsClient({
                     <div
                       style={{
                         padding: "14px 20px",
-                        borderBottom: "1px solid var(--fo-ink-3)",
+                        borderBottom: "1px solid var(--fo-rail-border)",
                         display: "flex",
                         alignItems: "center",
                         justifyContent: "space-between",
@@ -232,7 +250,7 @@ export default function FieldOpsClient({
                       <span className="fo-mono" style={{ color: "var(--fo-accent)" }}>
                         {selection ? "CURRENT" : "SELECT A SITE"}
                       </span>
-                      <span className="fo-mono" style={{ color: "var(--fo-line)" }}>
+                      <span className="fo-mono" style={{ color: "var(--fo-rail-mute)" }}>
                         {visibleCount} VISIBLE
                       </span>
                     </div>
@@ -254,10 +272,10 @@ export default function FieldOpsClient({
                     )}
                     {!selection && (
                       <div style={{ padding: 20 }}>
-                        <div className="fo-serif" style={{ fontSize: 18, color: "var(--fo-white)", marginBottom: 6 }}>
+                        <div className="fo-serif" style={{ fontSize: 18, color: "var(--fo-rail-text)", marginBottom: 6 }}>
                           Tap a marker
                         </div>
-                        <div className="fo-mono" style={{ color: "var(--fo-line)" }}>
+                        <div className="fo-mono" style={{ color: "var(--fo-rail-mute)" }}>
                           Map shows {filteredStations.length} FM · {filteredInterference.length} INT
                         </div>
                       </div>
@@ -282,13 +300,20 @@ export default function FieldOpsClient({
           )}
 
           {tab === "intermod" && (
-            <div style={{ flex: 1, overflow: "auto", padding: 16, background: "var(--fo-paper)" }}>
+            <div
+              style={{
+                flex: 1,
+                overflow: "auto",
+                padding: 20,
+                background: "var(--fo-canvas)",
+              }}
+            >
               <IntermodCalculator stations={stations} />
             </div>
           )}
 
           {tab === "analytics" && (
-            <div style={{ flex: 1, overflow: "auto" }}>
+            <div style={{ flex: 1, overflow: "auto", background: "var(--fo-canvas)" }}>
               <AnalyticsDashboard />
             </div>
           )}
@@ -299,8 +324,8 @@ export default function FieldOpsClient({
         <div
           style={{
             display: "flex",
-            background: "var(--fo-ink)",
-            borderTop: "1px solid var(--fo-ink-3)",
+            background: "var(--fo-rail-bg)",
+            borderTop: "1px solid var(--fo-rail-border)",
           }}
         >
           {(["field-ops", "intermod", "analytics"] as FieldOpsTab[]).map((t) => (
@@ -313,7 +338,7 @@ export default function FieldOpsClient({
                 flex: 1,
                 padding: "12px 8px",
                 background: tab === t ? "var(--fo-accent)" : "transparent",
-                color: tab === t ? "var(--fo-ink)" : "var(--fo-line)",
+                color: tab === t ? "#001e2b" : "var(--fo-rail-mute)",
                 border: "none",
                 cursor: "pointer",
               }}
