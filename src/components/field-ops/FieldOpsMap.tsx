@@ -1,12 +1,11 @@
 "use client";
 
 import { useEffect, useMemo, useRef } from "react";
-import { MapContainer, TileLayer, Marker, Polyline, CircleMarker, useMap } from "react-leaflet";
+import { MapContainer, TileLayer, Marker, useMap } from "react-leaflet";
 import L from "leaflet";
 import "leaflet/dist/leaflet.css";
 import type { FMStation } from "@/types/station";
 import type { InterferenceSite } from "@/types/interference";
-import { computeDestination } from "@/utils/bearing";
 
 export type FieldSelection =
   | { kind: "fm"; id: string | number }
@@ -101,7 +100,12 @@ function fmIcon(
  *  - GOLD ★ in upper-right when LAW PAPER SENT
  *  - SECTOR WEDGE behind the pin when direction is known
  */
-function intIcon(site: InterferenceSite, selected: boolean) {
+function intIcon(
+  site: InterferenceSite,
+  selected: boolean,
+  stackCount: number,
+  siblings: InterferenceSite[]
+) {
   const ranking = (site.ranking || "").toLowerCase();
   const inspected = site.status === "ตรวจแล้ว";
   // Inspected sites = green (matches FM's "done" semantics).
@@ -128,14 +132,35 @@ function intIcon(site: InterferenceSite, selected: boolean) {
     ? `<circle cx="12" cy="11" r="13" fill="none" stroke="#ff5b4a" stroke-width="2" opacity="0.55"/>`
     : "";
 
-  // Direction wedge — extends from the pin head outward toward `direction` degrees.
-  // Wedge keeps the ranking-severity color so the field worker can still see
-  // severity at a glance even when the pin head turns green after inspection.
-  const wedge =
-    direction !== null
+  // Direction wedges — render ALL co-located sectors as separate wedges
+  // around the pin head, so a 3-sector cellsite shows three triangles
+  // pointing in three directions instead of three overlapping pins.
+  const sectorWedges = siblings
+    .map((s) => {
+      if (s.direction === null || s.direction === undefined) return "";
+      const sRanking = (s.ranking || "").toLowerCase();
+      const c =
+        sRanking === "critical"
+          ? "#ff5b4a"
+          : sRanking === "major"
+            ? "#ffb800"
+            : "#ff8b7e";
+      const isHead = s.id === site.id;
+      const opacity = isHead ? (selected ? 0.9 : 0.7) : 0.55;
+      return `<g transform="translate(12, 11)">
+                <g transform="rotate(${s.direction})">
+                  <path d="M 0 0 L -10 -28 L 10 -28 Z" fill="${c}" opacity="${opacity}" stroke="${c}" stroke-width="0.5" stroke-opacity="0.9"/>
+                </g>
+              </g>`;
+    })
+    .join("");
+
+  // Single-sector fallback (when siblings is empty)
+  const singleWedge =
+    siblings.length === 0 && direction !== null
       ? `<g transform="translate(12, 11)" style="transform-origin:0 0;">
            <g transform="rotate(${direction})">
-             <path d="M 0 0 L -10 -28 L 10 -28 Z" fill="${wedgeColor}" opacity="${selected ? 0.45 : 0.25}"/>
+             <path d="M 0 0 L -10 -28 L 10 -28 Z" fill="${wedgeColor}" opacity="${selected ? 0.85 : 0.65}" stroke="${wedgeColor}" stroke-width="0.5" stroke-opacity="0.9"/>
            </g>
          </g>`
       : "";
@@ -147,12 +172,21 @@ function intIcon(site: InterferenceSite, selected: boolean) {
        </g>`
     : "";
 
+  const stackBadge =
+    stackCount > 1
+      ? `<g transform="translate(-3, -3)">
+           <circle cx="6" cy="6" r="6" fill="#001e2b" stroke="#ffffff" stroke-width="1.2"/>
+           <text x="6" y="9" text-anchor="middle" font-size="9" font-family="ui-monospace,monospace" font-weight="700" fill="#ffffff">+${stackCount - 1}</text>
+         </g>`
+      : "";
+
   const html = `<div style="position:relative;width:${wrapW}px;height:${wrapH}px;transition:all 120ms ease;">
     <svg width="${wrapW}" height="${wrapH}" viewBox="-7 -3 ${24 + 14} ${32 + 6}" style="position:absolute;left:0;top:0;overflow:visible;">
-      ${wedge}
+      ${sectorWedges || singleWedge}
       ${haloRing}
       <path d="${pinPath}" fill="${bodyFill}" stroke="#ffffff" stroke-width="1.8" stroke-linejoin="round" filter="drop-shadow(0 1px 2px rgba(0,30,43,0.4))"/>
       ${innerGlyph}
+      ${stackBadge}
       ${lawBadge}
     </svg>
   </div>`;
@@ -228,38 +262,44 @@ export function FieldOpsMap({
     return groups;
   }, [fmMarkers]);
 
+  // Group INT rows by identical coordinates — multi-sector cellsites have
+  // separate rows per sector at the same lat/long, which would otherwise stack
+  // as overlapping pins.
+  const intGroups = useMemo(() => {
+    const groups = new Map<string, InterferenceSite[]>();
+    for (const s of intMarkers) {
+      const lat = (s.lat as number).toFixed(5);
+      const lng = (s.long as number).toFixed(5);
+      const key = `${lat},${lng}`;
+      const arr = groups.get(key);
+      if (arr) arr.push(s);
+      else groups.set(key, [s]);
+    }
+    for (const arr of groups.values()) {
+      // Worst-ranking first (Critical > Major > Minor > unknown), then pending
+      // first (so the head pin reflects "what still needs attention").
+      const rankWeight = (r: string | null) => {
+        const lc = (r || "").toLowerCase();
+        if (lc === "critical") return 0;
+        if (lc === "major") return 1;
+        if (lc === "minor") return 2;
+        return 3;
+      };
+      arr.sort((a, b) => {
+        const ra = rankWeight(a.ranking);
+        const rb = rankWeight(b.ranking);
+        if (ra !== rb) return ra - rb;
+        const ai = a.status === "ตรวจแล้ว" ? 1 : 0;
+        const bi = b.status === "ตรวจแล้ว" ? 1 : 0;
+        if (ai !== bi) return ai - bi;
+        return a.id - b.id;
+      });
+    }
+    return groups;
+  }, [intMarkers]);
+
   const fmIconCache = useRef<Map<string, L.DivIcon>>(new Map());
   const intIconCache = useRef<Map<string, L.DivIcon>>(new Map());
-
-  // Bearing ray for the currently selected interference site
-  const bearingRay = useMemo(() => {
-    if (selection?.kind !== "int") return null;
-    const site = intMarkers.find((s) => s.id === selection.id);
-    if (
-      !site ||
-      site.lat === null ||
-      site.long === null ||
-      site.direction === null ||
-      site.direction === undefined
-    ) {
-      return null;
-    }
-    const distKm = Math.min(site.estimateDistance ?? 5, 30);
-    const end = computeDestination(site.lat, site.long, site.direction, distKm);
-    const ranking = (site.ranking || "").toLowerCase();
-    const color =
-      ranking === "critical" ? "#ff5b4a" : ranking === "major" ? "#ffb800" : "#ff8b7e";
-    return {
-      from: [site.lat, site.long] as [number, number],
-      to: [end.lat, end.lng] as [number, number],
-      color,
-      // explicit source pin (if known) — overrides the projection
-      sourcePin:
-        site.sourceLat !== null && site.sourceLong !== null
-          ? ([site.sourceLat, site.sourceLong] as [number, number])
-          : null,
-    };
-  }, [selection, intMarkers]);
 
   const tileUrl =
     theme === "light"
@@ -299,15 +339,25 @@ export function FieldOpsMap({
         );
       })}
 
-      {intMarkers.map((site) => {
-        const isSelected = selection?.kind === "int" && selection.id === site.id;
-        const cacheKey = `${site.id}-${isSelected}-${site.ranking}-${site.direction}-${site.status}-${site.lawPaperSent ? "L" : "x"}`;
+      {Array.from(intGroups.entries()).map(([coordKey, group]) => {
+        const stackCount = group.length;
+        const headFromGroup = group[0];
+        // If the user selected one of the siblings, treat that one as the
+        // head so the map highlights the right sector.
+        const selectedInGroup =
+          selection?.kind === "int"
+            ? group.find((s) => s.id === selection.id) ?? null
+            : null;
+        const site = selectedInGroup ?? headFromGroup;
+        const isSelected = selectedInGroup !== null;
+        const dirsKey = group.map((s) => `${s.id}:${s.direction}:${s.ranking}:${s.status}`).join("|");
+        const cacheKey = `${site.id}-${isSelected}-${stackCount}-${dirsKey}-${site.lawPaperSent ? "L" : "x"}`;
         if (!intIconCache.current.has(cacheKey)) {
-          intIconCache.current.set(cacheKey, intIcon(site, isSelected));
+          intIconCache.current.set(cacheKey, intIcon(site, isSelected, stackCount, group));
         }
         return (
           <Marker
-            key={`int-${site.id}`}
+            key={`int-grp-${coordKey}`}
             position={[site.lat as number, site.long as number]}
             icon={intIconCache.current.get(cacheKey)!}
             eventHandlers={{
@@ -316,55 +366,6 @@ export function FieldOpsMap({
           />
         );
       })}
-
-      {bearingRay && (
-        <>
-          <Polyline
-            positions={[bearingRay.from, bearingRay.to]}
-            pathOptions={{
-              color: bearingRay.color,
-              weight: 3,
-              opacity: 0.75,
-              dashArray: "6 8",
-            }}
-          />
-          {/* Projected source — concentric ring at the ray endpoint */}
-          <CircleMarker
-            center={bearingRay.to}
-            radius={9}
-            pathOptions={{
-              color: bearingRay.color,
-              weight: 2,
-              fillColor: "transparent",
-              fillOpacity: 0,
-              dashArray: "2 4",
-            }}
-          />
-          <CircleMarker
-            center={bearingRay.to}
-            radius={3}
-            pathOptions={{
-              color: bearingRay.color,
-              weight: 1,
-              fillColor: bearingRay.color,
-              fillOpacity: 0.9,
-            }}
-          />
-          {/* Confirmed source pin (if DB has explicit sourceLat/sourceLong) */}
-          {bearingRay.sourcePin && (
-            <CircleMarker
-              center={bearingRay.sourcePin}
-              radius={7}
-              pathOptions={{
-                color: "#00ed64",
-                weight: 2.5,
-                fillColor: "#00ed64",
-                fillOpacity: 0.6,
-              }}
-            />
-          )}
-        </>
-      )}
 
       <FlyTo target={flyTarget} />
     </MapContainer>

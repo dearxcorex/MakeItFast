@@ -7,6 +7,7 @@ import type { InterferenceSite } from "@/types/interference";
 import { FieldOpsNav, type FieldOpsTab } from "./FieldOpsNav";
 import { FieldOpsHeader } from "./FieldOpsHeader";
 import { FieldOpsFilters, DEFAULT_FILTERS, type FieldFilters } from "./FieldOpsFilters";
+import { dedupeInterferenceSites } from "@/utils/dedupeInterference";
 import { FieldOpsCurrentFM, FieldOpsCurrentINT } from "./FieldOpsCurrent";
 import { FieldOpsBottomSheet } from "./FieldOpsBottomSheet";
 import type { FieldSelection } from "./FieldOpsMap";
@@ -80,9 +81,18 @@ export default function FieldOpsClient({
     });
   }, [stations, filters]);
 
+  // De-duplicate interference rows that share (siteCode, cellName,
+  // sectorName, direction). The DB has older "High interference" rows
+  // alongside newer "ตรวจแล้ว" rows for the same physical sector — without
+  // this collapse, the map would render conflicting INSPECTED/PENDING pins.
+  const dedupedInterference = useMemo(
+    () => dedupeInterferenceSites(interference),
+    [interference]
+  );
+
   const filteredInterference = useMemo(() => {
     if (filters.type === "FM") return [];
-    return interference.filter((s) => {
+    return dedupedInterference.filter((s) => {
       if (filters.province !== "All" && s.changwat !== filters.province) return false;
       if (filters.status === "PENDING" && s.status === "ตรวจแล้ว") return false;
       if (filters.status === "INSPECTED" && s.status !== "ตรวจแล้ว") return false;
@@ -95,7 +105,7 @@ export default function FieldOpsClient({
       }
       return true;
     });
-  }, [interference, filters]);
+  }, [dedupedInterference, filters]);
 
   const visibleCount = filteredStations.length + filteredInterference.length;
 
@@ -113,6 +123,20 @@ export default function FieldOpsClient({
       (s) => `${round(s.latitude)},${round(s.longitude)}` === key
     );
   }, [filteredStations, selectedStation]);
+
+  const coLocatedSites = useMemo(() => {
+    if (!selectedSite || selectedSite.lat === null || selectedSite.long === null) {
+      return [] as InterferenceSite[];
+    }
+    const round = (n: number) => n.toFixed(5);
+    const key = `${round(selectedSite.lat)},${round(selectedSite.long)}`;
+    return filteredInterference.filter(
+      (s) =>
+        s.lat !== null &&
+        s.long !== null &&
+        `${round(s.lat)},${round(s.long)}` === key
+    );
+  }, [filteredInterference, selectedSite]);
 
   const handleSelect = (sel: FieldSelection) => {
     setSelection(sel);
@@ -233,7 +257,7 @@ export default function FieldOpsClient({
     >
       <FieldOpsHeader
         stations={stations}
-        interference={interference}
+        interference={dedupedInterference}
         type={filters.type}
         theme={theme}
         onToggleTheme={() => setTheme((t) => (t === "dark" ? "light" : "dark"))}
@@ -309,6 +333,8 @@ export default function FieldOpsClient({
                     {selection?.kind === "int" && selectedSite && (
                       <FieldOpsCurrentINT
                         site={selectedSite}
+                        coLocated={coLocatedSites}
+                        onSelectSite={(id) => handleSelect({ kind: "int", id })}
                         onToggleInspection={handleToggleInspection}
                         onToggleLawPaper={handleToggleLawPaper}
                         pending={pending}

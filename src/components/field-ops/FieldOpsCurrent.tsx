@@ -2,7 +2,6 @@
 
 import type { FMStation } from "@/types/station";
 import type { InterferenceSite } from "@/types/interference";
-import { computeDestination } from "@/utils/bearing";
 
 interface CommonAction {
   label: string;
@@ -187,17 +186,22 @@ export function FieldOpsCurrentFM({
 
 export function FieldOpsCurrentINT({
   site,
+  coLocated,
+  onSelectSite,
   onToggleInspection,
   onToggleLawPaper,
   pending,
 }: {
   site: InterferenceSite;
+  coLocated?: InterferenceSite[];
+  onSelectSite?: (id: number) => void;
   onToggleInspection: () => void;
   onToggleLawPaper: () => void;
   pending: boolean;
 }) {
   const inspected = site.status === "ตรวจแล้ว";
   const lawSent = !!site.lawPaperSent;
+  const others = (coLocated ?? []).filter((s) => s.id !== site.id);
 
   return (
     <div style={{ padding: "20px 20px", display: "flex", flexDirection: "column", gap: 12 }}>
@@ -276,54 +280,6 @@ export function FieldOpsCurrentINT({
         loading={pending}
       />
 
-      <button
-        type="button"
-        onClick={() => {
-          let target: { lat: number; lng: number } | null = null;
-          if (
-            site.sourceLat !== null &&
-            site.sourceLat !== undefined &&
-            site.sourceLong !== null &&
-            site.sourceLong !== undefined
-          ) {
-            target = { lat: site.sourceLat, lng: site.sourceLong };
-          } else if (
-            site.lat !== null &&
-            site.long !== null &&
-            site.direction !== null &&
-            site.direction !== undefined
-          ) {
-            const distKm = site.estimateDistance ?? 3;
-            target = computeDestination(site.lat, site.long, site.direction, distKm);
-          }
-          if (target) {
-            window.open(googleMapsUrl(target.lat, target.lng), "_blank");
-          }
-        }}
-        disabled={
-          site.direction === null ||
-          site.direction === undefined ||
-          site.lat === null ||
-          site.long === null
-        }
-        className="fo-mono"
-        style={{
-          padding: "12px 14px",
-          background: "transparent",
-          color: "var(--fo-accent)",
-          border: "1px solid var(--fo-accent)",
-          borderRadius: 999,
-          fontSize: 11,
-          fontWeight: 700,
-          letterSpacing: "0.2em",
-          cursor:
-            site.direction === null || site.direction === undefined ? "not-allowed" : "pointer",
-          opacity:
-            site.direction === null || site.direction === undefined ? 0.5 : 1,
-        }}
-      >
-        🎯 FIND SOURCE
-      </button>
 
       <button
         type="button"
@@ -353,6 +309,69 @@ export function FieldOpsCurrentINT({
         </span>
         <span className="fo-mono" style={{ color: "inherit", opacity: 0.7 }}>TAP TO TOGGLE</span>
       </button>
+
+      {others.length > 0 && (
+        <div
+          style={{
+            marginTop: 4,
+            paddingTop: 12,
+            borderTop: "1px solid var(--fo-rail-border)",
+            display: "flex",
+            flexDirection: "column",
+            gap: 6,
+          }}
+        >
+          <div className="fo-mono" style={{ color: "var(--fo-rail-mute)" }}>
+            ALSO AT THIS LOCATION · {others.length}
+          </div>
+          {others.map((s) => {
+            const sInsp = s.status === "ตรวจแล้ว";
+            const sColor = sInsp
+              ? "var(--fo-accent-2)"
+              : (s.ranking || "").toLowerCase() === "critical"
+                ? "var(--fo-crit)"
+                : (s.ranking || "").toLowerCase() === "major"
+                  ? "var(--fo-warn)"
+                  : "var(--fo-line)";
+            return (
+              <button
+                key={s.id}
+                type="button"
+                onClick={() => onSelectSite?.(s.id)}
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  gap: 8,
+                  padding: "8px 10px",
+                  borderRadius: 8,
+                  background: "transparent",
+                  border: "1px solid var(--fo-rail-border)",
+                  cursor: onSelectSite ? "pointer" : "default",
+                  color: "var(--fo-rail-text)",
+                  fontFamily: "var(--fo-body)",
+                  textAlign: "left",
+                }}
+              >
+                <span
+                  style={{
+                    width: 10,
+                    height: 10,
+                    borderRadius: 999,
+                    background: sColor,
+                    flexShrink: 0,
+                  }}
+                />
+                <span style={{ flex: 1, fontSize: 13, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                  {s.cellName ?? s.sectorName ?? `#${s.id}`}
+                </span>
+                <span className="fo-mono" style={{ color: "var(--fo-rail-mute)" }}>
+                  {s.direction !== null && s.direction !== undefined ? `${s.direction}°` : "—"}
+                </span>
+              </button>
+            );
+          })}
+        </div>
+      )}
     </div>
   );
 }
