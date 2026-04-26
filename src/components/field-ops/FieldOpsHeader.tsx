@@ -61,7 +61,7 @@ export function FieldOpsHeader({
       <Stat
         label="INSPECTED"
         value={kpis.inspected}
-        sub={`${kpis.pct}%`}
+        sub={`/ ${kpis.target} · ${kpis.pct}%`}
         accent
         textColor={textColor}
         labelColor={labelColor}

@@ -256,8 +256,8 @@ export default function FieldOpsClient({
       }}
     >
       <FieldOpsHeader
-        stations={stations}
-        interference={dedupedInterference}
+        stations={filteredStations}
+        interference={filteredInterference}
         type={filters.type}
         theme={theme}
         onToggleTheme={() => setTheme((t) => (t === "dark" ? "light" : "dark"))}
