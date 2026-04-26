@@ -1,7 +1,9 @@
 "use client";
 
+import { useEffect, useState } from "react";
 import type { FMStation } from "@/types/station";
 import type { InterferenceSite } from "@/types/interference";
+import { parseLatLngInput } from "@/utils/parseLatLng";
 
 interface CommonAction {
   label: string;
@@ -191,6 +193,11 @@ export function FieldOpsCurrentINT({
   onToggleInspection,
   onToggleLawPaper,
   pending,
+  marking = false,
+  onStartMarkSource,
+  onCancelMarkSource,
+  onClearSource,
+  onSubmitSourceCoords,
 }: {
   site: InterferenceSite;
   coLocated?: InterferenceSite[];
@@ -198,10 +205,38 @@ export function FieldOpsCurrentINT({
   onToggleInspection: () => void;
   onToggleLawPaper: () => void;
   pending: boolean;
+  marking?: boolean;
+  onStartMarkSource?: () => void;
+  onCancelMarkSource?: () => void;
+  onClearSource?: () => void;
+  onSubmitSourceCoords?: (lat: number, lng: number) => void;
 }) {
   const inspected = site.status === "ตรวจแล้ว";
   const lawSent = !!site.lawPaperSent;
   const others = (coLocated ?? []).filter((s) => s.id !== site.id);
+  const hasSource = site.sourceLat !== null && site.sourceLong !== null;
+  const [latInput, setLatInput] = useState("");
+  const [lngInput, setLngInput] = useState("");
+  const [coordError, setCoordError] = useState<string | null>(null);
+
+  useEffect(() => {
+    setLatInput("");
+    setLngInput("");
+    setCoordError(null);
+  }, [site.id]);
+
+  const handleSubmitCoords = () => {
+    if (!onSubmitSourceCoords) return;
+    const r = parseLatLngInput(latInput, lngInput);
+    if (!r.ok) {
+      setCoordError(r.error);
+      return;
+    }
+    setCoordError(null);
+    onSubmitSourceCoords(r.lat, r.lng);
+    setLatInput("");
+    setLngInput("");
+  };
 
   return (
     <div style={{ padding: "20px 20px", display: "flex", flexDirection: "column", gap: 12 }}>
@@ -252,9 +287,15 @@ export function FieldOpsCurrentINT({
           <Meter label="N/I" value={`${site.avgNiCarrier.toFixed(1)} dBm`} />
         )}
         {site.estimateDistance !== null && site.estimateDistance !== undefined && (
-          <Meter label="DIST" value={`${site.estimateDistance.toFixed(1)} km`} />
+          <Meter label="DIST" value={`${site.estimateDistance.toFixed(2)} km`} />
         )}
       </div>
+
+      {hasSource && (
+        <div className="fo-mono" style={{ color: "var(--fo-rail-mute)", fontSize: 11 }}>
+          SOURCE · {site.sourceLat!.toFixed(5)}, {site.sourceLong!.toFixed(5)}
+        </div>
+      )}
 
       <ButtonRow
         actions={[
@@ -309,6 +350,198 @@ export function FieldOpsCurrentINT({
         </span>
         <span className="fo-mono" style={{ color: "inherit", opacity: 0.7 }}>TAP TO TOGGLE</span>
       </button>
+
+      {(onStartMarkSource || onClearSource || onSubmitSourceCoords) && (
+        <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+          {marking ? (
+            <>
+              <div
+                className="fo-mono"
+                style={{
+                  color: "var(--fo-accent)",
+                  fontSize: 11,
+                  padding: "8px 12px",
+                  border: "1px dashed var(--fo-accent)",
+                  borderRadius: 8,
+                }}
+              >
+                ◎ Click on the map to drop the source pin · ESC to cancel
+              </div>
+              <button
+                type="button"
+                onClick={onCancelMarkSource}
+                disabled={pending}
+                className="fo-mono"
+                style={{
+                  padding: "10px 14px",
+                  background: "transparent",
+                  color: "var(--fo-warn)",
+                  border: "1px solid var(--fo-warn)",
+                  borderRadius: 12,
+                  cursor: pending ? "wait" : "pointer",
+                  fontSize: 11,
+                  letterSpacing: "0.12em",
+                }}
+              >
+                ✕ CANCEL
+              </button>
+            </>
+          ) : hasSource ? (
+            <div style={{ display: "flex", gap: 8 }}>
+              <button
+                type="button"
+                onClick={onClearSource}
+                disabled={pending}
+                className="fo-mono"
+                style={{
+                  flex: 1,
+                  padding: "10px 14px",
+                  background: "transparent",
+                  color: "var(--fo-rail-mute)",
+                  border: "1px solid var(--fo-divider)",
+                  borderRadius: 12,
+                  cursor: pending ? "wait" : "pointer",
+                  fontSize: 11,
+                  letterSpacing: "0.12em",
+                }}
+              >
+                ✕ CLEAR
+              </button>
+              <button
+                type="button"
+                onClick={onStartMarkSource}
+                disabled={pending}
+                className="fo-mono"
+                style={{
+                  flex: 2,
+                  padding: "10px 14px",
+                  background: "transparent",
+                  color: "var(--fo-accent)",
+                  border: "1px solid var(--fo-accent)",
+                  borderRadius: 12,
+                  cursor: pending ? "wait" : "pointer",
+                  fontSize: 11,
+                  letterSpacing: "0.12em",
+                }}
+              >
+                ⊕ RE-MARK SOURCE
+              </button>
+            </div>
+          ) : (
+            <button
+              type="button"
+              onClick={onStartMarkSource}
+              disabled={pending}
+              className="fo-mono"
+              style={{
+                padding: "12px 14px",
+                background: "var(--fo-accent)",
+                color: "var(--fo-ink)",
+                border: "1px solid var(--fo-accent)",
+                borderRadius: 12,
+                cursor: pending ? "wait" : "pointer",
+                fontSize: 11,
+                letterSpacing: "0.12em",
+              }}
+            >
+              ⊕ MARK SOURCE
+            </button>
+          )}
+
+          {!marking && onSubmitSourceCoords && (
+            <div
+              style={{
+                marginTop: 4,
+                paddingTop: 8,
+                borderTop: "1px dashed var(--fo-divider)",
+                display: "flex",
+                flexDirection: "column",
+                gap: 6,
+              }}
+            >
+              <div className="fo-mono" style={{ color: "var(--fo-rail-mute)", fontSize: 10 }}>
+                OR ENTER COORDS
+              </div>
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 6, minWidth: 0 }}>
+                <input
+                  type="text"
+                  inputMode="decimal"
+                  placeholder="LAT 13.756"
+                  value={latInput}
+                  onChange={(e) => setLatInput(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter") handleSubmitCoords();
+                  }}
+                  disabled={pending}
+                  className="fo-mono"
+                  style={{
+                    minWidth: 0,
+                    width: "100%",
+                    padding: "8px 10px",
+                    background: "var(--fo-canvas)",
+                    color: "var(--fo-rail-text)",
+                    border: "1px solid var(--fo-divider)",
+                    borderRadius: 8,
+                    fontSize: 12,
+                    boxSizing: "border-box",
+                  }}
+                />
+                <input
+                  type="text"
+                  inputMode="decimal"
+                  placeholder="LONG 100.501"
+                  value={lngInput}
+                  onChange={(e) => setLngInput(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter") handleSubmitCoords();
+                  }}
+                  disabled={pending}
+                  className="fo-mono"
+                  style={{
+                    minWidth: 0,
+                    width: "100%",
+                    padding: "8px 10px",
+                    background: "var(--fo-canvas)",
+                    color: "var(--fo-rail-text)",
+                    border: "1px solid var(--fo-divider)",
+                    borderRadius: 8,
+                    fontSize: 12,
+                    boxSizing: "border-box",
+                  }}
+                />
+              </div>
+              <button
+                type="button"
+                onClick={handleSubmitCoords}
+                disabled={pending || (!latInput.trim() && !lngInput.trim())}
+                className="fo-mono"
+                style={{
+                  width: "100%",
+                  padding: "10px 12px",
+                  background: "var(--fo-accent-2)",
+                  color: "#fff",
+                  border: "1px solid var(--fo-accent-2)",
+                  borderRadius: 8,
+                  cursor: pending ? "wait" : "pointer",
+                  fontSize: 11,
+                  letterSpacing: "0.12em",
+                  boxSizing: "border-box",
+                }}
+              >
+                SAVE COORDS
+              </button>
+              {coordError && (
+                <div className="fo-mono" style={{ color: "var(--fo-crit)", fontSize: 10 }}>
+                  ✕ {coordError}
+                </div>
+              )}
+              <div className="fo-mono" style={{ color: "var(--fo-rail-mute)", fontSize: 10 }}>
+                Tip: paste &quot;13.756, 100.501&quot; into LAT
+              </div>
+            </div>
+          )}
+        </div>
+      )}
 
       {others.length > 0 && (
         <div

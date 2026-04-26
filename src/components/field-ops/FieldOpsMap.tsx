@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useRef } from "react";
-import { MapContainer, TileLayer, Marker, useMap } from "react-leaflet";
+import { MapContainer, TileLayer, Marker, Polyline, useMap, useMapEvents } from "react-leaflet";
 import MarkerClusterGroup from "react-leaflet-cluster";
 import L from "leaflet";
 import "leaflet/dist/leaflet.css";
@@ -214,6 +214,64 @@ function FlyTo({ target }: { target: [number, number] | null }) {
   return null;
 }
 
+function makeSourceIcon(): L.DivIcon {
+  const html = `
+    <div style="
+      width:18px;height:18px;border-radius:50%;
+      display:flex;align-items:center;justify-content:center;
+      background:#ff5b4a;border:2px solid #ffffff;
+      box-shadow:0 0 0 2px rgba(0,30,43,0.45), 0 1px 4px rgba(0,30,43,0.5);
+      color:#ffffff;font-family:'Source Code Pro',ui-monospace,monospace;
+      font-weight:800;font-size:11px;line-height:1;
+    ">⊕</div>
+  `;
+  return L.divIcon({
+    className: "fo-source-pin",
+    html,
+    iconSize: [18, 18],
+    iconAnchor: [9, 9],
+  });
+}
+
+const SOURCE_ICON = makeSourceIcon();
+
+function ClickToMark({
+  active,
+  onPick,
+  onCancel,
+}: {
+  active: boolean;
+  onPick: (lat: number, lng: number) => void;
+  onCancel: () => void;
+}) {
+  const map = useMap();
+  useMapEvents({
+    click(e) {
+      if (!active) return;
+      const target = e.originalEvent?.target as HTMLElement | null;
+      if (target && target.closest && target.closest(".leaflet-marker-icon")) {
+        return;
+      }
+      onPick(e.latlng.lat, e.latlng.lng);
+    },
+  });
+  useEffect(() => {
+    if (!active) return;
+    const container = map.getContainer();
+    const prevCursor = container.style.cursor;
+    container.style.cursor = "crosshair";
+    const onKey = (ev: KeyboardEvent) => {
+      if (ev.key === "Escape") onCancel();
+    };
+    window.addEventListener("keydown", onKey);
+    return () => {
+      container.style.cursor = prevCursor;
+      window.removeEventListener("keydown", onKey);
+    };
+  }, [active, map, onCancel]);
+  return null;
+}
+
 export function FieldOpsMap({
   stations,
   interference,
@@ -221,6 +279,9 @@ export function FieldOpsMap({
   onSelect,
   flyTarget,
   theme = "dark",
+  markingSourceForId = null,
+  onMarkSource,
+  onCancelMarkSource,
 }: {
   stations: FMStation[];
   interference: InterferenceSite[];
@@ -228,7 +289,27 @@ export function FieldOpsMap({
   onSelect: (sel: FieldSelection) => void;
   flyTarget: [number, number] | null;
   theme?: "dark" | "light";
+  markingSourceForId?: number | null;
+  onMarkSource?: (siteId: number, lat: number, lng: number) => void;
+  onCancelMarkSource?: () => void;
 }) {
+  const isMarking = markingSourceForId !== null;
+  const sourcedSites = useMemo(
+    () =>
+      interference.filter(
+        (s) =>
+          s.lat !== null &&
+          s.long !== null &&
+          s.sourceLat !== null &&
+          s.sourceLong !== null &&
+          Number.isFinite(s.lat) &&
+          Number.isFinite(s.long) &&
+          Number.isFinite(s.sourceLat) &&
+          Number.isFinite(s.sourceLong)
+      ),
+    [interference]
+  );
+  const sourceLineColor = theme === "light" ? "#c0392b" : "#ff5b4a";
   const fmMarkers = useMemo(
     () => stations.filter((s) => Number.isFinite(s.latitude) && Number.isFinite(s.longitude)),
     [stations]
@@ -346,7 +427,10 @@ export function FieldOpsMap({
             position={[head.latitude, head.longitude]}
             icon={fmIconCache.current.get(cacheKey)!}
             eventHandlers={{
-              click: () => onSelect({ kind: "fm", id: head.id }),
+              click: () => {
+                if (isMarking) return;
+                onSelect({ kind: "fm", id: head.id });
+              },
             }}
           />
         );
@@ -374,12 +458,59 @@ export function FieldOpsMap({
             position={[site.lat as number, site.long as number]}
             icon={intIconCache.current.get(cacheKey)!}
             eventHandlers={{
-              click: () => onSelect({ kind: "int", id: site.id }),
+              click: () => {
+                if (isMarking) return;
+                onSelect({ kind: "int", id: site.id });
+              },
             }}
           />
         );
       })}
       </MarkerClusterGroup>
+
+      {sourcedSites.map((s) => {
+        const lat = s.lat as number;
+        const lng = s.long as number;
+        const sLat = s.sourceLat as number;
+        const sLng = s.sourceLong as number;
+        return (
+          <Polyline
+            key={`src-line-${s.id}`}
+            positions={[[lat, lng], [sLat, sLng]]}
+            pathOptions={{
+              color: sourceLineColor,
+              weight: 2,
+              opacity: 0.85,
+              dashArray: "4 6",
+              interactive: false,
+            }}
+          />
+        );
+      })}
+
+      {sourcedSites.map((s) => (
+        <Marker
+          key={`src-pin-${s.id}`}
+          position={[s.sourceLat as number, s.sourceLong as number]}
+          icon={SOURCE_ICON}
+          eventHandlers={{
+            click: () => {
+              if (isMarking) return;
+              onSelect({ kind: "int", id: s.id });
+            },
+          }}
+        />
+      ))}
+
+      {onMarkSource && (
+        <ClickToMark
+          active={isMarking}
+          onPick={(lat, lng) => {
+            if (markingSourceForId !== null) onMarkSource(markingSourceForId, lat, lng);
+          }}
+          onCancel={() => onCancelMarkSource?.()}
+        />
+      )}
 
       <FlyTo target={flyTarget} />
     </MapContainer>

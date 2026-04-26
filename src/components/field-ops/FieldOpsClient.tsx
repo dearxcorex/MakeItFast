@@ -8,6 +8,7 @@ import { FieldOpsNav, type FieldOpsTab } from "./FieldOpsNav";
 import { FieldOpsHeader } from "./FieldOpsHeader";
 import { FieldOpsFilters, DEFAULT_FILTERS, type FieldFilters } from "./FieldOpsFilters";
 import { dedupeInterferenceSites } from "@/utils/dedupeInterference";
+import { haversineDistanceKm } from "@/utils/distance";
 import { FieldOpsCurrentFM, FieldOpsCurrentINT } from "./FieldOpsCurrent";
 import { FieldOpsBottomSheet } from "./FieldOpsBottomSheet";
 import type { FieldSelection } from "./FieldOpsMap";
@@ -48,6 +49,7 @@ export default function FieldOpsClient({
   const [flyTarget, setFlyTarget] = useState<[number, number] | null>(null);
   const [isMobile, setIsMobile] = useState(false);
   const [theme, setTheme] = useState<"dark" | "light">("dark");
+  const [markingSourceForId, setMarkingSourceForId] = useState<number | null>(null);
 
   useEffect(() => {
     const check = () => setIsMobile(window.innerWidth < 900);
@@ -64,6 +66,17 @@ export default function FieldOpsClient({
   useEffect(() => {
     window.localStorage.setItem("fo-theme", theme);
   }, [theme]);
+
+  useEffect(() => {
+    if (markingSourceForId === null) return;
+    if (tab !== "field-ops") {
+      setMarkingSourceForId(null);
+      return;
+    }
+    if (selection?.kind !== "int" || selection.id !== markingSourceForId) {
+      setMarkingSourceForId(null);
+    }
+  }, [tab, selection, markingSourceForId]);
 
   const filteredStations = useMemo(() => {
     if (filters.type === "INT") return [];
@@ -223,6 +236,90 @@ export default function FieldOpsClient({
     }
   };
 
+  const handleMarkSource = async (siteId: number, lat: number, lng: number) => {
+    const target = interference.find((s) => s.id === siteId);
+    if (!target) return;
+    const prev = {
+      sourceLat: target.sourceLat,
+      sourceLong: target.sourceLong,
+      estimateDistance: target.estimateDistance,
+    };
+    let distance: number | null = null;
+    if (target.lat !== null && target.long !== null) {
+      const km = haversineDistanceKm(target.lat, target.long, lat, lng);
+      distance = Number.isFinite(km) ? km : null;
+    }
+    setInterference((all) =>
+      all.map((s) =>
+        s.id === siteId
+          ? { ...s, sourceLat: lat, sourceLong: lng, estimateDistance: distance }
+          : s
+      )
+    );
+    setMarkingSourceForId(null);
+    setPending(true);
+    try {
+      const res = await fetch(`/api/interference/${siteId}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ sourceLat: lat, sourceLong: lng, estimateDistance: distance }),
+      });
+      if (!res.ok) {
+        setInterference((all) =>
+          all.map((s) => (s.id === siteId ? { ...s, ...prev } : s))
+        );
+        const json = await res.json().catch(() => ({}));
+        console.error("Mark source failed:", json?.error ?? res.statusText);
+      }
+    } catch (err) {
+      console.error(err);
+      setInterference((all) =>
+        all.map((s) => (s.id === siteId ? { ...s, ...prev } : s))
+      );
+    } finally {
+      setPending(false);
+    }
+  };
+
+  const handleClearSource = async (siteId: number) => {
+    const target = interference.find((s) => s.id === siteId);
+    if (!target) return;
+    const prev = {
+      sourceLat: target.sourceLat,
+      sourceLong: target.sourceLong,
+      estimateDistance: target.estimateDistance,
+    };
+    setInterference((all) =>
+      all.map((s) =>
+        s.id === siteId
+          ? { ...s, sourceLat: null, sourceLong: null, estimateDistance: null }
+          : s
+      )
+    );
+    setPending(true);
+    try {
+      const res = await fetch(`/api/interference/${siteId}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ sourceLat: null, sourceLong: null, estimateDistance: null }),
+      });
+      if (!res.ok) {
+        setInterference((all) =>
+          all.map((s) => (s.id === siteId ? { ...s, ...prev } : s))
+        );
+        const json = await res.json().catch(() => ({}));
+        console.error("Clear source failed:", json?.error ?? res.statusText);
+      }
+    } catch (err) {
+      console.error(err);
+      setInterference((all) =>
+        all.map((s) => (s.id === siteId ? { ...s, ...prev } : s))
+      );
+    } finally {
+      setPending(false);
+    }
+  };
+
   const handleToggleLawPaper = async () => {
     if (!selection || selection.kind !== "int" || !selectedSite) return;
     setPending(true);
@@ -287,6 +384,9 @@ export default function FieldOpsClient({
                     onSelect={handleSelect}
                     flyTarget={flyTarget}
                     theme={theme}
+                    markingSourceForId={markingSourceForId}
+                    onMarkSource={handleMarkSource}
+                    onCancelMarkSource={() => setMarkingSourceForId(null)}
                   />
                 </div>
 
@@ -335,6 +435,11 @@ export default function FieldOpsClient({
                         onToggleInspection={handleToggleInspection}
                         onToggleLawPaper={handleToggleLawPaper}
                         pending={pending}
+                        marking={markingSourceForId === selectedSite.id}
+                        onStartMarkSource={() => setMarkingSourceForId(selectedSite.id)}
+                        onCancelMarkSource={() => setMarkingSourceForId(null)}
+                        onClearSource={() => handleClearSource(selectedSite.id)}
+                        onSubmitSourceCoords={(lat, lng) => handleMarkSource(selectedSite.id, lat, lng)}
                       />
                     )}
                     {!selection && (

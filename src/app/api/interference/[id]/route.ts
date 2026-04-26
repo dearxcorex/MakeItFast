@@ -62,6 +62,33 @@ export async function PATCH(
     if ('lawPaperSent' in body && typeof body.lawPaperSent === 'boolean') {
       updateData.law_paper_sent = body.lawPaperSent;
     }
+    if ('sourceLat' in body) {
+      const v = body.sourceLat;
+      if (v === null) updateData.source_lat = null;
+      else if (typeof v === 'number' && Number.isFinite(v) && v >= -90 && v <= 90) {
+        updateData.source_lat = v;
+      } else {
+        return NextResponse.json({ error: 'Invalid sourceLat' }, { status: 400 });
+      }
+    }
+    if ('sourceLong' in body) {
+      const v = body.sourceLong;
+      if (v === null) updateData.source_long = null;
+      else if (typeof v === 'number' && Number.isFinite(v) && v >= -180 && v <= 180) {
+        updateData.source_long = v;
+      } else {
+        return NextResponse.json({ error: 'Invalid sourceLong' }, { status: 400 });
+      }
+    }
+    if ('estimateDistance' in body) {
+      const v = body.estimateDistance;
+      if (v === null) updateData.estimate_distance = null;
+      else if (typeof v === 'number' && Number.isFinite(v) && v >= 0) {
+        updateData.estimate_distance = v;
+      } else {
+        return NextResponse.json({ error: 'Invalid estimateDistance' }, { status: 400 });
+      }
+    }
 
     if (Object.keys(updateData).length === 0) {
       return NextResponse.json({ error: 'No valid fields to update' }, { status: 400 });
