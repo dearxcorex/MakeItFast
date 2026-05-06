@@ -30,13 +30,13 @@ export function FieldOpsBottomSheet({
     return (
       <div
         style={{
-          background: "var(--fo-band, #ffffff)",
-          borderTop: "1px solid var(--fo-divider)",
+          background: "var(--fo-sheet-bg)",
+          borderTop: "1px solid var(--fo-rail-border)",
           padding: "20px 16px",
           textAlign: "center",
         }}
       >
-        <span className="fo-mono" style={{ color: "var(--fo-mute)" }}>NO ITEM SELECTED</span>
+        <span className="fo-mono" style={{ color: "var(--fo-rail-mute)" }}>NO ITEM SELECTED</span>
       </div>
     );
   }
@@ -55,8 +55,8 @@ export function FieldOpsBottomSheet({
   return (
     <div
       style={{
-        background: "var(--fo-band, #ffffff)",
-        borderTop: "1px solid var(--fo-divider)",
+        background: "var(--fo-sheet-bg)",
+        borderTop: "1px solid var(--fo-rail-border)",
         borderTopLeftRadius: 20,
         borderTopRightRadius: 20,
         boxShadow: "0 -8px 24px rgba(0,30,43,0.1)",
@@ -96,7 +96,7 @@ export function FieldOpsBottomSheet({
         >
           {isFM ? "FM" : "INT"}
         </span>
-        <span className="fo-mono" style={{ color: "var(--fo-ink)" }}>{id}</span>
+        <span className="fo-mono" style={{ color: "var(--fo-sheet-text)" }}>{id}</span>
         <div style={{ flex: 1 }} />
         <span
           className="fo-mono"
@@ -113,10 +113,10 @@ export function FieldOpsBottomSheet({
       </div>
 
       <div style={{ padding: "8px 16px 4px" }}>
-        <div className="fo-serif" style={{ fontSize: 18, color: "var(--fo-ink)", lineHeight: 1.15 }}>
+        <div className="fo-serif" style={{ fontSize: 18, color: "var(--fo-sheet-text)", lineHeight: 1.15 }}>
           {title}
         </div>
-        <div className="fo-mono" style={{ color: "var(--fo-mute)", marginTop: 4 }}>
+        <div className="fo-mono" style={{ color: "var(--fo-rail-mute)", marginTop: 4 }}>
           {province.toUpperCase()} · {district}
         </div>
       </div>
@@ -219,7 +219,7 @@ export function FieldOpsBottomSheet({
                   {lawSent ? "ส่งแล้ว · Sent" : "ยังไม่ส่ง · Not sent"}
                 </div>
               </span>
-              <span className="fo-mono" style={{ color: "var(--fo-mute)" }}>TAP TO TOGGLE</span>
+              <span className="fo-mono" style={{ color: "var(--fo-rail-mute)" }}>TAP TO TOGGLE</span>
             </button>
           )}
 
@@ -264,8 +264,17 @@ export function FieldOpsBottomSheet({
 function Inline({ label, value }: { label: string; value: string }) {
   return (
     <div style={{ display: "flex", flexDirection: "column" }}>
-      <span className="fo-mono" style={{ color: "var(--fo-mute)" }}>{label}</span>
-      <span className="fo-serif" style={{ fontSize: 14, color: "var(--fo-ink)" }}>{value}</span>
+      <span className="fo-mono" style={{ color: "var(--fo-rail-mute)" }}>{label}</span>
+      <span
+        className="fo-serif"
+        style={{
+          fontSize: 14,
+          color: "var(--fo-sheet-text)",
+          lineHeight: 1.4,
+          whiteSpace: "normal",
+          wordBreak: "break-word",
+        }}
+      >{value}</span>
     </div>
   );
 }
@@ -273,8 +282,8 @@ function Inline({ label, value }: { label: string; value: string }) {
 function Cell({ label, value }: { label: string; value: string }) {
   return (
     <div>
-      <div className="fo-mono" style={{ color: "var(--fo-mute)", marginBottom: 2 }}>{label}</div>
-      <div style={{ fontSize: 13, color: "var(--fo-ink)" }}>{value}</div>
+      <div className="fo-mono" style={{ color: "var(--fo-rail-mute)", marginBottom: 2 }}>{label}</div>
+      <div style={{ fontSize: 13, color: "var(--fo-sheet-text)" }}>{value}</div>
     </div>
   );
 }
