@@ -33,7 +33,17 @@ export default function StationListItem({
       >
         <div className="flex items-start justify-between mb-2">
           <div className="flex-1 min-w-0">
-            <h3 className="font-semibold text-card-foreground text-sm line-clamp-2">{station.name}</h3>
+            <h3 className="font-semibold text-card-foreground text-sm line-clamp-2">
+              {station.revoked && (
+                <span
+                  aria-label="revoked"
+                  title={station.revokedNote || 'REVOKED · ใบอนุญาตถูกเพิกถอน'}
+                  className="inline-block w-2 h-2 rounded-full mr-1.5 align-middle"
+                  style={{ background: 'var(--fo-crit, #e34b4b)' }}
+                />
+              )}
+              {station.name}
+            </h3>
             <div className="flex items-center gap-1 mt-1">
               <span className="inline-flex items-center px-2 py-0.5 rounded bg-primary/20 text-primary text-xs font-medium">
                 {station.frequency} FM
@@ -91,7 +101,17 @@ export default function StationListItem({
     >
       <div className="flex items-start justify-between mb-3">
         <div className="flex-1 min-w-0">
-          <h3 className="font-semibold text-foreground text-base leading-tight mb-2 line-clamp-2">{station.name}</h3>
+          <h3 className="font-semibold text-foreground text-base leading-tight mb-2 line-clamp-2">
+            {station.revoked && (
+              <span
+                aria-label="revoked"
+                title={station.revokedNote || 'REVOKED · ใบอนุญาตถูกเพิกถอน'}
+                className="inline-block w-2 h-2 rounded-full mr-1.5 align-middle"
+                style={{ background: 'var(--fo-crit, #e34b4b)' }}
+              />
+            )}
+            {station.name}
+          </h3>
           <div className="flex items-center gap-1 mt-1">
             <span className="inline-flex items-center px-2 py-0.5 rounded bg-primary/20 text-primary text-xs font-medium">
               {station.frequency} FM
