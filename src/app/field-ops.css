@@ -102,6 +102,10 @@
   --fo-band-inset: var(--fo-ink);
   --fo-text: var(--fo-white);
   --fo-divider: var(--fo-ink-3);
+
+  /* Bottom-sheet — always dark regardless of theme so it reads against the map */
+  --fo-sheet-bg: #0a1f23;
+  --fo-sheet-text: #e6efe9;
 }
 
 /* Light theme — flip canvas + rail surfaces, keep dark badge/icon colors intact */
