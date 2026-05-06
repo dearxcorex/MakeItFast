@@ -1,6 +1,5 @@
 "use client";
 
-import { useState } from "react";
 import type { FMStation } from "@/types/station";
 import type { InterferenceSite } from "@/types/interference";
 import type { TypeFilter } from "./FieldOpsFilters";
@@ -37,12 +36,10 @@ export function FieldOpsHeader({
 
   if (isMobile) {
     return <MobileHeader
-      kpis={kpis}
       scopeLabel={scopeLabel}
       headerBg={headerBg}
       textColor={textColor}
       borderColor={borderColor}
-      labelColor={labelColor}
       accentText={accentText}
       onOpenDrawer={onOpenDrawer}
     />;
@@ -175,119 +172,58 @@ function Stat({
 }
 
 function MobileHeader({
-  kpis,
   scopeLabel,
   headerBg,
   textColor,
   borderColor,
-  labelColor,
   accentText,
   onOpenDrawer,
 }: {
-  kpis: ReturnType<typeof computeKpis>;
   scopeLabel: string;
   headerBg: string;
   textColor: string;
   borderColor: string;
-  labelColor: string;
   accentText: string;
   onOpenDrawer?: () => void;
 }) {
-  const [statsOpen, setStatsOpen] = useState(false);
   return (
     <header
       style={{
         display: "flex",
-        flexDirection: "column",
+        alignItems: "center",
+        gap: 10,
+        padding: "10px 12px",
         background: headerBg,
         color: textColor,
         borderBottom: `1px solid ${borderColor}`,
         flexShrink: 0,
       }}
     >
-      <div
+      <button
+        type="button"
+        aria-label="Open menu"
+        onClick={onOpenDrawer}
         style={{
-          display: "flex",
-          alignItems: "center",
-          gap: 10,
-          padding: "10px 12px",
+          border: `1px solid ${borderColor}`,
+          background: "transparent",
+          color: textColor,
+          padding: "6px 10px",
+          borderRadius: 6,
+          fontSize: 16,
+          cursor: "pointer",
+          lineHeight: 1,
         }}
       >
-        <button
-          type="button"
-          aria-label="Open menu"
-          onClick={onOpenDrawer}
-          style={{
-            border: `1px solid ${borderColor}`,
-            background: "transparent",
-            color: textColor,
-            padding: "6px 10px",
-            borderRadius: 6,
-            fontSize: 16,
-            cursor: "pointer",
-            lineHeight: 1,
-          }}
-        >
-          ☰
-        </button>
-        <div style={{ flex: 1, minWidth: 0 }}>
-          <div className="fo-mono" style={{ color: accentText, fontSize: 9, letterSpacing: "0.18em" }}>
-            NBTC · FIELD OPS · {scopeLabel}
-          </div>
-          <div className="fo-serif" style={{ fontSize: 14, lineHeight: 1.1, color: textColor }}>
-            Field Operations
-          </div>
+        ☰
+      </button>
+      <div style={{ flex: 1, minWidth: 0 }}>
+        <div className="fo-mono" style={{ color: accentText, fontSize: 9, letterSpacing: "0.18em" }}>
+          NBTC · FIELD OPS · {scopeLabel}
         </div>
-        <button
-          type="button"
-          aria-label={statsOpen ? "Hide stats" : "Show stats"}
-          aria-expanded={statsOpen}
-          onClick={() => setStatsOpen((v) => !v)}
-          className="fo-mono"
-          style={{
-            border: `1px solid ${borderColor}`,
-            background: "transparent",
-            color: labelColor,
-            padding: "5px 10px",
-            borderRadius: 6,
-            fontSize: 10,
-            cursor: "pointer",
-            letterSpacing: "0.16em",
-          }}
-        >
-          STATS {statsOpen ? "▴" : "▾"}
-        </button>
+        <div className="fo-serif" style={{ fontSize: 14, lineHeight: 1.1, color: textColor }}>
+          Field Operations
+        </div>
       </div>
-      {statsOpen && (
-        <div
-          style={{
-            display: "flex",
-            gap: 18,
-            padding: "8px 12px",
-            borderTop: `1px solid ${borderColor}`,
-            overflowX: "auto",
-          }}
-        >
-          <Stat label="TOTAL" value={kpis.total} textColor={textColor} labelColor={labelColor} />
-          <Stat
-            label="INSPECTED"
-            value={kpis.inspected}
-            sub={`/ ${kpis.target} · ${kpis.pct}%`}
-            accent
-            textColor={textColor}
-            labelColor={labelColor}
-            accentText={accentText}
-          />
-          <Stat label="PENDING" value={kpis.pending} textColor={textColor} labelColor={labelColor} />
-          <Stat
-            label="CRITICAL"
-            value={kpis.critical}
-            warn
-            textColor={textColor}
-            labelColor={labelColor}
-          />
-        </div>
-      )}
     </header>
   );
 }
