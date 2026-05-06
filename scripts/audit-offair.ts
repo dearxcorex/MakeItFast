@@ -6,6 +6,7 @@ import {
   parseXlsxRows,
   filterByProvinces,
   buildAuditRecords,
+  chooseApplyTargets,
   type RawXlsxRow,
   type DbStationRow,
 } from '../src/utils/offairAudit';
@@ -15,6 +16,10 @@ import * as path from 'node:path';
 const XLSX_PATH = process.argv[2]
   ?? '/Users/deardevx/Downloads/สทช2304_266_2569-20.xlsx';
 const APPLY = process.argv.includes('--apply');
+const NOTE_INDEX = process.argv.indexOf('--note');
+const NOTE = NOTE_INDEX >= 0 && process.argv[NOTE_INDEX + 1]
+  ? process.argv[NOTE_INDEX + 1]
+  : 'NBTC สทช2304/266/2569';
 const REPORT_DIR = path.join(process.cwd(), 'reports');
 
 async function main(): Promise<void> {
@@ -73,19 +78,27 @@ async function main(): Promise<void> {
   }
 
   if (APPLY) {
-    const targets = records
-      .filter((r) => r.classification === 'STILL_ON_AIR')
-      .map((r) => r.idFm);
-    console.log(`\n--apply: setting on_air=false for ${targets.length} ids`);
-    if (targets.length > 0) {
-      const result = await prisma.fm_station.updateMany({
-        where: { id_fm: { in: targets } },
-        data: { on_air: false },
-      });
-      console.log(`updated ${result.count} rows`);
+    const { revokeIds, offAirIds } = chooseApplyTargets(records);
+    console.log(
+      `\n--apply: revoking ${revokeIds.length} ids; setting on_air=false on ${offAirIds.length} of those`
+    );
+    console.log(`note tag: "${NOTE}"`);
+    if (revokeIds.length > 0) {
+      const [revokeRes, offairRes] = await prisma.$transaction([
+        prisma.fm_station.updateMany({
+          where: { id_fm: { in: revokeIds } },
+          data: { revoked: true, revoked_note: NOTE },
+        }),
+        prisma.fm_station.updateMany({
+          where: { id_fm: { in: offAirIds } },
+          data: { on_air: false },
+        }),
+      ]);
+      console.log(`revoked rows updated: ${revokeRes.count}`);
+      console.log(`on_air flipped: ${offairRes.count}`);
     }
   } else {
-    console.log('\n(dry-run only — re-run with --apply to flip on_air=false)');
+    console.log('\n(dry-run only — re-run with --apply to revoke + flip on_air=false)');
   }
 
   await prisma.$disconnect();
