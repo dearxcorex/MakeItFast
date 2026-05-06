@@ -15,6 +15,7 @@ export function FieldOpsBottomSheet({
   site,
   onToggleInspection,
   onToggleLawPaper,
+  onClose,
   pending,
 }: {
   selection: FieldSelection;
@@ -22,23 +23,13 @@ export function FieldOpsBottomSheet({
   site: InterferenceSite | null;
   onToggleInspection: () => void;
   onToggleLawPaper: () => void;
+  onClose?: () => void;
   pending: boolean;
 }) {
   const [expanded, setExpanded] = useState(false);
 
   if (!selection || (!station && !site)) {
-    return (
-      <div
-        style={{
-          background: "var(--fo-sheet-bg)",
-          borderTop: "1px solid var(--fo-rail-border)",
-          padding: "20px 16px",
-          textAlign: "center",
-        }}
-      >
-        <span className="fo-mono" style={{ color: "var(--fo-rail-mute)" }}>NO ITEM SELECTED</span>
-      </div>
-    );
+    return null;
   }
 
   const isFM = selection.kind === "fm" && station;
@@ -110,6 +101,28 @@ export function FieldOpsBottomSheet({
         >
           {inspected ? "INSPECTED" : "PENDING"}
         </span>
+        {onClose && (
+          <button
+            type="button"
+            aria-label="Close"
+            onClick={onClose}
+            style={{
+              marginLeft: 4,
+              border: "1px solid var(--fo-rail-border)",
+              background: "transparent",
+              color: "var(--fo-rail-mute)",
+              width: 28,
+              height: 28,
+              borderRadius: 6,
+              fontSize: 14,
+              cursor: "pointer",
+              lineHeight: 1,
+              padding: 0,
+            }}
+          >
+            ✕
+          </button>
+        )}
       </div>
 
       <div style={{ padding: "8px 16px 4px" }}>

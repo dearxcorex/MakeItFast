@@ -473,6 +473,7 @@ export default function FieldOpsClient({
                   site={selectedSite}
                   onToggleInspection={handleToggleInspection}
                   onToggleLawPaper={handleToggleLawPaper}
+                  onClose={() => setSelection(null)}
                   pending={pending}
                 />
               )}
