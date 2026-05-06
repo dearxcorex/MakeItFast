@@ -103,37 +103,6 @@ export function FieldOpsCurrentFM({
         {(station.state || "").toUpperCase()} · {station.city}
       </div>
 
-      {station.revoked && (
-        <div
-          role="alert"
-          style={{
-            marginTop: 4,
-            padding: "10px 12px",
-            borderRadius: 10,
-            background: "rgba(227, 75, 75, 0.12)",
-            border: "1px solid var(--fo-crit)",
-            color: "var(--fo-crit)",
-            fontSize: 13,
-            lineHeight: 1.4,
-            display: "flex",
-            flexDirection: "column",
-            gap: 4,
-          }}
-        >
-          <div className="fo-mono" style={{ fontSize: 10, letterSpacing: 1, fontWeight: 700 }}>
-            ⚠ ILLEGAL IF ON AIR
-          </div>
-          <div>
-            สถานีนี้ถูกเพิกถอนใบอนุญาต — หากยังออกอากาศ ถือว่าผิดกฎหมาย
-          </div>
-          {station.revokedNote && (
-            <div className="fo-mono" style={{ fontSize: 10, opacity: 0.8 }}>
-              SOURCE: {station.revokedNote}
-            </div>
-          )}
-        </div>
-      )}
-
       <div style={{ display: "flex", gap: 18, flexWrap: "wrap", paddingTop: 4 }}>
         <Meter label="FREQ" value={`${station.frequency.toFixed(2)} MHz`} />
         <Meter label="PERMIT" value={station.permit || "—"} />

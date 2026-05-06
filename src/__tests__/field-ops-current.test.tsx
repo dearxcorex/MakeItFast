@@ -17,10 +17,10 @@ const baseStation: FMStation = {
   onAir: true,
 };
 
-describe('FieldOpsCurrentFM — revoked alert', () => {
-  it('renders REVOKED pill and the illegal-if-on-air banner when station.revoked is true', () => {
+describe('FieldOpsCurrentFM — revoked station', () => {
+  it('renders the REVOKED chip when station.revoked is true', () => {
     const station: FMStation = { ...baseStation, revoked: true, revokedNote: 'NBTC สทช2304/266/2569' };
-    const { container, getByRole } = render(
+    const { container } = render(
       <FieldOpsCurrentFM
         station={station}
         onToggleInspection={vi.fn()}
@@ -28,12 +28,9 @@ describe('FieldOpsCurrentFM — revoked alert', () => {
       />
     );
     expect(container.textContent).toContain('REVOKED');
-    expect(container.textContent).toContain('ผิดกฎหมาย');
-    expect(container.textContent).toContain('NBTC สทช2304/266/2569');
-    expect(getByRole('alert')).toBeTruthy();
   });
 
-  it('does NOT render the alert when station.revoked is false or undefined', () => {
+  it('does NOT render the REVOKED chip when station.revoked is false or undefined', () => {
     const { container } = render(
       <FieldOpsCurrentFM
         station={baseStation}
@@ -42,10 +39,9 @@ describe('FieldOpsCurrentFM — revoked alert', () => {
       />
     );
     expect(container.textContent).not.toContain('REVOKED');
-    expect(container.textContent).not.toContain('ผิดกฎหมาย');
   });
 
-  it('uses warn-style INSPECT button label when revoked', () => {
+  it('still renders the INSPECT button when revoked', () => {
     const station: FMStation = { ...baseStation, revoked: true };
     const { container } = render(
       <FieldOpsCurrentFM
@@ -55,6 +51,5 @@ describe('FieldOpsCurrentFM — revoked alert', () => {
       />
     );
     expect(container.textContent).toContain('✓ INSPECT');
-    expect(container.textContent).toContain('ILLEGAL IF ON AIR');
   });
 });
