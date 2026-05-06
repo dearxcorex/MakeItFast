@@ -109,3 +109,6 @@ data_interference/
 # DB snapshots from audit scripts (machine-local rollback aids)
 reports/revoke-snapshot-*.json
 reports/offair-snapshot-*.json
+
+# brainstorming session artefacts
+.superpowers/
