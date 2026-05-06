@@ -94,10 +94,10 @@ describe('convertToFMStation', () => {
     expect(result.frequency).toBe(0);
   });
 
-  it('handles null lat/long', () => {
+  it('returns NaN for null lat/long so map filters skip the row', () => {
     const result = convertToFMStation(makeDbRow({ lat: null, long: null }));
-    expect(result.latitude).toBe(0);
-    expect(result.longitude).toBe(0);
+    expect(Number.isNaN(result.latitude)).toBe(true);
+    expect(Number.isNaN(result.longitude)).toBe(true);
   });
 
   it('handles null type', () => {
