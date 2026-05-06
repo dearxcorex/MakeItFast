@@ -128,3 +128,22 @@ export function buildAuditRecords(
     };
   });
 }
+
+export interface ApplyTargets {
+  /** Every id_fm that should get revoked=true (every audited row that exists in DB). */
+  revokeIds: number[];
+  /** Subset of revokeIds that should also get on_air=false (only currently on_air=true rows). */
+  offAirIds: number[];
+}
+
+/** Decide which DB rows the audit script should write. Pure — no I/O. */
+export function chooseApplyTargets(records: AuditRecord[]): ApplyTargets {
+  const revokeIds: number[] = [];
+  const offAirIds: number[] = [];
+  for (const r of records) {
+    if (r.classification === 'MISSING_IN_DB') continue;
+    revokeIds.push(r.idFm);
+    if (r.classification === 'STILL_ON_AIR') offAirIds.push(r.idFm);
+  }
+  return { revokeIds, offAirIds };
+}

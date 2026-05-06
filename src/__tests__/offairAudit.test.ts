@@ -4,6 +4,7 @@ import {
   parseXlsxRows,
   filterByProvinces,
   buildAuditRecords,
+  chooseApplyTargets,
   type RawXlsxRow,
   type DbStationRow,
 } from '@/utils/offairAudit';
@@ -135,5 +136,54 @@ describe('buildAuditRecords', () => {
     const r = buildAuditRecords(xlsx, db)[0];
     expect(r.warnings).toContain('province-mismatch');
     expect(r.warnings).toContain('name-mismatch');
+  });
+});
+
+describe('chooseApplyTargets', () => {
+  it('revokes every record that exists in DB (STILL_ON_AIR + ALREADY_OFF_AIR + ON_AIR_UNKNOWN)', () => {
+    const records = buildAuditRecords(
+      parseXlsxRows([
+        { 'ลำดับ': 1, 'รหัสสถานี': '05520117', 'ชื่อสถานี': 'A', 'ประเภท': '', 'คลื่นความถี่เดิม': 100, 'จังหวัด': 'นครราชสีมา', 'เขต/อำเภอ': '', 'ผู้ทดลองออกอากาศเดิม': '', 'หมายเหตุ': '' },
+        { 'ลำดับ': 2, 'รหัสสถานี': '05520154', 'ชื่อสถานี': 'B', 'ประเภท': '', 'คลื่นความถี่เดิม': 100, 'จังหวัด': 'นครราชสีมา', 'เขต/อำเภอ': '', 'ผู้ทดลองออกอากาศเดิม': '', 'หมายเหตุ': '' },
+        { 'ลำดับ': 3, 'รหัสสถานี': '05520500', 'ชื่อสถานี': 'C', 'ประเภท': '', 'คลื่นความถี่เดิม': 100, 'จังหวัด': 'นครราชสีมา', 'เขต/อำเภอ': '', 'ผู้ทดลองออกอากาศเดิม': '', 'หมายเหตุ': '' },
+        { 'ลำดับ': 4, 'รหัสสถานี': '05520999', 'ชื่อสถานี': 'D', 'ประเภท': '', 'คลื่นความถี่เดิม': 100, 'จังหวัด': 'นครราชสีมา', 'เขต/อำเภอ': '', 'ผู้ทดลองออกอากาศเดิม': '', 'หมายเหตุ': '' },
+      ]),
+      [
+        { id_fm: 5520117, name: 'A', province: 'นครราชสีมา', district: '', freq: 100, on_air: true  },
+        { id_fm: 5520154, name: 'B', province: 'นครราชสีมา', district: '', freq: 100, on_air: false },
+        { id_fm: 5520500, name: 'C', province: 'นครราชสีมา', district: '', freq: 100, on_air: null  },
+      ],
+    );
+    const t = chooseApplyTargets(records);
+    expect(t.revokeIds.sort()).toEqual([5520117, 5520154, 5520500]);
+  });
+
+  it('only flips on_air for STILL_ON_AIR — never for ON_AIR_UNKNOWN or ALREADY_OFF_AIR', () => {
+    const records = buildAuditRecords(
+      parseXlsxRows([
+        { 'ลำดับ': 1, 'รหัสสถานี': '05520117', 'ชื่อสถานี': 'A', 'ประเภท': '', 'คลื่นความถี่เดิม': 100, 'จังหวัด': 'นครราชสีมา', 'เขต/อำเภอ': '', 'ผู้ทดลองออกอากาศเดิม': '', 'หมายเหตุ': '' },
+        { 'ลำดับ': 2, 'รหัสสถานี': '05520154', 'ชื่อสถานี': 'B', 'ประเภท': '', 'คลื่นความถี่เดิม': 100, 'จังหวัด': 'นครราชสีมา', 'เขต/อำเภอ': '', 'ผู้ทดลองออกอากาศเดิม': '', 'หมายเหตุ': '' },
+        { 'ลำดับ': 3, 'รหัสสถานี': '05520500', 'ชื่อสถานี': 'C', 'ประเภท': '', 'คลื่นความถี่เดิม': 100, 'จังหวัด': 'นครราชสีมา', 'เขต/อำเภอ': '', 'ผู้ทดลองออกอากาศเดิม': '', 'หมายเหตุ': '' },
+      ]),
+      [
+        { id_fm: 5520117, name: 'A', province: 'นครราชสีมา', district: '', freq: 100, on_air: true  },
+        { id_fm: 5520154, name: 'B', province: 'นครราชสีมา', district: '', freq: 100, on_air: false },
+        { id_fm: 5520500, name: 'C', province: 'นครราชสีมา', district: '', freq: 100, on_air: null  },
+      ],
+    );
+    const t = chooseApplyTargets(records);
+    expect(t.offAirIds).toEqual([5520117]);
+  });
+
+  it('skips MISSING_IN_DB rows entirely (no insert intended)', () => {
+    const records = buildAuditRecords(
+      parseXlsxRows([
+        { 'ลำดับ': 1, 'รหัสสถานี': '05520999', 'ชื่อสถานี': 'GHOST', 'ประเภท': '', 'คลื่นความถี่เดิม': 100, 'จังหวัด': 'นครราชสีมา', 'เขต/อำเภอ': '', 'ผู้ทดลองออกอากาศเดิม': '', 'หมายเหตุ': '' },
+      ]),
+      [],
+    );
+    const t = chooseApplyTargets(records);
+    expect(t.revokeIds).toEqual([]);
+    expect(t.offAirIds).toEqual([]);
   });
 });
