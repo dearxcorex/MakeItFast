@@ -17,7 +17,7 @@ export function convertToFMStation(row: fm_station): FMStation {
     description: `${row.type?.trim() || ''} radio station in ${row.district || ''}, ${row.province || ''}`,
     website: undefined,
     transmitterPower: undefined,
-    permit: undefined,
+    permit: row.permit ?? undefined,
     inspection68: row.inspection_68 ? 'ตรวจแล้ว' : 'ยังไม่ตรวจ',
     inspection69: row.inspection_69 ? 'ตรวจแล้ว' : 'ยังไม่ตรวจ',
     dateInspected: row.date_inspected || undefined,

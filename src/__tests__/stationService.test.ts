@@ -21,6 +21,7 @@ function makeDbRow(overrides: Record<string, unknown> = {}) {
     date_inspected: '2024-01-01',
     revoked: false,
     revoked_note: null,
+    permit: null,
     created_at: null,
     updated_at: null,
     ...overrides,
@@ -119,6 +120,16 @@ describe('convertToFMStation', () => {
   it('builds description from type and location', () => {
     const result = convertToFMStation(makeDbRow({ type: 'FM', district: 'Sathorn', province: 'Bangkok' }));
     expect(result.description).toBe('FM radio station in Sathorn, Bangkok');
+  });
+
+  it('maps row.permit to FMStation.permit', () => {
+    const result = convertToFMStation(makeDbRow({ permit: 'ห้างหุ้นส่วนจำกัด ABC' }));
+    expect(result.permit).toBe('ห้างหุ้นส่วนจำกัด ABC');
+  });
+
+  it('returns undefined permit when row.permit is null', () => {
+    const result = convertToFMStation(makeDbRow({ permit: null }));
+    expect(result.permit).toBeUndefined();
   });
 });
 
