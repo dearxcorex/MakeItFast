@@ -19,6 +19,8 @@ function makeDbRow(overrides: Record<string, unknown> = {}) {
     inspection_68: true,
     inspection_69: false,
     date_inspected: '2024-01-01',
+    revoked: false,
+    revoked_note: null,
     created_at: null,
     updated_at: null,
     ...overrides,
