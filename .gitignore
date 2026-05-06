@@ -105,3 +105,7 @@ data_interference/
 /backup/
 *.sql
 *.dump
+
+# DB snapshots from audit scripts (machine-local rollback aids)
+reports/revoke-snapshot-*.json
+reports/offair-snapshot-*.json
