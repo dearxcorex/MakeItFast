@@ -5,14 +5,12 @@ import {
   type FieldFilters,
   type TypeFilter,
   type StatusFilter,
-  type SeverityFilter,
 } from "./FieldOpsFilters";
 
 const SS_KEY = "fo:mobileFiltersOpen";
 const TYPES: TypeFilter[] = ["ALL", "FM", "INT"];
 const STATUSES_FM: Array<StatusFilter | "OFF AIR"> = ["ALL", "PENDING", "INSPECTED", "OFF AIR"];
 const STATUSES_INT: StatusFilter[] = ["ALL", "PENDING", "INSPECTED"];
-const SEVERITIES: SeverityFilter[] = ["ALL", "Critical", "Major", "Minor"];
 
 export function MobileFilterBar({
   filters,
@@ -60,6 +58,11 @@ export function MobileFilterBar({
     }
     if (v === "INT") {
       next.offAir = false;
+      // Mobile INT view shows only critical-ranked sites — clutter-free.
+      next.severity = "Critical";
+    }
+    if (v === "ALL") {
+      next.severity = "ALL";
     }
     onChange(next);
   };
@@ -78,7 +81,6 @@ export function MobileFilterBar({
   };
 
   const provinceOptions = ["All", ...provinces];
-  const showSeverity = filters.type !== "FM";
   const showLawSent = filters.type !== "FM";
   const showOffAirInStatus = filters.type !== "INT";
 
@@ -169,18 +171,6 @@ export function MobileFilterBar({
         isActive={isStatusActive}
         onPick={handleStatus}
       />
-      {showSeverity && (
-        <>
-          <div style={{ height: 6 }} />
-          <SegmentRow
-            label="RANK"
-            options={SEVERITIES}
-            isActive={(v) => filters.severity === v}
-            onPick={(v) => onChange({ ...filters, severity: v })}
-            renderLabel={(v) => v.toUpperCase()}
-          />
-        </>
-      )}
       {showLawSent && (
         <>
           <div style={{ height: 6 }} />
