@@ -38,17 +38,26 @@ function fmIcon(
   const inspected = station.inspection69 === "ตรวจแล้ว";
   const offAir = !station.onAir;
   const main = isMainStation(station);
+  const revoked = station.revoked === true;
 
-  // Solid fills — three maximally distinct hues so PENDING vs INSPECTED is
-  // unmistakable at a glance (amber = needs attention, green = done, grey = off air).
-  const bodyFill = offAir ? "#5c6c75" : inspected ? "#00684a" : "#f5a623";
+  // Color priority: revoked > offAir > inspected > pending. Revoked always wins
+  // because a revoked station broadcasting is a legal-risk state regardless of
+  // inspection or on-air metadata.
+  const bodyFill = revoked
+    ? "#e34b4b"
+    : offAir
+      ? "#5c6c75"
+      : inspected
+        ? "#00684a"
+        : "#f5a623";
 
-  // Glyph centered at the pin head (cx=12, cy=12 in 24-unit viewBox)
-  const innerGlyph = offAir
-    ? `<path d="M9 9 l6 6 M15 9 l-6 6" stroke="#ffffff" stroke-width="2" stroke-linecap="round"/>`
-    : inspected
-      ? `<path d="M8.5 12.5 l2.5 2.5 l5 -5" stroke="#ffffff" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" fill="none"/>`
-      : `<g><line x1="12" y1="8" x2="12" y2="13" stroke="#ffffff" stroke-width="2.2" stroke-linecap="round"/><circle cx="12" cy="16" r="1.3" fill="#ffffff"/></g>`;
+  const innerGlyph = revoked
+    ? `<path d="M12 7 L12 14 M12 16.5 L12 17.5" stroke="#ffffff" stroke-width="2.4" stroke-linecap="round"/>`
+    : offAir
+      ? `<path d="M9 9 l6 6 M15 9 l-6 6" stroke="#ffffff" stroke-width="2" stroke-linecap="round"/>`
+      : inspected
+        ? `<path d="M8.5 12.5 l2.5 2.5 l5 -5" stroke="#ffffff" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" fill="none"/>`
+        : `<g><line x1="12" y1="8" x2="12" y2="13" stroke="#ffffff" stroke-width="2.2" stroke-linecap="round"/><circle cx="12" cy="16" r="1.3" fill="#ffffff"/></g>`;
 
   const baseSize = selected ? 30 : 24;
   const wrapW = baseSize + 14;
