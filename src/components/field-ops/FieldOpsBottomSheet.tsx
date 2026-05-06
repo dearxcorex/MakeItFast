@@ -223,38 +223,41 @@ export function FieldOpsBottomSheet({
             </button>
           )}
 
-          <div
-            style={{
-              padding: 12,
-              background: "var(--fo-paper-2)",
-              border: "1px solid var(--fo-line)",
-              borderRadius: 10,
-              display: "grid",
-              gridTemplateColumns: "repeat(2, 1fr)",
-              gap: 10,
-              marginBottom: 10,
-            }}
-          >
-            <Cell label="LAT" value={lat.toFixed(4)} />
-            <Cell label="LONG" value={lng.toFixed(4)} />
-            {isFM ? (
-              <>
-                {station!.transmitterPower !== undefined && (
-                  <Cell label="POWER" value={`${station!.transmitterPower} W`} />
-                )}
-                {station!.dateInspected && (
-                  <Cell label="INSPECTED" value={station!.dateInspected} />
-                )}
-              </>
-            ) : (
-              <>
-                {site!.estimateDistance !== null && site!.estimateDistance !== undefined && (
-                  <Cell label="DIST" value={`${site!.estimateDistance.toFixed(1)} km`} />
-                )}
-                {site!.nbtcArea && <Cell label="NBTC AREA" value={site!.nbtcArea} />}
-              </>
-            )}
-          </div>
+          {(() => {
+            const cells: React.ReactNode[] = [];
+            if (isFM) {
+              if (station!.transmitterPower !== undefined) {
+                cells.push(<Cell key="power" label="POWER" value={`${station!.transmitterPower} W`} />);
+              }
+              if (station!.dateInspected) {
+                cells.push(<Cell key="inspected" label="INSPECTED" value={station!.dateInspected} />);
+              }
+            } else {
+              if (site!.estimateDistance !== null && site!.estimateDistance !== undefined) {
+                cells.push(<Cell key="dist" label="DIST" value={`${site!.estimateDistance.toFixed(1)} km`} />);
+              }
+              if (site!.nbtcArea) {
+                cells.push(<Cell key="nbtc" label="NBTC AREA" value={site!.nbtcArea} />);
+              }
+            }
+            if (cells.length === 0) return null;
+            return (
+              <div
+                style={{
+                  padding: 12,
+                  background: "var(--fo-paper-2)",
+                  border: "1px solid var(--fo-line)",
+                  borderRadius: 10,
+                  display: "grid",
+                  gridTemplateColumns: "repeat(2, 1fr)",
+                  gap: 10,
+                  marginBottom: 10,
+                }}
+              >
+                {cells}
+              </div>
+            );
+          })()}
         </div>
       )}
     </div>
