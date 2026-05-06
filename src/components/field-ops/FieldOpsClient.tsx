@@ -11,6 +11,9 @@ import { dedupeInterferenceSites } from "@/utils/dedupeInterference";
 import { haversineDistanceKm } from "@/utils/distance";
 import { FieldOpsCurrentFM, FieldOpsCurrentINT } from "./FieldOpsCurrent";
 import { FieldOpsBottomSheet } from "./FieldOpsBottomSheet";
+import { FieldOpsDrawer } from "./FieldOpsDrawer";
+import { MobileFilterBar } from "./MobileFilterBar";
+import { computeKpis } from "@/utils/fieldOpsKpi";
 import type { FieldSelection } from "./FieldOpsMap";
 
 const FieldOpsMap = dynamic(
@@ -48,6 +51,7 @@ export default function FieldOpsClient({
   const [pending, setPending] = useState(false);
   const [flyTarget, setFlyTarget] = useState<[number, number] | null>(null);
   const [isMobile, setIsMobile] = useState(false);
+  const [drawerOpen, setDrawerOpen] = useState(false);
   const [theme, setTheme] = useState<"dark" | "light">("dark");
   const [markingSourceForId, setMarkingSourceForId] = useState<number | null>(null);
 
@@ -358,6 +362,8 @@ export default function FieldOpsClient({
         type={filters.type}
         theme={theme}
         onToggleTheme={() => setTheme((t) => (t === "dark" ? "light" : "dark"))}
+        isMobile={isMobile}
+        onOpenDrawer={() => setDrawerOpen(true)}
       />
 
       <div style={{ flex: 1, display: "flex", minHeight: 0 }}>
@@ -373,6 +379,10 @@ export default function FieldOpsClient({
                   provinces={initialProvinces}
                   visibleCount={visibleCount}
                 />
+              )}
+
+              {isMobile && (
+                <MobileFilterBar filters={filters} onChange={setFilters} />
               )}
 
               <div style={{ flex: 1, display: "flex", minHeight: 0 }}>
@@ -491,32 +501,15 @@ export default function FieldOpsClient({
       </div>
 
       {isMobile && (
-        <div
-          style={{
-            display: "flex",
-            background: "var(--fo-rail-bg)",
-            borderTop: "1px solid var(--fo-rail-border)",
-          }}
-        >
-          {(["field-ops", "intermod", "analytics"] as FieldOpsTab[]).map((t) => (
-            <button
-              key={t}
-              type="button"
-              onClick={() => setTab(t)}
-              className="fo-mono"
-              style={{
-                flex: 1,
-                padding: "12px 8px",
-                background: tab === t ? "var(--fo-accent)" : "transparent",
-                color: tab === t ? "#001e2b" : "var(--fo-rail-mute)",
-                border: "none",
-                cursor: "pointer",
-              }}
-            >
-              {t === "field-ops" ? "FIELD OPS" : t.toUpperCase()}
-            </button>
-          ))}
-        </div>
+        <FieldOpsDrawer
+          open={drawerOpen}
+          activeTab={tab}
+          theme={theme}
+          kpis={computeKpis(filteredStations, filteredInterference, filters.type)}
+          onChangeTab={setTab}
+          onToggleTheme={() => setTheme((t) => (t === "dark" ? "light" : "dark"))}
+          onClose={() => setDrawerOpen(false)}
+        />
       )}
     </div>
   );
