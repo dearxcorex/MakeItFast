@@ -108,6 +108,19 @@ describe('buildAuditRecords', () => {
     expect(r.dbOnAir).toBeNull();
   });
 
+  it('flags an on_air=null match as ON_AIR_UNKNOWN', () => {
+    const xlsx = parseXlsxRows([
+      { 'ลำดับ': 1, 'รหัสสถานี': '05520500', 'ชื่อสถานี': 'X', 'ประเภท': '', 'คลื่นความถี่เดิม': 95, 'จังหวัด': 'นครราชสีมา', 'เขต/อำเภอ': '', 'ผู้ทดลองออกอากาศเดิม': '', 'หมายเหตุ': '' },
+    ]);
+    const db: DbStationRow[] = [
+      { id_fm: 5520500, name: 'X', province: 'นครราชสีมา', district: '', freq: 95, on_air: null },
+    ];
+    const r = buildAuditRecords(xlsx, db)[0];
+    expect(r.classification).toBe('ON_AIR_UNKNOWN');
+    expect(r.dbOnAir).toBeNull();
+    expect(r.foundInDb).toBe(true);
+  });
+
   it('returns one record per xlsx row, in input order', () => {
     expect(records.map((r) => r.idFm)).toEqual([5520117, 5520154, 5520999]);
   });

@@ -36,9 +36,10 @@ export interface DbStationRow {
 }
 
 export type Classification =
-  | 'STILL_ON_AIR'      // xlsx row is in DB and on_air=true (the audit target)
-  | 'ALREADY_OFF_AIR'   // xlsx row is in DB and on_air=false (no action needed)
-  | 'MISSING_IN_DB';    // xlsx row has no matching id_fm in DB
+  | 'STILL_ON_AIR'      // on_air === true
+  | 'ALREADY_OFF_AIR'   // on_air === false
+  | 'ON_AIR_UNKNOWN'    // matched in DB but on_air is null — needs human review
+  | 'MISSING_IN_DB';    // no matching id_fm in DB
 
 export interface AuditRecord {
   idFm: number;
@@ -107,7 +108,8 @@ export function buildAuditRecords(
     let classification: Classification;
     if (!db) classification = 'MISSING_IN_DB';
     else if (db.on_air === true) classification = 'STILL_ON_AIR';
-    else classification = 'ALREADY_OFF_AIR';
+    else if (db.on_air === false) classification = 'ALREADY_OFF_AIR';
+    else classification = 'ON_AIR_UNKNOWN';
 
     return {
       idFm: x.idFm,
