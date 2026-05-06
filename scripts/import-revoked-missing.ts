@@ -81,6 +81,7 @@ async function main(): Promise<void> {
 
   const data = missing.map((m) => {
     const p = parsedById.get(m.idFm);
+    const noteTrimmed = (p?.note ?? '').trim();
     return {
       id_fm: m.idFm,
       name: p?.name || m.xlsxName,
@@ -96,6 +97,7 @@ async function main(): Promise<void> {
       submit_a_request: false,
       revoked: true,
       revoked_note: NOTE,
+      permit: noteTrimmed.length > 0 ? noteTrimmed : null,
     };
   });
 
