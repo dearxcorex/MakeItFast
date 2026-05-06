@@ -45,6 +45,23 @@ export function FieldOpsCurrentFM({
     <div style={{ padding: "20px 20px", display: "flex", flexDirection: "column", gap: 12 }}>
       <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
         <Badge tone="fm">FM</Badge>
+        {station.revoked && (
+          <span
+            className="fo-mono"
+            style={{
+              padding: "2px 8px",
+              borderRadius: 999,
+              background: "var(--fo-crit)",
+              color: "#ffffff",
+              fontSize: 9,
+              letterSpacing: 0.5,
+              fontWeight: 700,
+            }}
+            title={station.revokedNote || "ใบอนุญาตถูกเพิกถอน"}
+          >
+            ⚠ REVOKED
+          </span>
+        )}
         {main && (
           <span
             className="fo-mono"
@@ -86,6 +103,37 @@ export function FieldOpsCurrentFM({
         {(station.state || "").toUpperCase()} · {station.city}
       </div>
 
+      {station.revoked && (
+        <div
+          role="alert"
+          style={{
+            marginTop: 4,
+            padding: "10px 12px",
+            borderRadius: 10,
+            background: "rgba(227, 75, 75, 0.12)",
+            border: "1px solid var(--fo-crit)",
+            color: "var(--fo-crit)",
+            fontSize: 13,
+            lineHeight: 1.4,
+            display: "flex",
+            flexDirection: "column",
+            gap: 4,
+          }}
+        >
+          <div className="fo-mono" style={{ fontSize: 10, letterSpacing: 1, fontWeight: 700 }}>
+            ⚠ ILLEGAL IF ON AIR
+          </div>
+          <div>
+            สถานีนี้ถูกเพิกถอนใบอนุญาต — หากยังออกอากาศ ถือว่าผิดกฎหมาย
+          </div>
+          {station.revokedNote && (
+            <div className="fo-mono" style={{ fontSize: 10, opacity: 0.8 }}>
+              SOURCE: {station.revokedNote}
+            </div>
+          )}
+        </div>
+      )}
+
       <div style={{ display: "flex", gap: 18, flexWrap: "wrap", paddingTop: 4 }}>
         <Meter label="FREQ" value={`${station.frequency.toFixed(2)} MHz`} />
         <Meter label="PERMIT" value={station.permit || "—"} />
@@ -101,7 +149,7 @@ export function FieldOpsCurrentFM({
             label: inspected ? "✓ INSPECTED" : "✓ INSPECT",
             pending: "...",
             onClick: onToggleInspection,
-            variant: inspected ? "ghost" : "primary",
+            variant: station.revoked ? "warn" : (inspected ? "ghost" : "primary"),
             disabled: pending,
             inverse: inspected,
           },
