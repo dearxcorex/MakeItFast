@@ -24,6 +24,7 @@ model fm_station {
   note             String?
   revoked          Boolean? @default(false)
   revoked_note     String?
+  permit           String?
 
   @@index([revoked])
 }
