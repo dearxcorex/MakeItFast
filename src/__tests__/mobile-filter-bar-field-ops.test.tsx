@@ -16,7 +16,7 @@ afterEach(() => {
 describe('MobileFilterBar', () => {
   it('renders TYPE and STATUS chip rows when expanded', () => {
     const { container } = render(
-      <MobileFilterBar filters={DEFAULT_FILTERS} onChange={vi.fn()} />
+      <MobileFilterBar filters={DEFAULT_FILTERS} onChange={vi.fn()} provinces={['นครราชสีมา', 'ชัยภูมิ']} />
     );
     expect(container.textContent).toContain('TYPE');
     expect(container.textContent).toContain('STATUS');
@@ -30,7 +30,7 @@ describe('MobileFilterBar', () => {
   it('clicking a TYPE chip calls onChange with the new type', () => {
     const onChange = vi.fn();
     const { getByText } = render(
-      <MobileFilterBar filters={DEFAULT_FILTERS} onChange={onChange} />
+      <MobileFilterBar filters={DEFAULT_FILTERS} onChange={onChange} provinces={['นครราชสีมา', 'ชัยภูมิ']} />
     );
     fireEvent.click(getByText('FM'));
     expect(onChange).toHaveBeenCalledWith(expect.objectContaining({ type: 'FM' }));
@@ -38,7 +38,7 @@ describe('MobileFilterBar', () => {
 
   it('clicking the collapse chevron toggles to a single FILTERS pill', () => {
     const { container, getByLabelText } = render(
-      <MobileFilterBar filters={DEFAULT_FILTERS} onChange={vi.fn()} />
+      <MobileFilterBar filters={DEFAULT_FILTERS} onChange={vi.fn()} provinces={['นครราชสีมา', 'ชัยภูมิ']} />
     );
     fireEvent.click(getByLabelText('Collapse filters'));
     expect(container.textContent).toContain('FILTERS · 0');
@@ -50,6 +50,7 @@ describe('MobileFilterBar', () => {
       <MobileFilterBar
         filters={{ ...DEFAULT_FILTERS, type: 'FM', status: 'PENDING' }}
         onChange={vi.fn()}
+        provinces={['นครราชสีมา', 'ชัยภูมิ']}
       />
     );
     fireEvent.click(getByLabelText('Collapse filters'));
@@ -58,7 +59,7 @@ describe('MobileFilterBar', () => {
 
   it('persists collapsed state to sessionStorage', () => {
     const { getByLabelText } = render(
-      <MobileFilterBar filters={DEFAULT_FILTERS} onChange={vi.fn()} />
+      <MobileFilterBar filters={DEFAULT_FILTERS} onChange={vi.fn()} provinces={['นครราชสีมา', 'ชัยภูมิ']} />
     );
     fireEvent.click(getByLabelText('Collapse filters'));
     expect(window.sessionStorage.getItem(SS_KEY)).toBe('false');
@@ -67,7 +68,7 @@ describe('MobileFilterBar', () => {
   it('hydrates from sessionStorage on mount', () => {
     window.sessionStorage.setItem(SS_KEY, 'false');
     const { container } = render(
-      <MobileFilterBar filters={DEFAULT_FILTERS} onChange={vi.fn()} />
+      <MobileFilterBar filters={DEFAULT_FILTERS} onChange={vi.fn()} provinces={['นครราชสีมา', 'ชัยภูมิ']} />
     );
     expect(container.textContent).toContain('FILTERS');
     expect(container.textContent).not.toContain('TYPE');
@@ -76,7 +77,7 @@ describe('MobileFilterBar', () => {
   it('clicking the expand pill restores the chip rows', () => {
     window.sessionStorage.setItem(SS_KEY, 'false');
     const { container, getByLabelText } = render(
-      <MobileFilterBar filters={DEFAULT_FILTERS} onChange={vi.fn()} />
+      <MobileFilterBar filters={DEFAULT_FILTERS} onChange={vi.fn()} provinces={['นครราชสีมา', 'ชัยภูมิ']} />
     );
     fireEvent.click(getByLabelText('Expand filters'));
     expect(container.textContent).toContain('TYPE');

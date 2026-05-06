@@ -14,9 +14,11 @@ const STATUSES: Array<StatusFilter | "OFF AIR"> = ["ALL", "PENDING", "INSPECTED"
 export function MobileFilterBar({
   filters,
   onChange,
+  provinces,
 }: {
   filters: FieldFilters;
   onChange: (next: FieldFilters) => void;
+  provinces: string[];
 }) {
   const [expanded, setExpanded] = useState<boolean>(true);
 
@@ -72,6 +74,8 @@ export function MobileFilterBar({
     return filters.status === v && !filters.offAir;
   };
 
+  const provinceOptions = ["All", ...provinces];
+
   if (!expanded) {
     return (
       <div
@@ -115,7 +119,7 @@ export function MobileFilterBar({
         padding: "8px 12px",
       }}
     >
-      <ChipRow
+      <SegmentRow
         label="TYPE"
         options={TYPES}
         isActive={(v) => filters.type === v}
@@ -127,22 +131,33 @@ export function MobileFilterBar({
             onClick={() => persist(false)}
             className="fo-mono"
             style={{
-              marginLeft: "auto",
               border: "1px solid var(--fo-rail-border)",
               color: "var(--fo-rail-mute)",
               background: "transparent",
-              padding: "3px 8px",
+              padding: 0,
+              width: 28,
+              height: 28,
               borderRadius: 6,
-              fontSize: 10,
+              fontSize: 12,
               cursor: "pointer",
+              flexShrink: 0,
+              lineHeight: 1,
             }}
           >
             ▴
           </button>
         }
       />
-      <div style={{ height: 4 }} />
-      <ChipRow
+      <div style={{ height: 6 }} />
+      <SegmentRow
+        label="PROVINCE"
+        options={provinceOptions}
+        isActive={(v) => (v === "All" ? filters.province === "All" : filters.province === v)}
+        onPick={(v) => onChange({ ...filters, province: v })}
+        renderLabel={(v) => (v === "All" ? "ALL" : v)}
+      />
+      <div style={{ height: 6 }} />
+      <SegmentRow
         label="STATUS"
         options={STATUSES}
         isActive={isStatusActive}
@@ -152,60 +167,85 @@ export function MobileFilterBar({
   );
 }
 
-function ChipRow<T extends string>({
+function SegmentRow<T extends string>({
   label,
   options,
   isActive,
   onPick,
   rightAdornment,
+  renderLabel,
 }: {
   label: string;
   options: readonly T[];
   isActive: (v: T) => boolean;
   onPick: (v: T) => void;
   rightAdornment?: React.ReactNode;
+  renderLabel?: (v: T) => string;
 }) {
   return (
     <div
       style={{
         display: "flex",
         alignItems: "center",
-        gap: 6,
-        overflowX: "auto",
-        scrollbarWidth: "none",
+        gap: 8,
       }}
     >
       <span
         className="fo-mono"
-        style={{ color: "var(--fo-rail-mute)", fontSize: 9, flexShrink: 0 }}
+        style={{
+          color: "var(--fo-rail-mute)",
+          fontSize: 9,
+          flexShrink: 0,
+          width: 56,
+          letterSpacing: "0.18em",
+        }}
       >
         {label}
       </span>
-      {options.map((opt) => {
-        const active = isActive(opt);
-        return (
-          <button
-            key={opt}
-            type="button"
-            className="fo-mono"
-            onClick={() => onPick(opt)}
-            style={{
-              padding: "3px 10px",
-              borderRadius: 999,
-              border: active ? "none" : "1px solid var(--fo-rail-border)",
-              background: active ? "var(--fo-accent)" : "transparent",
-              color: active ? "#001e2b" : "var(--fo-rail-text)",
-              fontSize: 10,
-              fontWeight: active ? 700 : 400,
-              flexShrink: 0,
-              cursor: "pointer",
-              letterSpacing: "0.1em",
-            }}
-          >
-            {opt}
-          </button>
-        );
-      })}
+      <div
+        style={{
+          flex: 1,
+          display: "flex",
+          overflowX: "auto",
+          scrollbarWidth: "none",
+          background: "transparent",
+          border: "1px solid var(--fo-rail-border)",
+          borderRadius: 8,
+          padding: 2,
+          gap: 0,
+          minWidth: 0,
+        }}
+      >
+        {options.map((opt, i) => {
+          const active = isActive(opt);
+          return (
+            <button
+              key={opt}
+              type="button"
+              className="fo-mono"
+              onClick={() => onPick(opt)}
+              style={{
+                position: "relative",
+                padding: "6px 12px",
+                border: "none",
+                background: active ? "var(--fo-accent)" : "transparent",
+                color: active ? "#001e2b" : "var(--fo-rail-text)",
+                fontSize: 10,
+                fontWeight: active ? 700 : 400,
+                flexShrink: 0,
+                cursor: "pointer",
+                letterSpacing: "0.12em",
+                borderRadius: 6,
+                marginLeft: i === 0 ? 0 : 1,
+                lineHeight: 1.2,
+                whiteSpace: "nowrap",
+              }}
+            >
+              {renderLabel ? renderLabel(opt) : opt}
+            </button>
+          );
+        })}
+      </div>
       {rightAdornment}
     </div>
   );

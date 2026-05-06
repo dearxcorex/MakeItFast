@@ -382,7 +382,11 @@ export default function FieldOpsClient({
               )}
 
               {isMobile && (
-                <MobileFilterBar filters={filters} onChange={setFilters} />
+                <MobileFilterBar
+                  filters={filters}
+                  onChange={setFilters}
+                  provinces={initialProvinces}
+                />
               )}
 
               <div style={{ flex: 1, display: "flex", minHeight: 0 }}>
