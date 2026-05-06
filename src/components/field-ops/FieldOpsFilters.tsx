@@ -41,9 +41,7 @@ export function FieldOpsFilters({
   const provinceOptions = ["All", ...provinces];
   const types: TypeFilter[] = ["ALL", "FM", "INT"];
   const statuses: StatusFilter[] = ["ALL", "PENDING", "INSPECTED"];
-  const severities: SeverityFilter[] = ["ALL", "Critical", "Major", "Minor"];
 
-  const showSeverity = filters.type !== "FM";
   const showOffAir = filters.type !== "INT";
   const showLawSent = filters.type !== "FM";
 
@@ -94,24 +92,6 @@ export function FieldOpsFilters({
           </option>
         ))}
       </select>
-
-      {showSeverity && (
-        <select
-          aria-label="Severity filter"
-          className="fo-mono"
-          value={filters.severity}
-          onChange={(e) =>
-            onChange({ ...filters, severity: e.target.value as SeverityFilter })
-          }
-          style={selectStyle}
-        >
-          {severities.map((s) => (
-            <option key={s} value={s}>
-              {s === "ALL" ? "ALL SEVERITY" : s.toUpperCase()}
-            </option>
-          ))}
-        </select>
-      )}
 
       <Divider />
 

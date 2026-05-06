@@ -53,16 +53,10 @@ export function MobileFilterBar({
   const handleType = (v: TypeFilter) => {
     const next: FieldFilters = { ...filters, type: v };
     if (v === "FM") {
-      next.severity = "ALL";
       next.lawSent = false;
     }
     if (v === "INT") {
       next.offAir = false;
-      // Mobile INT view shows only critical-ranked sites — clutter-free.
-      next.severity = "Critical";
-    }
-    if (v === "ALL") {
-      next.severity = "ALL";
     }
     onChange(next);
   };
