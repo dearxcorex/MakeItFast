@@ -13,7 +13,16 @@ import {
 import * as fs from 'node:fs';
 import * as path from 'node:path';
 
-const XLSX_PATH = process.argv[2]
+const POSITIONAL = process.argv.slice(2).filter((a) => !a.startsWith('--'));
+const NEXT_AFTER_NOTE = (() => {
+  const i = process.argv.indexOf('--note');
+  return i >= 0 ? i + 1 : -1;
+})();
+const POSITIONAL_PATHS = process.argv
+  .slice(2)
+  .filter((a, i) => !a.startsWith('--') && i + 2 !== NEXT_AFTER_NOTE);
+const XLSX_PATH = POSITIONAL_PATHS[0]
+  ?? POSITIONAL[0]
   ?? '/Users/deardevx/Downloads/สทช2304_266_2569-20.xlsx';
 const APPLY = process.argv.includes('--apply');
 const NOTE_INDEX = process.argv.indexOf('--note');
