@@ -22,6 +22,10 @@ model fm_station {
   submit_a_request Boolean? @default(false)
   date_inspected   String?
   note             String?
+  revoked          Boolean? @default(false)
+  revoked_note     String?
+
+  @@index([revoked])
 }
 
 model interference_site {
