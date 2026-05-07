@@ -10,8 +10,10 @@ export interface FieldFilters {
   status: StatusFilter;
   /** Interference ranking — INT-only. Ignored when type=FM. */
   severity: SeverityFilter;
-  /** FM "off air" toggle — FM-only. Ignored when type=INT. */
+  /** FM "off air" toggle — FM-only. Excludes revoked rows so REVOKED stays disjoint. */
   offAir: boolean;
+  /** FM "revoked" toggle — FM-only. License revoked by NBTC; illegal if on-air. */
+  revoked: boolean;
   /** INT "law paper sent" toggle — INT-only. Ignored when type=FM. */
   lawSent: boolean;
   search: string;
@@ -23,6 +25,7 @@ export const DEFAULT_FILTERS: FieldFilters = {
   status: "ALL",
   severity: "ALL",
   offAir: false,
+  revoked: false,
   lawSent: false,
   search: "",
 };
@@ -47,13 +50,13 @@ export function FieldOpsFilters({
 
   const handleTypeChange = (v: TypeFilter) => {
     const next: FieldFilters = { ...filters, type: v };
-    // Cascade: drop filters that don't apply to the new type
     if (v === "FM") {
       next.severity = "ALL";
       next.lawSent = false;
     }
     if (v === "INT") {
       next.offAir = false;
+      next.revoked = false;
     }
     onChange(next);
   };
