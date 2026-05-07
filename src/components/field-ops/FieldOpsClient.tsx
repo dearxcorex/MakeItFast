@@ -88,7 +88,11 @@ export default function FieldOpsClient({
       if (filters.province !== "All" && s.state !== filters.province) return false;
       if (filters.status === "PENDING" && s.inspection69 === "ตรวจแล้ว") return false;
       if (filters.status === "INSPECTED" && s.inspection69 !== "ตรวจแล้ว") return false;
-      if (filters.offAir && s.onAir !== false) return false;
+      // OFF AIR: license still valid but currently silent. Excludes revoked
+      // so the OFF AIR / REVOKED filters are truly disjoint.
+      if (filters.offAir && (s.onAir !== false || s.revoked === true)) return false;
+      // REVOKED: license cancelled by NBTC. Illegal if on-air.
+      if (filters.revoked && s.revoked !== true) return false;
       if (filters.search) {
         const q = filters.search.toLowerCase();
         const hay = `${s.name} ${s.frequency} ${s.city} ${s.state} ${s.id}`.toLowerCase();
@@ -130,6 +134,26 @@ export default function FieldOpsClient({
     selection?.kind === "fm" ? stations.find((s) => s.id === selection.id) ?? null : null;
   const selectedSite =
     selection?.kind === "int" ? interference.find((s) => s.id === selection.id) ?? null : null;
+
+  // Auto-dismiss the selection (and its details panel / bottom sheet) when
+  // the current filter no longer includes the selected item — e.g. switching
+  // TYPE from ALL to FM while an INT site is open.
+  useEffect(() => {
+    if (!selection) return;
+    if (selection.kind === "fm") {
+      if (!filteredStations.some((s) => s.id === selection.id)) {
+        setSelection(null);
+        setFlyTarget(null);
+        if (markingSourceForId !== null) setMarkingSourceForId(null);
+      }
+    } else {
+      if (!filteredInterference.some((s) => s.id === selection.id)) {
+        setSelection(null);
+        setFlyTarget(null);
+        if (markingSourceForId !== null) setMarkingSourceForId(null);
+      }
+    }
+  }, [selection, filteredStations, filteredInterference, markingSourceForId]);
 
   const coLocatedStations = useMemo(() => {
     if (!selectedStation) return [] as FMStation[];
@@ -479,6 +503,19 @@ export default function FieldOpsClient({
                   onToggleLawPaper={handleToggleLawPaper}
                   onClose={() => setSelection(null)}
                   pending={pending}
+                  marking={selectedSite ? markingSourceForId === selectedSite.id : false}
+                  onStartMarkSource={
+                    selectedSite ? () => setMarkingSourceForId(selectedSite.id) : undefined
+                  }
+                  onCancelMarkSource={() => setMarkingSourceForId(null)}
+                  onClearSource={
+                    selectedSite ? () => handleClearSource(selectedSite.id) : undefined
+                  }
+                  onSubmitSourceCoords={
+                    selectedSite
+                      ? (lat, lng) => handleMarkSource(selectedSite.id, lat, lng)
+                      : undefined
+                  }
                 />
               )}
             </>
