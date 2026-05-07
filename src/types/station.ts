@@ -30,6 +30,7 @@ export interface UserLocation {
   accuracy?: number;
   heading?: number | null;
   speed?: number | null;
+  stale?: boolean;
 }
 
 export type FilterType = {
