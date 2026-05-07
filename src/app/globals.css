@@ -1280,37 +1280,70 @@ input[type="checkbox"][role="switch"]:focus {
   color: #4ADE80;
 }
 
-/* Location marker styles */
-.location-marker {
-  width: 20px;
-  height: 20px;
+/* Location marker styles (heading-aware) */
+.location-marker-host {
+  position: relative;
+  width: 80px;
+  height: 80px;
+  pointer-events: none;
+}
+
+.location-dot {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 18px;
+  height: 18px;
+  margin-top: -9px;
+  margin-left: -9px;
   background: #22D3EE;
   border: 3px solid #ffffff;
   border-radius: 50%;
-  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.3);
-  position: relative;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.35);
+  pointer-events: auto;
 }
 
 .location-pulse {
+  position: absolute;
+  top: 50%;
+  left: 50%;
   width: 40px;
   height: 40px;
+  margin-top: -20px;
+  margin-left: -20px;
   background: rgba(34, 211, 238, 0.2);
   border-radius: 50%;
-  position: absolute;
-  top: -13px;
-  left: -13px;
   animation: locationPulse 1.5s ease-out infinite;
+  pointer-events: none;
+}
+
+.location-pulse--paused {
+  animation-play-state: paused;
+  opacity: 0.4;
+}
+
+.heading-cone {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 80px;
+  height: 80px;
+  pointer-events: none;
+  transition: transform 200ms linear;
+  filter: drop-shadow(0 2px 6px rgba(0, 0, 0, 0.25));
+}
+
+.heading-cone--stale path {
+  fill: rgba(148, 163, 184, 0.45) !important; /* slate-400 @ 0.45 */
+}
+
+.heading-cone--stale {
+  opacity: 0.6;
 }
 
 @keyframes locationPulse {
-  0% {
-    transform: scale(0.8);
-    opacity: 1;
-  }
-  100% {
-    transform: scale(2);
-    opacity: 0;
-  }
+  0% { transform: scale(0.8); opacity: 1; }
+  100% { transform: scale(2); opacity: 0; }
 }
 
 /* Reduced motion for accessibility */
