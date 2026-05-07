@@ -10,6 +10,7 @@ const baseFilters: FieldFilters = {
   status: 'ALL',
   severity: 'ALL',
   offAir: false,
+  revoked: false,
   lawSent: false,
   search: '',
 };
