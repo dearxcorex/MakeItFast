@@ -69,4 +69,29 @@ describe('parseLatLngInput', () => {
       lng: 100.501,
     });
   });
+
+  it('does NOT split a Thai-locale single decimal "13,75" as (13, 75)', () => {
+    // Comma is not followed by whitespace AND second token has no decimal —
+    // treat as a single (malformed) lat number, with empty lng.
+    const r = parseLatLngInput('13,75', '');
+    expect(r.ok).toBe(false);
+  });
+
+  it('parses "13.756,100.501" (no whitespace, decimal in lng) as a pair', () => {
+    expect(parseLatLngInput('13.756,100.501', '')).toEqual({
+      ok: true,
+      lat: 13.756,
+      lng: 100.501,
+    });
+  });
+
+  it('parses "13,100.5" as a pair when second token has a decimal', () => {
+    // No whitespace after comma, but the second part has a decimal point —
+    // unambiguous as a paired paste.
+    expect(parseLatLngInput('13,100.5', '')).toEqual({
+      ok: true,
+      lat: 13,
+      lng: 100.5,
+    });
+  });
 });

@@ -5,8 +5,14 @@ export type ParseLatLngResult =
 /**
  * Parse two text inputs into a (lat, lng) pair.
  *
- * If `lngRaw` is empty and `latRaw` contains a comma, treat `latRaw` as a
- * pasted "lat, lng" pair (Google-Maps friendly).
+ * If `lngRaw` is empty and `latRaw` looks like a pasted "lat, lng" pair
+ * (Google-Maps friendly), split on the comma.
+ *
+ * Heuristic for "looks like a pair": either the comma is followed by
+ * whitespace ("13.756, 100.501") or the second token contains a decimal
+ * point ("13.756,100.501"). This guards against Thai-locale users typing a
+ * single decimal with a comma separator ("13,75") being silently parsed as
+ * `(13, 75)`.
  *
  * Returns `{ ok: false, error }` for empty / non-numeric / out-of-range input.
  */
@@ -17,7 +23,12 @@ export function parseLatLngInput(latRaw: string, lngRaw: string): ParseLatLngRes
   let lat: number;
   let lng: number;
 
-  if (!lngTrim && latTrim.includes(",")) {
+  const looksLikePair =
+    !lngTrim &&
+    latTrim.includes(",") &&
+    (/,\s/.test(latTrim) || /,[^,]*\./.test(latTrim));
+
+  if (looksLikePair) {
     const [a, b] = latTrim.split(",").map((v) => v.trim());
     lat = parseFloat(a);
     lng = parseFloat(b);
