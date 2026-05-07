@@ -52,4 +52,44 @@ describe('FieldOpsCurrentFM — revoked station', () => {
     );
     expect(container.textContent).toContain('✓ INSPECT');
   });
+
+  it('renders INSPECT with the danger palette for a revoked station', () => {
+    const station: FMStation = {
+      ...baseStation,
+      revoked: true,
+      onAir: false,
+      inspection69: 'ยังไม่ตรวจ',
+    };
+    const { container } = render(
+      <FieldOpsCurrentFM
+        station={station}
+        onToggleInspection={vi.fn()}
+        onToggleOnAir={vi.fn()}
+        pending={false}
+      />
+    );
+    const buttons = container.querySelectorAll('button');
+    const inspectBtn = Array.from(buttons).find(btn => btn.textContent === '✓ INSPECT')!;
+    expect(inspectBtn.getAttribute('style')).toContain('var(--fo-crit)');
+  });
+
+  it('renders INSPECT with the primary palette for a non-revoked pending station', () => {
+    const station: FMStation = {
+      ...baseStation,
+      revoked: false,
+      onAir: false,
+      inspection69: 'ยังไม่ตรวจ',
+    };
+    const { container } = render(
+      <FieldOpsCurrentFM
+        station={station}
+        onToggleInspection={vi.fn()}
+        pending={false}
+      />
+    );
+    const buttons = container.querySelectorAll('button');
+    const inspectBtn = Array.from(buttons).find(btn => btn.textContent === '✓ INSPECT')!;
+    expect(inspectBtn.getAttribute('style')).toContain('var(--fo-accent)');
+    expect(inspectBtn.getAttribute('style')).not.toContain('var(--fo-crit)');
+  });
 });
