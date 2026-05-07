@@ -114,6 +114,14 @@ export function FieldOpsFilters({
           onChange={(v) => onChange({ ...filters, offAir: v })}
         />
       )}
+      {showOffAir && (
+        <Toggle
+          label="REVOKED"
+          active={filters.revoked}
+          onChange={(v) => onChange({ ...filters, revoked: v })}
+          activeColor="var(--fo-crit)"
+        />
+      )}
       {showLawSent && (
         <Toggle
           label="LAW SENT"
@@ -166,10 +174,12 @@ function Toggle({
   label,
   active,
   onChange,
+  activeColor = "var(--fo-accent)",
 }: {
   label: string;
   active: boolean;
   onChange: (v: boolean) => void;
+  activeColor?: string;
 }) {
   return (
     <button
@@ -179,8 +189,8 @@ function Toggle({
       style={{
         padding: "5px 12px",
         borderRadius: 999,
-        border: `1px solid ${active ? "var(--fo-accent)" : "var(--fo-divider)"}`,
-        background: active ? "var(--fo-accent)" : "transparent",
+        border: `1px solid ${active ? activeColor : "var(--fo-divider)"}`,
+        background: active ? activeColor : "transparent",
         color: active ? "#001e2b" : "var(--fo-band-text)",
         fontSize: 10,
         cursor: "pointer",
