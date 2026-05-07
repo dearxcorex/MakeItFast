@@ -72,7 +72,6 @@ export function FieldOpsHeader({
 
       <div style={{ flex: 1 }} />
 
-      <Stat label="TOTAL" value={kpis.total} textColor={textColor} labelColor={labelColor} />
       <Stat
         label="INSPECTED"
         value={kpis.inspected}

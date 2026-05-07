@@ -148,7 +148,6 @@ export function FieldOpsDrawer({
         <div className="fo-mono" style={{ color: "var(--fo-rail-mute)", fontSize: 9, letterSpacing: "0.2em" }}>
           STATS
         </div>
-        <StatsRow label="TOTAL" value={String(kpis.total)} />
         <StatsRow
           label="INSPECTED"
           value={`${kpis.inspected}/${kpis.target} · ${kpis.pct}%`}
