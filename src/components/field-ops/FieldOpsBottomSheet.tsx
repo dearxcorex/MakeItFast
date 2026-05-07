@@ -140,6 +140,7 @@ export function FieldOpsBottomSheet({
   const district = isFM ? station!.city : (site!.cellName || "—");
   const inspected = isFM ? station!.inspection69 === "ตรวจแล้ว" : site!.status === "ตรวจแล้ว";
   const lawSent = !isFM && !!site!.lawPaperSent;
+  const revoked = !!isFM && station!.revoked === true;
   const lat = isFM ? station!.latitude : (site!.lat ?? 0);
   const lng = isFM ? station!.longitude : (site!.long ?? 0);
   const canNavigate = isFM ? true : site!.lat !== null && site!.long !== null;
@@ -305,9 +306,23 @@ export function FieldOpsBottomSheet({
           style={{
             flex: 1,
             padding: "12px",
-            background: inspected ? "var(--fo-ink)" : "var(--fo-white)",
-            color: inspected ? "var(--fo-accent)" : "var(--fo-ink)",
-            border: `1px solid ${inspected ? "var(--fo-ink)" : "var(--fo-line)"}`,
+            background: revoked
+              ? "var(--fo-crit)"
+              : inspected
+                ? "var(--fo-ink)"
+                : "var(--fo-white)",
+            color: revoked
+              ? "#ffffff"
+              : inspected
+                ? "var(--fo-accent)"
+                : "var(--fo-ink)",
+            border: `1px solid ${
+              revoked
+                ? "var(--fo-crit)"
+                : inspected
+                  ? "var(--fo-ink)"
+                  : "var(--fo-line)"
+            }`,
             borderRadius: 999,
             fontSize: 11,
             letterSpacing: "0.2em",
