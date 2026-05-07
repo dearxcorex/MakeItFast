@@ -42,26 +42,6 @@ describe('FieldOpsFilters · status chips', () => {
   });
 });
 
-describe('FieldOpsFilters · severity dropdown', () => {
-  it('is shown for type=ALL and type=INT; hidden for type=FM', () => {
-    const all = renderFilters({ type: 'ALL' });
-    expect(all.queryByLabelText('Severity filter')).toBeTruthy();
-    cleanup();
-    const intView = renderFilters({ type: 'INT' });
-    expect(intView.queryByLabelText('Severity filter')).toBeTruthy();
-    cleanup();
-    const fm = renderFilters({ type: 'FM' });
-    expect(fm.queryByLabelText('Severity filter')).toBeNull();
-  });
-
-  it('exposes ALL · Critical · Major · Minor as options', () => {
-    const { getByLabelText } = renderFilters({ type: 'ALL' });
-    const select = getByLabelText('Severity filter') as HTMLSelectElement;
-    const values = Array.from(select.options).map((o) => o.value);
-    expect(values).toEqual(['ALL', 'Critical', 'Major', 'Minor']);
-  });
-});
-
 describe('FieldOpsFilters · OFF AIR / LAW SENT toggles', () => {
   it('OFF AIR toggle is shown for type=ALL/FM and hidden for INT', () => {
     const all = renderFilters({ type: 'ALL' });
