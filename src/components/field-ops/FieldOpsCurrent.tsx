@@ -10,7 +10,7 @@ interface CommonAction {
   pending: string;
   inverse?: boolean;
   onClick: () => void;
-  variant?: "primary" | "ghost" | "warn";
+  variant?: "primary" | "ghost" | "warn" | "danger";
   disabled?: boolean;
 }
 
@@ -118,7 +118,7 @@ export function FieldOpsCurrentFM({
             label: inspected ? "✓ INSPECTED" : "✓ INSPECT",
             pending: "...",
             onClick: onToggleInspection,
-            variant: station.revoked ? "warn" : (inspected ? "ghost" : "primary"),
+            variant: station.revoked ? "danger" : (inspected ? "ghost" : "primary"),
             disabled: pending,
             inverse: inspected,
           },
@@ -682,33 +682,40 @@ function ButtonRow({ actions, loading }: { actions: CommonAction[]; loading: boo
           opacity: a.disabled ? 0.6 : 1,
         };
         const style: React.CSSProperties =
-          a.variant === "warn"
+          a.variant === "danger"
             ? {
                 ...baseStyle,
-                background: "var(--fo-warn)",
-                color: "var(--fo-ink)",
-                borderColor: "var(--fo-warn)",
+                background: "var(--fo-crit)",
+                color: "#ffffff",
+                borderColor: "var(--fo-crit)",
               }
-            : a.variant === "primary"
+            : a.variant === "warn"
               ? {
                   ...baseStyle,
-                  background: "var(--fo-accent)",
+                  background: "var(--fo-warn)",
                   color: "var(--fo-ink)",
-                  borderColor: "var(--fo-accent)",
+                  borderColor: "var(--fo-warn)",
                 }
-              : a.inverse
+              : a.variant === "primary"
                 ? {
                     ...baseStyle,
-                    background: "var(--fo-ink)",
-                    color: "var(--fo-accent)",
+                    background: "var(--fo-accent)",
+                    color: "var(--fo-ink)",
                     borderColor: "var(--fo-accent)",
                   }
-                : {
-                    ...baseStyle,
-                    background: "transparent",
-                    color: "var(--fo-rail-mute)",
-                    borderColor: "var(--fo-ink-3)",
-                  };
+                : a.inverse
+                  ? {
+                      ...baseStyle,
+                      background: "var(--fo-ink)",
+                      color: "var(--fo-accent)",
+                      borderColor: "var(--fo-accent)",
+                    }
+                  : {
+                      ...baseStyle,
+                      background: "transparent",
+                      color: "var(--fo-rail-mute)",
+                      borderColor: "var(--fo-ink-3)",
+                    };
         return (
           <button
             key={i}
