@@ -9,7 +9,13 @@ import {
 
 const SS_KEY = "fo:mobileFiltersOpen";
 const TYPES: TypeFilter[] = ["ALL", "FM", "INT"];
-const STATUSES_FM: Array<StatusFilter | "OFF AIR"> = ["ALL", "PENDING", "INSPECTED", "OFF AIR"];
+const STATUSES_FM: Array<StatusFilter | "OFF AIR" | "REVOKED"> = [
+  "ALL",
+  "PENDING",
+  "INSPECTED",
+  "OFF AIR",
+  "REVOKED",
+];
 const STATUSES_INT: StatusFilter[] = ["ALL", "PENDING", "INSPECTED"];
 
 export function MobileFilterBar({
@@ -47,6 +53,7 @@ export function MobileFilterBar({
     (filters.status !== "ALL" ? 1 : 0) +
     (filters.province !== "All" ? 1 : 0) +
     (filters.offAir ? 1 : 0) +
+    (filters.revoked ? 1 : 0) +
     (filters.lawSent ? 1 : 0) +
     (filters.search.trim().length > 0 ? 1 : 0);
 
@@ -57,21 +64,25 @@ export function MobileFilterBar({
     }
     if (v === "INT") {
       next.offAir = false;
+      next.revoked = false;
     }
     onChange(next);
   };
 
-  const handleStatus = (v: StatusFilter | "OFF AIR") => {
+  const handleStatus = (v: StatusFilter | "OFF AIR" | "REVOKED") => {
     if (v === "OFF AIR") {
-      onChange({ ...filters, status: "ALL", offAir: !filters.offAir });
+      onChange({ ...filters, status: "ALL", offAir: !filters.offAir, revoked: false });
+    } else if (v === "REVOKED") {
+      onChange({ ...filters, status: "ALL", offAir: false, revoked: !filters.revoked });
     } else {
-      onChange({ ...filters, status: v as StatusFilter, offAir: false });
+      onChange({ ...filters, status: v as StatusFilter, offAir: false, revoked: false });
     }
   };
 
-  const isStatusActive = (v: StatusFilter | "OFF AIR"): boolean => {
+  const isStatusActive = (v: StatusFilter | "OFF AIR" | "REVOKED"): boolean => {
     if (v === "OFF AIR") return filters.offAir;
-    return filters.status === v && !filters.offAir;
+    if (v === "REVOKED") return filters.revoked;
+    return filters.status === v && !filters.offAir && !filters.revoked;
   };
 
   const provinceOptions = ["All", ...provinces];
