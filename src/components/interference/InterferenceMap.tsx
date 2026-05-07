@@ -118,7 +118,10 @@ export default function InterferenceMap({
       {userLocation && (
         <Marker
           position={[userLocation.latitude, userLocation.longitude]}
-          icon={createLocationIcon()}
+          icon={createLocationIcon({
+            heading: userLocation.heading,
+            stale: userLocation.stale,
+          })}
         >
           <Popup>
             <div className="interference-popup">
