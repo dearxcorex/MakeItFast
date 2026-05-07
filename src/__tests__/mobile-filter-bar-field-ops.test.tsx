@@ -83,4 +83,41 @@ describe('MobileFilterBar', () => {
     expect(container.textContent).toContain('TYPE');
     expect(container.textContent).toContain('STATUS');
   });
+
+  it('renders REVOKED option in the FM STATUS row', () => {
+    const { container } = render(
+      <MobileFilterBar filters={DEFAULT_FILTERS} onChange={vi.fn()} provinces={['นครราชสีมา', 'ชัยภูมิ']} />
+    );
+    expect(container.textContent).toContain('REVOKED');
+  });
+
+  it('clicking REVOKED toggles filters.revoked and clears offAir/status', () => {
+    const onChange = vi.fn();
+    const { getByText } = render(
+      <MobileFilterBar
+        filters={{ ...DEFAULT_FILTERS, status: 'PENDING', offAir: true }}
+        onChange={onChange}
+        provinces={['นครราชสีมา']}
+      />
+    );
+    fireEvent.click(getByText('REVOKED'));
+    expect(onChange).toHaveBeenCalledWith(
+      expect.objectContaining({ revoked: true, offAir: false, status: 'ALL' })
+    );
+  });
+
+  it('clicking OFF AIR clears revoked', () => {
+    const onChange = vi.fn();
+    const { getByText } = render(
+      <MobileFilterBar
+        filters={{ ...DEFAULT_FILTERS, revoked: true }}
+        onChange={onChange}
+        provinces={['นครราชสีมา']}
+      />
+    );
+    fireEvent.click(getByText('OFF AIR'));
+    expect(onChange).toHaveBeenCalledWith(
+      expect.objectContaining({ offAir: true, revoked: false })
+    );
+  });
 });
