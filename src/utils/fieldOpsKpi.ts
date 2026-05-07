@@ -2,15 +2,13 @@ import type { FMStation } from "@/types/station";
 import type { InterferenceSite } from "@/types/interference";
 import type { TypeFilter } from "@/components/field-ops/FieldOpsFilters";
 
-export const FM_INSPECTION_TARGET = 200;
-
 export interface FieldOpsKpis {
   total: number;
   inspected: number;
   pending: number;
   /** null when type=FM (FM has no Critical concept) */
   critical: number | null;
-  /** Denominator for the inspected progress %: 200 for FM, otherwise the visible total. */
+  /** Denominator for the inspected progress %: always the visible total. */
   target: number;
   pct: number;
 }
@@ -40,7 +38,7 @@ export function computeKpis(
       ? null
       : interference.filter((s) => s.ranking === "Critical").length;
 
-  const target = type === "FM" ? FM_INSPECTION_TARGET : total;
+  const target = total;
   const pct =
     target > 0 ? Math.min(100, Math.round((inspected / target) * 100)) : 0;
 

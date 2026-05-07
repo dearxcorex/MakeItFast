@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { computeKpis, FM_INSPECTION_TARGET } from '@/utils/fieldOpsKpi';
+import { computeKpis } from '@/utils/fieldOpsKpi';
 import type { FMStation } from '@/types/station';
 import type { InterferenceSite } from '@/types/interference';
 
@@ -76,14 +76,14 @@ describe('computeKpis (pure tally over pre-filtered arrays)', () => {
     expect(k.pct).toBe(Math.round((4 / 9) * 100));
   });
 
-  it('type=FM uses fixed target 200; critical=null', () => {
+  it('type=FM uses dynamic target=total; critical=null', () => {
     const k = computeKpis(stations, [], 'FM');
     expect(k.total).toBe(4);
     expect(k.inspected).toBe(2);
     expect(k.pending).toBe(2);
     expect(k.critical).toBeNull();
-    expect(k.target).toBe(FM_INSPECTION_TARGET);
-    expect(k.pct).toBe(Math.round((2 / 200) * 100));
+    expect(k.target).toBe(4);
+    expect(k.pct).toBe(Math.round((2 / 4) * 100));
   });
 
   it('type=INT uses dynamic target=total and includes critical', () => {
@@ -101,10 +101,10 @@ describe('computeKpis (pure tally over pre-filtered arrays)', () => {
     expect(k).toEqual({ total: 0, inspected: 0, pending: 0, critical: 0, target: 0, pct: 0 });
   });
 
-  it('FM-only with empty stations still returns critical=null and target=200', () => {
+  it('FM-only with empty stations still returns critical=null and target=0', () => {
     const k = computeKpis([], [], 'FM');
     expect(k.critical).toBeNull();
-    expect(k.target).toBe(FM_INSPECTION_TARGET);
+    expect(k.target).toBe(0);
     expect(k.pct).toBe(0);
   });
 
