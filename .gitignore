@@ -113,3 +113,4 @@ reports/offair-snapshot-*.json
 # brainstorming session artefacts
 .superpowers/
 reports/interference-non-critical-snapshot.json
+reports/revoked-no-coords-pre-delete.json
