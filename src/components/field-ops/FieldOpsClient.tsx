@@ -38,6 +38,27 @@ interface Props {
   initialProvinces: string[];
 }
 
+/**
+ * Pure FM filter predicate. Exported for unit tests.
+ * Returns true if `s` should be visible under `filters`.
+ */
+export function fmStationMatchesFilter(s: FMStation, filters: FieldFilters): boolean {
+  if (filters.province !== "All" && s.state !== filters.province) return false;
+  if (filters.status === "PENDING" && s.inspection69 === "ตรวจแล้ว") return false;
+  if (filters.status === "INSPECTED" && s.inspection69 !== "ตรวจแล้ว") return false;
+  // OFF AIR: license still valid but currently silent. Excludes revoked
+  // so the OFF AIR / REVOKED filters are truly disjoint.
+  if (filters.offAir && (s.onAir !== false || s.revoked === true)) return false;
+  // REVOKED: license cancelled by NBTC. Illegal if on-air.
+  if (filters.revoked && s.revoked !== true) return false;
+  if (filters.search) {
+    const q = filters.search.toLowerCase();
+    const hay = `${s.name} ${s.frequency} ${s.city} ${s.state} ${s.id}`.toLowerCase();
+    if (!hay.includes(q)) return false;
+  }
+  return true;
+}
+
 export default function FieldOpsClient({
   initialStations,
   initialInterference,
@@ -84,22 +105,7 @@ export default function FieldOpsClient({
 
   const filteredStations = useMemo(() => {
     if (filters.type === "INT") return [];
-    return stations.filter((s) => {
-      if (filters.province !== "All" && s.state !== filters.province) return false;
-      if (filters.status === "PENDING" && s.inspection69 === "ตรวจแล้ว") return false;
-      if (filters.status === "INSPECTED" && s.inspection69 !== "ตรวจแล้ว") return false;
-      // OFF AIR: license still valid but currently silent. Excludes revoked
-      // so the OFF AIR / REVOKED filters are truly disjoint.
-      if (filters.offAir && (s.onAir !== false || s.revoked === true)) return false;
-      // REVOKED: license cancelled by NBTC. Illegal if on-air.
-      if (filters.revoked && s.revoked !== true) return false;
-      if (filters.search) {
-        const q = filters.search.toLowerCase();
-        const hay = `${s.name} ${s.frequency} ${s.city} ${s.state} ${s.id}`.toLowerCase();
-        if (!hay.includes(q)) return false;
-      }
-      return true;
-    });
+    return stations.filter((s) => fmStationMatchesFilter(s, filters));
   }, [stations, filters]);
 
   // De-duplicate interference rows that share (siteCode, cellName,
