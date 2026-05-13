@@ -6,7 +6,19 @@ import type { PublicUser } from "@/types/user";
 
 const USERNAME_RE = /^[a-z0-9_.-]{3,32}$/;
 
-function toPublic(row: any): PublicUser {
+type UserRow = {
+  id: number;
+  username: string;
+  password_hash: string;
+  display_name: string;
+  role: string;
+  active: boolean;
+  created_at: Date;
+  updated_at: Date;
+  created_by: number | null;
+};
+
+function toPublic(row: UserRow): PublicUser {
   return {
     id: row.id,
     username: row.username,
@@ -34,13 +46,14 @@ export async function GET() {
 export async function POST(req: NextRequest) {
   try {
     const me = await requireAdmin();
-    let body: any;
+    let body: unknown;
     try {
       body = await req.json();
     } catch {
       return NextResponse.json({ error: "validation_error" }, { status: 400 });
     }
-    const { username: raw, password, displayName, role } = body ?? {};
+    const b = (body ?? {}) as Record<string, unknown>;
+    const { username: raw, password, displayName, role } = b;
     if (
       typeof raw !== "string" ||
       typeof password !== "string" ||

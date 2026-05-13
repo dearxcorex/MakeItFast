@@ -15,13 +15,14 @@ export async function POST(
       return NextResponse.json({ error: "validation_error" }, { status: 400 });
     }
 
-    let body: any;
+    let body: unknown;
     try {
       body = await req.json();
     } catch {
       return NextResponse.json({ error: "validation_error" }, { status: 400 });
     }
-    const { newPassword } = body ?? {};
+    const b = (body ?? {}) as Record<string, unknown>;
+    const { newPassword } = b;
     if (typeof newPassword !== "string" || newPassword.length < 8) {
       return NextResponse.json({ error: "validation_error" }, { status: 400 });
     }

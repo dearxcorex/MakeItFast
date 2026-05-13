@@ -3,7 +3,19 @@ import prisma from "@/lib/prisma";
 import { AuthError, requireAdmin } from "@/lib/auth";
 import type { PublicUser } from "@/types/user";
 
-function toPublic(row: any): PublicUser {
+type UserRow = {
+  id: number;
+  username: string;
+  password_hash: string;
+  display_name: string;
+  role: string;
+  active: boolean;
+  created_at: Date;
+  updated_at: Date;
+  created_by: number | null;
+};
+
+function toPublic(row: UserRow): PublicUser {
   return {
     id: row.id,
     username: row.username,
@@ -27,26 +39,27 @@ export async function PATCH(
       return NextResponse.json({ error: "validation_error" }, { status: 400 });
     }
 
-    let body: any;
+    let body: unknown;
     try {
       body = await req.json();
     } catch {
       return NextResponse.json({ error: "validation_error" }, { status: 400 });
     }
+    const b = (body ?? {}) as Record<string, unknown>;
 
     const data: { active?: boolean; role?: string; display_name?: string } = {};
-    if (typeof body.active === "boolean") data.active = body.active;
-    if (typeof body.role === "string") {
-      if (body.role !== "admin" && body.role !== "inspector") {
+    if (typeof b.active === "boolean") data.active = b.active;
+    if (typeof b.role === "string") {
+      if (b.role !== "admin" && b.role !== "inspector") {
         return NextResponse.json(
           { error: "validation_error" },
           { status: 400 }
         );
       }
-      data.role = body.role;
+      data.role = b.role;
     }
-    if (typeof body.displayName === "string") {
-      const dn = body.displayName.trim();
+    if (typeof b.displayName === "string") {
+      const dn = b.displayName.trim();
       if (!dn) {
         return NextResponse.json(
           { error: "validation_error" },
