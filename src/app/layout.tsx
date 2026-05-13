@@ -3,6 +3,7 @@ import { Exo_2, Orbitron, Prompt, Noto_Sans_Thai, Inter, Playfair_Display, Sourc
 import "./globals.css";
 import "./field-ops.css";
 import { ThemeProvider } from "@/contexts/ThemeContext";
+import { UserProvider } from "@/contexts/UserContext";
 
 const exo2 = Exo_2({
   subsets: ["latin"],
@@ -82,9 +83,11 @@ export default function RootLayout({
   return (
     <html lang="en" className="dark" suppressHydrationWarning>
       <body className={`${fontVars} font-sans antialiased`} suppressHydrationWarning>
-        <ThemeProvider>
-          {children}
-        </ThemeProvider>
+        <UserProvider>
+          <ThemeProvider>
+            {children}
+          </ThemeProvider>
+        </UserProvider>
       </body>
     </html>
   );
