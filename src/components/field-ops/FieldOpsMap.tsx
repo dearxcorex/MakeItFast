@@ -294,6 +294,37 @@ function InitialLocationPan({ location }: { location: UserLocation | undefined }
   return null;
 }
 
+function RecenterButton({ location }: { location: UserLocation }) {
+  const map = useMap();
+  return (
+    <button
+      type="button"
+      aria-label="Recenter map on my location"
+      onClick={() => {
+        map.setView([location.latitude, location.longitude], 14);
+      }}
+      style={{
+        position: 'absolute',
+        right: 12,
+        bottom: 12,
+        zIndex: 500,
+        padding: '8px 12px',
+        borderRadius: 999,
+        border: '1px solid rgba(0, 30, 43, 0.2)',
+        background: 'rgba(255, 255, 255, 0.92)',
+        color: '#001e2b',
+        boxShadow: '0 2px 6px rgba(0, 0, 0, 0.18)',
+        cursor: 'pointer',
+        fontSize: 12,
+        letterSpacing: '0.12em',
+      }}
+      className="fo-mono"
+    >
+      ◎ ME
+    </button>
+  );
+}
+
 export function FieldOpsMap({
   stations,
   interference,
@@ -545,6 +576,7 @@ export function FieldOpsMap({
       )}
 
       <FlyTo target={flyTarget} />
+      {userLocation && <RecenterButton location={userLocation} />}
     </MapContainer>
   );
 }

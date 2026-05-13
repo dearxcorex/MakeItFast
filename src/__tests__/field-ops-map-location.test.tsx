@@ -121,4 +121,51 @@ describe('FieldOpsMap — current location pin', () => {
 
     expect(setViewCalls).toHaveLength(1);
   });
+
+  it('renders a "Recenter" button when userLocation is provided; clicking re-pans', () => {
+    setViewCalls.length = 0;
+    const userLocation: UserLocation = {
+      latitude: 13.7563,
+      longitude: 100.5018,
+      accuracy: 25,
+    };
+    const { container } = render(
+      <FieldOpsMap
+        stations={[]}
+        interference={[]}
+        selection={null}
+        onSelect={vi.fn()}
+        flyTarget={null}
+        userLocation={userLocation}
+      />
+    );
+
+    // First call is the auto-pan from Task 5.
+    expect(setViewCalls).toHaveLength(1);
+
+    const btn = Array.from(container.querySelectorAll('button')).find((b) =>
+      (b.getAttribute('aria-label') ?? '').toLowerCase().includes('recenter')
+    );
+    expect(btn).toBeDefined();
+    btn!.click();
+
+    expect(setViewCalls).toHaveLength(2);
+    expect(setViewCalls[1].center).toEqual([13.7563, 100.5018]);
+  });
+
+  it('does NOT render the Recenter button when userLocation is undefined', () => {
+    const { container } = render(
+      <FieldOpsMap
+        stations={[]}
+        interference={[]}
+        selection={null}
+        onSelect={vi.fn()}
+        flyTarget={null}
+      />
+    );
+    const btn = Array.from(container.querySelectorAll('button')).find((b) =>
+      (b.getAttribute('aria-label') ?? '').toLowerCase().includes('recenter')
+    );
+    expect(btn).toBeUndefined();
+  });
 });
