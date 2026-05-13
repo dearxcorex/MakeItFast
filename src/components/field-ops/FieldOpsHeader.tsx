@@ -115,30 +115,47 @@ export function FieldOpsHeader({
         className="fo-mono"
         title={`Switch to ${isLight ? "dark" : "light"} theme`}
         style={{
+          display: "inline-flex",
+          alignItems: "center",
+          justifyContent: "center",
+          gap: 6,
           padding: "6px 12px",
           border: `1px solid ${accentText}`,
           color: accentText,
           background: "transparent",
           borderRadius: 999,
           fontSize: 10,
+          lineHeight: 1,
           cursor: "pointer",
           letterSpacing: "0.16em",
         }}
       >
-        {isLight ? "☀ LIGHT" : "☾ DARK"}
+        <span aria-hidden style={{ fontSize: 12, lineHeight: 1 }}>
+          {isLight ? "☀" : "☾"}
+        </span>
+        <span style={{ lineHeight: 1 }}>{isLight ? "LIGHT" : "DARK"}</span>
       </button>
 
       <div
         className="fo-mono"
         style={{
+          display: "inline-flex",
+          alignItems: "center",
+          justifyContent: "center",
+          gap: 6,
           padding: "6px 12px",
           border: `1px solid ${accentText}`,
           color: accentText,
           borderRadius: 999,
           fontSize: 10,
+          lineHeight: 1,
+          letterSpacing: "0.16em",
         }}
       >
-        ● LIVE
+        <span aria-hidden style={{ fontSize: 10, lineHeight: 1 }}>
+          ●
+        </span>
+        <span style={{ lineHeight: 1 }}>LIVE</span>
       </div>
     </header>
   );

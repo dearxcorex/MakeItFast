@@ -52,13 +52,22 @@ function fmIcon(
         ? "#00684a"
         : "#f5a623";
 
+  // Glyph reflects inspection state, even on revoked pins — once a revoked
+  // station is inspected we still want the ✓ confirmation, just on the red
+  // body. Color (red) keeps the legal-risk signal; glyph tells you whether
+  // it has been checked.
+  const checkGlyph = `<path d="M8.5 12.5 l2.5 2.5 l5 -5" stroke="#ffffff" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" fill="none"/>`;
+  const warningGlyph = `<path d="M12 7 L12 14 M12 16.5 L12 17.5" stroke="#ffffff" stroke-width="2.4" stroke-linecap="round"/>`;
+  const offAirGlyph = `<path d="M9 9 l6 6 M15 9 l-6 6" stroke="#ffffff" stroke-width="2" stroke-linecap="round"/>`;
+  const pendingDotGlyph = `<g><line x1="12" y1="8" x2="12" y2="13" stroke="#ffffff" stroke-width="2.2" stroke-linecap="round"/><circle cx="12" cy="16" r="1.3" fill="#ffffff"/></g>`;
+
   const innerGlyph = revoked
-    ? `<path d="M12 7 L12 14 M12 16.5 L12 17.5" stroke="#ffffff" stroke-width="2.4" stroke-linecap="round"/>`
+    ? (inspected ? checkGlyph : warningGlyph)
     : offAir
-      ? `<path d="M9 9 l6 6 M15 9 l-6 6" stroke="#ffffff" stroke-width="2" stroke-linecap="round"/>`
+      ? offAirGlyph
       : inspected
-        ? `<path d="M8.5 12.5 l2.5 2.5 l5 -5" stroke="#ffffff" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" fill="none"/>`
-        : `<g><line x1="12" y1="8" x2="12" y2="13" stroke="#ffffff" stroke-width="2.2" stroke-linecap="round"/><circle cx="12" cy="16" r="1.3" fill="#ffffff"/></g>`;
+        ? checkGlyph
+        : pendingDotGlyph;
 
   const baseSize = selected ? 30 : 24;
   const wrapW = baseSize + 14;
@@ -472,7 +481,7 @@ export function FieldOpsMap({
         const head = group[0];
         const stackCount = group.length;
         const isSelected = selection?.kind === "fm" && group.some((s) => s.id === selection.id);
-        const cacheKey = `${head.id}-${isSelected}-${head.inspection69}-${head.onAir}-${isMainStation(head) ? "M" : "x"}-${stackCount}`;
+        const cacheKey = `${head.id}-${isSelected}-${head.inspection69}-${head.onAir}-${head.revoked ? "R" : "x"}-${isMainStation(head) ? "M" : "x"}-${stackCount}`;
         if (!fmIconCache.current.has(cacheKey)) {
           fmIconCache.current.set(cacheKey, fmIcon(head, isSelected, stackCount));
         }

@@ -114,32 +114,47 @@ export function FieldOpsDrawer({
             className="fo-mono"
             style={{
               flex: 1,
+              display: "inline-flex",
+              alignItems: "center",
+              justifyContent: "center",
+              gap: 6,
               padding: "6px 10px",
               borderRadius: 999,
               border: "1px solid var(--fo-accent)",
               background: "transparent",
               color: "var(--fo-accent)",
               fontSize: 10,
+              lineHeight: 1,
               cursor: "pointer",
               letterSpacing: "0.16em",
             }}
           >
-            {theme === "light" ? "☀ LIGHT" : "☾ DARK"}
+            <span aria-hidden style={{ fontSize: 12, lineHeight: 1 }}>
+              {theme === "light" ? "☀" : "☾"}
+            </span>
+            <span style={{ lineHeight: 1 }}>{theme === "light" ? "LIGHT" : "DARK"}</span>
           </button>
           <span
             className="fo-mono"
             style={{
               flex: 1,
+              display: "inline-flex",
+              alignItems: "center",
+              justifyContent: "center",
+              gap: 6,
               padding: "6px 10px",
               borderRadius: 999,
               border: "1px solid var(--fo-accent)",
               color: "var(--fo-accent)",
               fontSize: 10,
-              textAlign: "center",
+              lineHeight: 1,
               letterSpacing: "0.16em",
             }}
           >
-            ● LIVE
+            <span aria-hidden style={{ fontSize: 10, lineHeight: 1 }}>
+              ●
+            </span>
+            <span style={{ lineHeight: 1 }}>LIVE</span>
           </span>
         </div>
 

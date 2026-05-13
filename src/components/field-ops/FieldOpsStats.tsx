@@ -71,14 +71,20 @@ export function FieldOpsStats({
         <span
           className="fo-mono"
           style={{
+            display: "inline-flex",
+            alignItems: "center",
+            justifyContent: "center",
+            gap: 5,
             color: "var(--fo-accent)",
             padding: "2px 8px",
             border: "1px solid var(--fo-accent-2)",
             borderRadius: 999,
             fontSize: 9,
+            lineHeight: 1,
           }}
         >
-          ● LIVE
+          <span aria-hidden style={{ fontSize: 9, lineHeight: 1 }}>●</span>
+          <span style={{ lineHeight: 1 }}>LIVE</span>
         </span>
       </div>
 
