@@ -25,6 +25,33 @@ describe("middleware", () => {
     expect(res.status).not.toBe(307);
   });
 
+  it("redirects /login to / when already authenticated", async () => {
+    const c = await mintCookie();
+    const res = await middleware(reqWithCookie("/login", c.value));
+    expect(res.status).toBe(307);
+    expect(res.headers.get("location")).toMatch(/^http:\/\/localhost\/$/);
+  });
+
+  it("honors ?next when /login redirects an authenticated user", async () => {
+    const c = await mintCookie();
+    const url = new URL("http://localhost/login?next=%2Fadmin%2Fusers");
+    const req = new NextRequest(url, { method: "GET" });
+    req.cookies.set(COOKIE_NAME, c.value);
+    const res = await middleware(req);
+    expect(res.status).toBe(307);
+    expect(res.headers.get("location")).toMatch(/\/admin\/users$/);
+  });
+
+  it("ignores external ?next values to prevent open redirect", async () => {
+    const c = await mintCookie();
+    const url = new URL("http://localhost/login?next=https%3A%2F%2Fevil.com%2Fx");
+    const req = new NextRequest(url, { method: "GET" });
+    req.cookies.set(COOKIE_NAME, c.value);
+    const res = await middleware(req);
+    expect(res.status).toBe(307);
+    expect(res.headers.get("location")).toMatch(/^http:\/\/localhost\/$/);
+  });
+
   it("allows /api/auth/login without a session", async () => {
     const res = await middleware(reqWithCookie("/api/auth/login"));
     expect(res.status).not.toBe(307);

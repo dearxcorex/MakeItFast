@@ -19,6 +19,20 @@ function isAdminPath(pathname: string): boolean {
 export async function middleware(req: NextRequest) {
   const { pathname } = req.nextUrl;
 
+  // Already-logged-in users hitting /login bounce to their `next` param or /.
+  // The POST /api/auth/login allow-list stays open so the form can still submit
+  // (logout-then-relogin and password-managers depend on it).
+  if (pathname === "/login") {
+    const cookieValue = req.cookies.get(COOKIE_NAME)?.value;
+    const session = await readSessionFromCookie(cookieValue);
+    if (session) {
+      const nextParam = req.nextUrl.searchParams.get("next");
+      const target = nextParam && nextParam.startsWith("/") ? nextParam : "/";
+      return NextResponse.redirect(new URL(target, req.url), 307);
+    }
+    return NextResponse.next();
+  }
+
   if (isPublic(pathname)) {
     return NextResponse.next();
   }
