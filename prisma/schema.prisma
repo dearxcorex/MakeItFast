@@ -81,3 +81,17 @@ model cloudrf_cache {
   created_at     DateTime @default(now())
   expires_at     DateTime
 }
+
+model user {
+  id            Int      @id @default(autoincrement())
+  username      String   @unique
+  password_hash String
+  display_name  String
+  role          String   @default("inspector")
+  active        Boolean  @default(true)
+  created_at    DateTime @default(now())
+  updated_at    DateTime @updatedAt
+  created_by    Int?
+
+  @@index([username])
+}
