@@ -171,3 +171,98 @@ describe('deleteInspection', () => {
     })).rejects.toThrow(/forbidden/i);
   });
 });
+
+describe('createInspection — additional validation', () => {
+  it('rejects more than 5 helpers', async () => {
+    await expect(createInspection({
+      stationId: 1,
+      inspectedOn: '2026-04-03',
+      leadUserId: 3,
+      helperUserIds: [6, 4, 2, 1, 5, 7],
+    })).rejects.toThrow(/5 helpers/);
+  });
+
+  it('rejects when station does not exist', async () => {
+    vi.mocked(prisma.fm_station.findUnique).mockResolvedValue(null);
+    await expect(createInspection({
+      stationId: 999, inspectedOn: '2026-04-03', leadUserId: 3, helperUserIds: [],
+    })).rejects.toThrow(/Station not found/);
+  });
+
+  it('rejects when a user is inactive, missing, or not an inspector', async () => {
+    vi.mocked(prisma.fm_station.findUnique).mockResolvedValue({ id_fm: 1 } as never);
+    vi.mocked(prisma.user.findMany).mockResolvedValue([] as never);
+    await expect(createInspection({
+      stationId: 1, inspectedOn: '2026-04-03', leadUserId: 3, helperUserIds: [],
+    })).rejects.toThrow(/inactive, missing, or not inspectors/);
+  });
+
+  it('writes inspection + members and runs recompute inside the transaction (happy path)', async () => {
+    vi.mocked(prisma.fm_station.findUnique)
+      .mockResolvedValueOnce({ id_fm: 1 } as never);
+    vi.mocked(prisma.user.findMany).mockResolvedValue([
+      { id: 3, username: 'iff', display_name: 'iff', active: true, role: 'inspector' },
+      { id: 6, username: 'daf', display_name: 'daf', active: true, role: 'inspector' },
+    ] as never);
+    vi.mocked(prisma.station_inspection.findFirst).mockResolvedValue(null);
+
+    const txCreate = vi.fn().mockResolvedValue({ id: 100 });
+    const txAggregate = vi.fn().mockResolvedValue({ _max: { inspected_on: new Date('2026-04-03T00:00:00Z') } });
+    const txCount = vi.fn().mockResolvedValue(1);
+    const txStationUpdate = vi.fn().mockResolvedValue({ id_fm: 1 });
+    const txMemberCreateMany = vi.fn().mockResolvedValue({ count: 1 });
+
+    vi.mocked(prisma.$transaction).mockImplementationOnce(async (cb: never) => {
+      const tx = {
+        station_inspection: { create: txCreate, aggregate: txAggregate, count: txCount },
+        station_inspection_member: { createMany: txMemberCreateMany },
+        fm_station: { update: txStationUpdate },
+      };
+      return (cb as unknown as (t: typeof tx) => Promise<number>)(tx);
+    });
+
+    vi.mocked(prisma.station_inspection.findUnique).mockResolvedValue({
+      id: 100,
+      station_id: 1,
+      inspected_on: new Date('2026-04-03T00:00:00Z'),
+      lead_user_id: 3, notes: null, source: 'app',
+      created_at: new Date('2026-04-03T00:00:00Z'),
+      updated_at: new Date('2026-04-03T00:00:00Z'),
+      lead: { id: 3, username: 'iff', display_name: 'iff' },
+      members: [{ user_id: 6, member: { id: 6, username: 'daf', display_name: 'daf' } }],
+    } as never);
+
+    const out = await createInspection({
+      stationId: 1, inspectedOn: '2026-04-03', leadUserId: 3, helperUserIds: [6],
+    });
+
+    expect(out.id).toBe(100);
+    expect(txCreate).toHaveBeenCalledWith(expect.objectContaining({
+      data: expect.objectContaining({ station_id: 1, lead_user_id: 3 }),
+    }));
+    expect(txMemberCreateMany).toHaveBeenCalledWith({
+      data: [{ inspection_id: 100, user_id: 6, role: 'helper' }],
+    });
+    expect(txStationUpdate).toHaveBeenCalledWith(expect.objectContaining({
+      where: { id_fm: 1 },
+      data: { date_inspected: '2026-04-03', inspection_69: true },
+    }));
+  });
+});
+
+describe('deleteInspection — recompute runs', () => {
+  it('runs recompute after admin delete', async () => {
+    vi.mocked(prisma.station_inspection.findUnique).mockResolvedValue({
+      id: 7, station_id: 1, lead_user_id: 999,
+    } as never);
+    vi.mocked(prisma.station_inspection.aggregate).mockResolvedValue({ _max: { inspected_on: null } } as never);
+    vi.mocked(prisma.station_inspection.count).mockResolvedValue(0 as never);
+
+    await deleteInspection(7, { userId: 1, username: 'admin', displayName: 'Admin', role: 'admin', issuedAt: 0 });
+
+    expect(prisma.fm_station.update).toHaveBeenCalledWith({
+      where: { id_fm: 1 },
+      data: { date_inspected: null, inspection_69: false },
+    });
+  });
+});

@@ -1,4 +1,5 @@
 // src/services/inspectionService.ts
+import { Prisma } from '@prisma/client';
 import prisma from '@/lib/prisma';
 import type { SessionData } from '@/lib/session';
 import type {
@@ -6,6 +7,9 @@ import type {
   InspectionMember,
   StationInspection,
 } from '@/types/inspection';
+
+type Tx = Prisma.TransactionClient;
+type DbLike = Tx | typeof prisma;
 
 const DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
 
@@ -67,14 +71,17 @@ export async function listInspectionsForStation(stationId: number): Promise<Stat
   return rows.map((row) => shape(row as unknown as Record<string, unknown>));
 }
 
-export async function recomputeStationInspectionState(stationId: number): Promise<void> {
-  const agg = await prisma.station_inspection.aggregate({
+export async function recomputeStationInspectionState(
+  stationId: number,
+  db: DbLike = prisma,
+): Promise<void> {
+  const agg = await db.station_inspection.aggregate({
     where: { station_id: stationId },
     _max: { inspected_on: true },
   });
-  const count = await prisma.station_inspection.count({ where: { station_id: stationId } });
+  const count = await db.station_inspection.count({ where: { station_id: stationId } });
   const date = agg._max.inspected_on ? toDateOnlyISO(agg._max.inspected_on) : null;
-  await prisma.fm_station.update({
+  await db.fm_station.update({
     where: { id_fm: stationId },
     data: { date_inspected: date, inspection_69: count > 0 },
   });
@@ -134,18 +141,7 @@ export async function createInspection(input: CreateInspectionInput): Promise<St
         })),
       });
     }
-    const agg = await tx.station_inspection.aggregate({
-      where: { station_id: input.stationId },
-      _max: { inspected_on: true },
-    });
-    const count = await tx.station_inspection.count({ where: { station_id: input.stationId } });
-    await tx.fm_station.update({
-      where: { id_fm: input.stationId },
-      data: {
-        date_inspected: agg._max.inspected_on ? toDateOnlyISO(agg._max.inspected_on) : null,
-        inspection_69: count > 0,
-      },
-    });
+    await recomputeStationInspectionState(input.stationId, tx);
     return ins.id;
   });
 
