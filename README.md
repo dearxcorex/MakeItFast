@@ -24,6 +24,40 @@ You can start editing the page by modifying `app/page.tsx`. The page auto-update
 
 This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
 
+## Authentication setup
+
+The app requires login for every route except `/login`. Bootstrap the first admin before starting the dev server.
+
+1. Generate a session secret:
+   ```bash
+   openssl rand -base64 32
+   ```
+2. Add to `.env.local`:
+   ```
+   SESSION_PASSWORD="<paste output above>"
+   ADMIN_USERNAME=admin
+   ADMIN_PASSWORD=<at least 8 chars>
+   ADMIN_DISPLAY_NAME="<display name>"
+   ```
+3. Push schema and seed:
+   ```bash
+   npx prisma db push
+   npx prisma db seed
+   ```
+4. Start dev:
+   ```bash
+   npm run dev
+   ```
+5. Open `http://localhost:3000`, log in with the admin credentials, then **change the admin password** from `/admin/users` (click "Reset password" on your own row).
+
+Rotating `SESSION_PASSWORD` logs every user out (existing cookies become undecryptable).
+
+### Behavior notes
+
+- "Remember me" CHECKED → 7-day cookie. UNCHECKED → 2-hour cookie (approximation of a browser-session cookie since iron-session always attaches a maxAge).
+- 5 failed login attempts in 15 minutes throttles that username for 15 minutes.
+- Admins cannot disable or demote themselves (DB-enforced).
+
 ## Learn More
 
 To learn more about Next.js, take a look at the following resources:
