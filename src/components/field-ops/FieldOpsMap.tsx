@@ -7,9 +7,10 @@ import L from "leaflet";
 import "leaflet/dist/leaflet.css";
 import "leaflet.markercluster/dist/MarkerCluster.css";
 import "leaflet.markercluster/dist/MarkerCluster.Default.css";
-import type { FMStation } from "@/types/station";
+import type { FMStation, UserLocation } from "@/types/station";
 import type { InterferenceSite } from "@/types/interference";
 import { makeClusterIcon } from "@/utils/clusterIcon";
+import { createLocationIcon } from "@/utils/mapHelpers";
 
 export type FieldSelection =
   | { kind: "fm"; id: string | number }
@@ -291,6 +292,7 @@ export function FieldOpsMap({
   markingSourceForId = null,
   onMarkSource,
   onCancelMarkSource,
+  userLocation,
 }: {
   stations: FMStation[];
   interference: InterferenceSite[];
@@ -301,6 +303,7 @@ export function FieldOpsMap({
   markingSourceForId?: number | null;
   onMarkSource?: (siteId: number, lat: number, lng: number) => void;
   onCancelMarkSource?: () => void;
+  userLocation?: UserLocation;
 }) {
   const isMarking = markingSourceForId !== null;
   const sourcedSites = useMemo(
@@ -518,6 +521,13 @@ export function FieldOpsMap({
             if (markingSourceForId !== null) onMarkSource(markingSourceForId, lat, lng);
           }}
           onCancel={() => onCancelMarkSource?.()}
+        />
+      )}
+
+      {userLocation && (
+        <Marker
+          position={[userLocation.latitude, userLocation.longitude]}
+          icon={createLocationIcon({ heading: null })}
         />
       )}
 
