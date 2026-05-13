@@ -44,13 +44,19 @@ export default function LoginPage() {
 
   return (
     <div
-      className="field-ops-root min-h-screen flex items-center justify-center bg-[var(--fo-canvas)] p-6"
-      style={{ color: "var(--fo-text)" }}
+      className="field-ops-root min-h-screen flex items-center justify-center p-6"
+      style={{
+        background: "var(--fo-canvas)",
+        color: "var(--fo-text)",
+      }}
     >
       <form
         onSubmit={onSubmit}
-        className="w-full max-w-sm rounded-2xl bg-[var(--fo-band)] p-6 shadow-xl space-y-4"
-        style={{ color: "var(--fo-text)" }}
+        className="w-full max-w-sm rounded-2xl p-6 shadow-xl space-y-4"
+        style={{
+          background: "var(--fo-band)",
+          color: "var(--fo-text)",
+        }}
       >
         <h1 className="text-2xl font-semibold text-center">Field Ops</h1>
 

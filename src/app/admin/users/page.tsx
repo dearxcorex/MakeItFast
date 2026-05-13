@@ -52,8 +52,11 @@ export default function AdminUsersPage() {
 
   return (
     <div
-      className="field-ops-root min-h-screen bg-[var(--fo-canvas)] p-6"
-      style={{ color: "var(--fo-text)" }}
+      className="field-ops-root min-h-screen p-6"
+      style={{
+        background: "var(--fo-canvas)",
+        color: "var(--fo-text)",
+      }}
     >
       <header className="flex items-center justify-between mb-4">
         <div className="flex items-center gap-3">
