@@ -1,10 +1,10 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { FMStation } from '@/types/station';
-import { formatInspectionDate } from '@/utils/mapHelpers';
 import LoadingSpinner from './LoadingSpinner';
 import type { StationInspection } from '@/types/inspection';
+import InspectionPanel from '@/components/inspection/InspectionPanel';
 
 interface StationCardProps {
   station: FMStation;
@@ -23,12 +23,20 @@ interface StationCardProps {
 export default function StationCard({
   station,
   onUpdateStation,
+  inspectionHistory,
+  inspectors,
+  currentUser,
+  onLoadInspections,
+  onCreateInspection,
   isMobile = false,
   showStationIndex,
 }: StationCardProps) {
   const [loadingOnAir, setLoadingOnAir] = useState(false);
-  const [loadingInspection69, setLoadingInspection69] = useState(false);
   const [loadingDetails, setLoadingDetails] = useState(false);
+
+  useEffect(() => {
+    onLoadInspections?.();
+  }, [station.id, onLoadInspections]);
 
   const handleOnAirToggle = async (e: React.MouseEvent) => {
     e.preventDefault();
@@ -40,20 +48,6 @@ export default function StationCard({
       await new Promise(resolve => setTimeout(resolve, isMobile ? 300 : 500));
     } finally {
       setLoadingOnAir(false);
-    }
-  };
-
-  const handleInspection69Toggle = async (e: React.MouseEvent) => {
-    e.preventDefault();
-    e.stopPropagation();
-    if (!onUpdateStation || loadingInspection69) return;
-    setLoadingInspection69(true);
-    try {
-      const newStatus = station.inspection69 === 'ตรวจแล้ว' ? 'ยังไม่ตรวจ' : 'ตรวจแล้ว';
-      await onUpdateStation(station.id, { inspection69: newStatus });
-      await new Promise(resolve => setTimeout(resolve, isMobile ? 300 : 500));
-    } finally {
-      setLoadingInspection69(false);
     }
   };
 
@@ -70,7 +64,7 @@ export default function StationCard({
     }
   };
 
-  const isLoading = loadingOnAir || loadingInspection69 || loadingDetails;
+  const isLoading = loadingOnAir || loadingDetails;
   const borderClass = isMobile ? 'border rounded-lg p-3 bg-muted/20 hover:bg-muted/30 transition-colors' : '';
   const containerStyle = isMobile ? {
     contain: 'layout style' as const,
@@ -155,42 +149,15 @@ export default function StationCard({
         )}
       </div>
 
-      {/* Inspection Status Row */}
-      <div className={`flex items-center justify-between gap-2 p-2 ${isMobile ? 'bg-muted/30 rounded border' : 'bg-muted/20 rounded-lg border'} border-border/50 mb-${isMobile ? '2' : '3'}`}>
-        <span className={`inline-flex items-center gap-${isMobile ? '1' : '2'} px-2 py-1 rounded-md text-xs font-medium ${
-          station.inspection69 === 'ตรวจแล้ว' ? 'badge-success' : 'badge-warning'
-        }`}>
-          {station.inspection69 === 'ตรวจแล้ว' ? '✅' : '⏳'}
-          <span className={`break-words ${isMobile ? 'text-xs' : ''}`}>{station.inspection69 || 'ยังไม่ตรวจ'}</span>
-        </span>
-        {onUpdateStation && (
-          <button
-            onClick={handleInspection69Toggle}
-            disabled={loadingInspection69}
-            className={`px-3 py-1.5 text-xs rounded${isMobile ? '' : '-md'} font-medium whitespace-nowrap transition-all duration-200 ${
-              loadingInspection69
-                ? 'bg-muted text-muted-foreground cursor-not-allowed'
-                : 'bg-primary text-primary-foreground hover:bg-primary/90'
-            }`}
-            aria-label={`Toggle ${station.name} inspection status`}
-          >
-            {loadingInspection69 ? (
-              <LoadingSpinner size="sm" text={isMobile ? 'Save...' : 'Saving...'} />
-            ) : (
-              station.inspection69 === 'ตรวจแล้ว' ? 'Inspected' : 'Inspect'
-            )}
-          </button>
-        )}
-      </div>
-
-      {/* Inspection Date */}
-      {station.dateInspected && (
-        <div className={`flex items-center gap-2 text-xs ${isMobile ? '' : 'sm:text-sm'} text-muted-foreground ${isMobile ? 'bg-muted/30 p-2 rounded border' : 'bg-muted/20 p-2 rounded-lg border'} border-border/50 mb-${isMobile ? '2' : '3'}`}>
-          <svg className={`w-3 h-3 ${isMobile ? '' : 'sm:w-4 sm:h-4'} flex-shrink-0`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
-          </svg>
-          <span>Inspected: {formatInspectionDate(station.dateInspected)}</span>
-        </div>
+      {/* Inspection Panel */}
+      {onCreateInspection && currentUser && inspectors && (
+        <InspectionPanel
+          stationId={Number(station.id)}
+          history={inspectionHistory ?? []}
+          currentUser={currentUser}
+          inspectors={inspectors}
+          onCreate={onCreateInspection}
+        />
       )}
 
       {/* Hashtag Details */}

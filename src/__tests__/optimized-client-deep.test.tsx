@@ -79,6 +79,15 @@ vi.mock('@/components/client/MobileFilterBar', () => ({
 const mockFetch = vi.fn();
 global.fetch = mockFetch;
 
+// Default response for the on-mount inspectors fetch (and any unconfigured calls).
+// Tests that need to assert on a specific request use mockFetch.mockResolvedValueOnce(...)
+// to take priority over this default.
+const defaultFetchResponse = () =>
+  Promise.resolve({ ok: true, json: () => Promise.resolve({ users: [] }) });
+beforeEach(() => {
+  mockFetch.mockImplementation(defaultFetchResponse);
+});
+
 import OptimizedFMStationClient from '@/components/OptimizedFMStationClient';
 import type { FMStation } from '@/types/station';
 
@@ -151,6 +160,9 @@ describe('OptimizedFMStationClient - handleUpdateStation', () => {
   });
 
   it('handles API failure without crashing', async () => {
+    // First call: on-mount /api/users/inspectors (handled by default mock).
+    // Second call: PATCH that returns 500.
+    mockFetch.mockResolvedValueOnce({ ok: true, json: () => Promise.resolve({ users: [] }) });
     mockFetch.mockResolvedValueOnce({
       ok: false,
       status: 500,
@@ -164,11 +176,12 @@ describe('OptimizedFMStationClient - handleUpdateStation', () => {
       await onUpdateStation('1', { onAir: false });
     });
 
-    // Should not crash
-    expect(mockFetch).toHaveBeenCalledTimes(1);
+    // Should not crash. Two calls expected: inspectors (on mount) + PATCH.
+    expect(mockFetch).toHaveBeenCalledTimes(2);
   });
 
   it('handles network error without crashing', async () => {
+    mockFetch.mockResolvedValueOnce({ ok: true, json: () => Promise.resolve({ users: [] }) });
     mockFetch.mockRejectedValueOnce(new Error('Network error'));
 
     render(<OptimizedFMStationClient {...defaultProps} />);
@@ -179,7 +192,7 @@ describe('OptimizedFMStationClient - handleUpdateStation', () => {
       await onUpdateStation('1', { onAir: false });
     });
 
-    expect(mockFetch).toHaveBeenCalledTimes(1);
+    expect(mockFetch).toHaveBeenCalledTimes(2);
   });
 
   it('handles station not found gracefully', async () => {
@@ -191,11 +204,14 @@ describe('OptimizedFMStationClient - handleUpdateStation', () => {
       await onUpdateStation('999', { onAir: false });
     });
 
-    // Should not call fetch for non-existent station
-    expect(mockFetch).not.toHaveBeenCalled();
+    // Should not call fetch for non-existent station — the only fetch call
+    // is the on-mount inspectors fetch.
+    const patchCalls = mockFetch.mock.calls.filter((c) => String(c[0]).startsWith('/api/stations/'));
+    expect(patchCalls).toHaveLength(0);
   });
 
   it('sends inspection68 and inspection69 updates', async () => {
+    mockFetch.mockResolvedValueOnce({ ok: true, json: () => Promise.resolve({ users: [] }) });
     mockFetch.mockResolvedValueOnce({
       ok: true,
       json: () => Promise.resolve({ data: {
@@ -212,12 +228,14 @@ describe('OptimizedFMStationClient - handleUpdateStation', () => {
       await onUpdateStation('1', { inspection68: 'ตรวจแล้ว', inspection69: 'ตรวจแล้ว' });
     });
 
-    const body = JSON.parse(mockFetch.mock.calls[0][1].body);
+    const patchCall = mockFetch.mock.calls.find((c) => String(c[0]).startsWith('/api/stations/'));
+    const body = JSON.parse(patchCall![1].body);
     expect(body.inspection68).toBe('ตรวจแล้ว');
     expect(body.inspection69).toBe('ตรวจแล้ว');
   });
 
   it('sends details update', async () => {
+    mockFetch.mockResolvedValueOnce({ ok: true, json: () => Promise.resolve({ users: [] }) });
     mockFetch.mockResolvedValueOnce({
       ok: true,
       json: () => Promise.resolve({ data: {
@@ -234,7 +252,8 @@ describe('OptimizedFMStationClient - handleUpdateStation', () => {
       await onUpdateStation('1', { details: '#deviation' });
     });
 
-    const body = JSON.parse(mockFetch.mock.calls[0][1].body);
+    const patchCall = mockFetch.mock.calls.find((c) => String(c[0]).startsWith('/api/stations/'));
+    const body = JSON.parse(patchCall![1].body);
     expect(body.details).toBe('#deviation');
   });
 });

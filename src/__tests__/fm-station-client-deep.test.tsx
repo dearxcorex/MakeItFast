@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, afterEach, beforeAll } from 'vitest';
+import { describe, it, expect, vi, afterEach, beforeAll, beforeEach } from 'vitest';
 import { render, fireEvent, cleanup, act } from '@testing-library/react';
 import React from 'react';
 
@@ -82,6 +82,14 @@ global.fetch = mockFetch;
 
 import OptimizedFMStationClient from '@/components/OptimizedFMStationClient';
 import type { FMStation } from '@/types/station';
+
+beforeEach(() => {
+  // Default response for the on-mount /api/users/inspectors fetch.
+  // Tests using mockFetch.mockResolvedValueOnce(...) take priority.
+  mockFetch.mockImplementation(() =>
+    Promise.resolve({ ok: true, json: () => Promise.resolve({ users: [] }) }),
+  );
+});
 
 afterEach(() => {
   cleanup();

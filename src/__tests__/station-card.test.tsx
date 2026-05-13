@@ -59,11 +59,6 @@ describe('StationCard', () => {
     expect(container.textContent).toContain('Main');
   });
 
-  it('shows inspection status', () => {
-    const { container } = render(<StationCard station={makeStation({ inspection69: 'ตรวจแล้ว' })} />);
-    expect(container.textContent).toContain('ตรวจแล้ว');
-  });
-
   it('renders Set On/Off button with onUpdateStation', () => {
     const onUpdate = vi.fn();
     const { container } = render(
@@ -75,15 +70,23 @@ describe('StationCard', () => {
     expect(setOffBtn).toBeTruthy();
   });
 
-  it('renders Inspect button with onUpdateStation', () => {
+  it('renders Record inspection button when inspection props are provided', () => {
     const onUpdate = vi.fn();
+    const onCreateInspection = vi.fn().mockResolvedValue(undefined);
     const { container } = render(
-      <StationCard station={makeStation()} onUpdateStation={onUpdate} />
+      <StationCard
+        station={makeStation()}
+        onUpdateStation={onUpdate}
+        currentUser={{ id: 1, displayName: 'iff' }}
+        inspectors={[]}
+        inspectionHistory={[]}
+        onCreateInspection={onCreateInspection}
+      />
     );
-    const inspectBtn = Array.from(container.querySelectorAll('button')).find(
-      (b) => b.textContent?.includes('Inspect')
+    const recordBtn = Array.from(container.querySelectorAll('button')).find(
+      (b) => b.textContent?.includes('Record inspection')
     );
-    expect(inspectBtn).toBeTruthy();
+    expect(recordBtn).toBeTruthy();
   });
 
   it('toggles on-air when button clicked', async () => {
@@ -104,22 +107,32 @@ describe('StationCard', () => {
     vi.useRealTimers();
   });
 
-  it('toggles inspection69 when button clicked', async () => {
-    vi.useFakeTimers();
+  it('opens NewInspectionForm when Record inspection button clicked', async () => {
     const onUpdate = vi.fn().mockResolvedValue(undefined);
+    const onCreateInspection = vi.fn().mockResolvedValue(undefined);
     const { container } = render(
-      <StationCard station={makeStation({ inspection69: 'ยังไม่ตรวจ' })} onUpdateStation={onUpdate} />
+      <StationCard
+        station={makeStation()}
+        onUpdateStation={onUpdate}
+        currentUser={{ id: 1, displayName: 'iff' }}
+        inspectors={[]}
+        inspectionHistory={[]}
+        onCreateInspection={onCreateInspection}
+      />
     );
-    const inspectBtn = Array.from(container.querySelectorAll('button')).find(
-      (b) => b.textContent?.includes('Inspect')
+    const recordBtn = Array.from(container.querySelectorAll('button')).find(
+      (b) => b.textContent?.includes('Record inspection')
     )!;
 
     await act(async () => {
-      fireEvent.click(inspectBtn);
+      fireEvent.click(recordBtn);
     });
 
-    expect(onUpdate).toHaveBeenCalledWith('1', { inspection69: 'ตรวจแล้ว' });
-    vi.useRealTimers();
+    // After clicking, the form should be visible (the panel hides the trigger when recording)
+    const stillHasRecordBtn = Array.from(container.querySelectorAll('button')).find(
+      (b) => b.textContent?.includes('Record inspection')
+    );
+    expect(stillHasRecordBtn).toBeFalsy();
   });
 
   it('renders hashtag detail buttons with onUpdateStation', () => {
@@ -147,11 +160,14 @@ describe('StationCard', () => {
     expect(onUpdate).toHaveBeenCalledWith('1', { details: '#deviation' });
   });
 
-  it('shows dateInspected when present', () => {
+  it('omits the legacy "Inspected:" date row even when dateInspected is set', () => {
     const { container } = render(
       <StationCard station={makeStation({ dateInspected: '2026-01-15' })} />
     );
-    expect(container.textContent).toContain('Inspected:');
+    // The card no longer renders its own dateInspected label;
+    // history dates live inside InspectionPanel (mounted only when inspection
+    // props are provided).
+    expect(container.textContent).not.toContain('Inspected:');
   });
 
   it('shows station index when provided', () => {
@@ -188,14 +204,14 @@ describe('StationCard', () => {
     expect(buttons.length).toBe(0);
   });
 
-  it('shows "Inspected" button text when inspection69 is ตรวจแล้ว', () => {
+  it('does not render InspectionPanel when inspection props are missing', () => {
     const onUpdate = vi.fn();
     const { container } = render(
-      <StationCard station={makeStation({ inspection69: 'ตรวจแล้ว' })} onUpdateStation={onUpdate} />
+      <StationCard station={makeStation()} onUpdateStation={onUpdate} />
     );
-    const inspectedBtn = Array.from(container.querySelectorAll('button')).find(
-      (b) => b.textContent?.includes('Inspected')
+    const recordBtn = Array.from(container.querySelectorAll('button')).find(
+      (b) => b.textContent?.includes('Record inspection')
     );
-    expect(inspectedBtn).toBeTruthy();
+    expect(recordBtn).toBeFalsy();
   });
 });
