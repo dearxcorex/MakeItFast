@@ -26,6 +26,8 @@ model fm_station {
   revoked_note     String?
   permit           String?
 
+  inspections   station_inspection[]
+
   @@index([revoked])
 }
 
@@ -93,5 +95,39 @@ model user {
   updated_at    DateTime @updatedAt
   created_by    Int?
 
+  inspections_led    station_inspection[]        @relation("inspection_lead")
+  inspection_members station_inspection_member[]
+
   @@index([username])
+}
+
+model station_inspection {
+  id            Int       @id @default(autoincrement())
+  station_id    Int
+  inspected_on  DateTime  @db.Date
+  lead_user_id  Int
+  notes         String?
+  source        String    @default("app")
+  created_at    DateTime  @default(now())
+  updated_at    DateTime  @updatedAt
+
+  station fm_station @relation(fields: [station_id], references: [id_fm])
+  lead    user       @relation("inspection_lead", fields: [lead_user_id], references: [id])
+  members station_inspection_member[]
+
+  @@index([station_id, inspected_on(sort: Desc)])
+  @@index([lead_user_id])
+  @@unique([station_id, inspected_on, lead_user_id])
+}
+
+model station_inspection_member {
+  inspection_id Int
+  user_id       Int
+  role          String  @default("helper")
+
+  inspection station_inspection @relation(fields: [inspection_id], references: [id], onDelete: Cascade)
+  member     user               @relation(fields: [user_id], references: [id])
+
+  @@id([inspection_id, user_id])
+  @@index([user_id])
 }
