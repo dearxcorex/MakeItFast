@@ -1,10 +1,12 @@
 "use client";
 
+import Link from "next/link";
 import type { FMStation, UserLocation } from "@/types/station";
 import type { InterferenceSite } from "@/types/interference";
 import type { TypeFilter } from "./FieldOpsFilters";
 import type { GeolocationStatus } from "@/hooks/useGeolocation";
 import { computeKpis } from "@/utils/fieldOpsKpi";
+import { useCurrentUser } from "@/hooks/useCurrentUser";
 
 export function FieldOpsHeader({
   stations,
@@ -157,6 +159,8 @@ export function FieldOpsHeader({
         </span>
         <span style={{ lineHeight: 1 }}>LIVE</span>
       </div>
+
+      <UserChip accentText={accentText} textColor={textColor} borderColor={borderColor} />
     </header>
   );
 }
@@ -274,6 +278,7 @@ function MobileHeader({
         accentText={accentText}
         labelColor={labelColor}
       />
+      <UserChip accentText={accentText} textColor={textColor} borderColor={borderColor} compact />
     </header>
   );
 }
@@ -325,5 +330,83 @@ function LocationBadge({
     >
       {buttonLabel}
     </button>
+  );
+}
+
+function UserChip({
+  accentText,
+  textColor,
+  borderColor,
+  compact = false,
+}: {
+  accentText: string;
+  textColor: string;
+  borderColor: string;
+  compact?: boolean;
+}) {
+  const { user, loading, logout } = useCurrentUser();
+  if (loading || !user) return null;
+
+  const fontSize = compact ? 11 : 12;
+
+  return (
+    <div style={{ display: "inline-flex", alignItems: "center", gap: 8 }}>
+      {user.role === "admin" && !compact && (
+        <Link
+          href="/admin/users"
+          className="fo-mono"
+          style={{
+            padding: "6px 12px",
+            border: `1px solid ${borderColor}`,
+            color: textColor,
+            borderRadius: 999,
+            fontSize: 10,
+            lineHeight: 1,
+            letterSpacing: "0.16em",
+            textDecoration: "none",
+          }}
+        >
+          MANAGE USERS
+        </Link>
+      )}
+      <span style={{ fontSize, color: textColor, lineHeight: 1 }}>
+        {user.displayName}
+      </span>
+      {user.role === "admin" && (
+        <span
+          className="fo-mono"
+          style={{
+            fontSize: 9,
+            padding: "2px 6px",
+            border: `1px solid ${accentText}`,
+            color: accentText,
+            borderRadius: 999,
+            letterSpacing: "0.16em",
+            lineHeight: 1,
+          }}
+        >
+          ADMIN
+        </span>
+      )}
+      <button
+        type="button"
+        onClick={() => void logout()}
+        aria-label="Log out"
+        title="Log out"
+        style={{
+          border: `1px solid ${borderColor}`,
+          background: "transparent",
+          color: textColor,
+          width: 26,
+          height: 26,
+          borderRadius: 999,
+          cursor: "pointer",
+          fontSize: 13,
+          lineHeight: 1,
+        }}
+      >
+        ⏻
+      </button>
+    </div>
   );
 }
