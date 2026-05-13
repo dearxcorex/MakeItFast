@@ -137,22 +137,23 @@ describe("POST /api/auth/login", () => {
     expect(setCookie?.options.maxAge).toBeGreaterThan(sevenDays - 120);
   });
 
-  it("rememberMe=false produces a non-persistent cookie distinct from rememberMe=true", async () => {
-    // buildSessionOptions("session") omits maxAge entirely. iron-session always
-    // attaches *some* maxAge to the outgoing Set-Cookie (its internal default
-    // ttl is 14 days, with no path to emit a header-less session cookie), so we
-    // assert the semantic invariant the spec actually cares about: a session-mode
-    // cookie must differ from a persistent-mode cookie, and must not carry the
-    // configured 7-day persistent TTL.
+  it("rememberMe=false produces a short-lived cookie (~2h, not 7d)", async () => {
+    // iron-session always attaches a maxAge; we cap session-mode cookies at
+    // 2 hours to approximate "dies on browser close" semantics on shared
+    // devices.
     vi.mocked(prisma.user.findUnique).mockResolvedValue(await userRow());
     await POST(
       req({ username: "alice", password: "hunter2!!", rememberMe: false })
     );
     const sessionCookie = cookieMutations.find((c) => c.name === "fm_session");
+    const twoHours = 60 * 60 * 2;
     const sevenDays = 60 * 60 * 24 * 7;
     expect(sessionCookie).toBeDefined();
-    // Iron-session in session-mode falls back to its 14-day default ttl, so the
-    // emitted maxAge is well above our 7-day persistent TTL.
-    expect(sessionCookie?.options.maxAge).toBeGreaterThan(sevenDays);
+    expect(sessionCookie?.options.maxAge).toBeGreaterThan(0);
+    // Approximately the 2h session-mode TTL (allow 120s iron-session skew).
+    expect(sessionCookie?.options.maxAge).toBeLessThanOrEqual(twoHours);
+    expect(sessionCookie?.options.maxAge).toBeGreaterThan(twoHours - 120);
+    // And clearly distinct from the 7-day persistent TTL.
+    expect(sessionCookie?.options.maxAge).toBeLessThan(sevenDays);
   });
 });

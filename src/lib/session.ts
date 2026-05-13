@@ -21,7 +21,11 @@ function getPassword(): string {
   return p;
 }
 
-export const SESSION_TTL_SECONDS = 60 * 60 * 24 * 7; // 7 days
+export const SESSION_TTL_SECONDS = 60 * 60 * 24 * 7; // 7 days for "Remember me"
+// iron-session always attaches some maxAge to outgoing Set-Cookie (no path to
+// emit a header-less browser-session cookie). To approximate "dies on browser
+// close" semantics, we cap session-mode cookies at 2 hours.
+export const SESSION_MODE_TTL_SECONDS = 60 * 60 * 2;
 
 export type SessionCookieMode = "persistent" | "session";
 
@@ -34,7 +38,8 @@ export function buildSessionOptions(mode: SessionCookieMode) {
       httpOnly: true,
       sameSite: "lax" as const,
       path: "/",
-      ...(mode === "persistent" ? { maxAge: SESSION_TTL_SECONDS } : {}),
+      maxAge:
+        mode === "persistent" ? SESSION_TTL_SECONDS : SESSION_MODE_TTL_SECONDS,
     },
   };
 }
