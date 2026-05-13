@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useCallback, useEffect, useState } from "react";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
 import type { PublicUser } from "@/types/user";
@@ -55,11 +56,23 @@ export default function AdminUsersPage() {
       style={{ color: "var(--fo-text)" }}
     >
       <header className="flex items-center justify-between mb-4">
-        <h1 className="text-xl font-semibold">Manage users</h1>
+        <div className="flex items-center gap-3">
+          <Link
+            href="/"
+            className="text-sm opacity-80 hover:opacity-100"
+            style={{ color: "var(--fo-text)" }}
+          >
+            ← Back
+          </Link>
+          <h1 className="text-xl font-semibold" style={{ color: "var(--fo-text)" }}>
+            Manage users
+          </h1>
+        </div>
         <button
           type="button"
           onClick={() => setCreating(true)}
-          className="rounded-md bg-[var(--fo-accent)] text-black px-3 py-1.5 text-sm"
+          className="rounded-md bg-[var(--fo-accent)] px-3 py-1.5 text-sm font-medium"
+          style={{ color: "#001e2b" }}
         >
           + New user
         </button>

@@ -22,7 +22,10 @@
   --fo-sketch: var(--fo-font-kalam), 'Kalam', cursive;
 
   background: var(--fo-paper);
-  color: var(--fo-ink);
+  /* Default to the theme-aware token so containers without [data-theme="light"]
+     inherit white text on the dark canvas. The light-theme variant below
+     re-asserts color: var(--fo-text) with the same token but flipped value. */
+  color: var(--fo-text);
   font-family: var(--fo-body);
   min-height: 100vh;
 }
