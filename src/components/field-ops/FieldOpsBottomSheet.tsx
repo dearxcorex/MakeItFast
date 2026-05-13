@@ -5,6 +5,8 @@ import type { FMStation } from "@/types/station";
 import type { InterferenceSite } from "@/types/interference";
 import type { FieldSelection } from "./FieldOpsMap";
 import { parseLatLngInput } from "@/utils/parseLatLng";
+import type { StationInspection } from "@/types/inspection";
+import InspectionPanel from "@/components/inspection/InspectionPanel";
 
 function googleMapsUrl(lat: number, lng: number) {
   return `https://www.google.com/maps/dir/?api=1&destination=${lat},${lng}&travelmode=driving`;
@@ -23,6 +25,11 @@ export function FieldOpsBottomSheet({
   onCancelMarkSource,
   onClearSource,
   onSubmitSourceCoords,
+  inspectionHistory,
+  inspectors,
+  currentUser,
+  onLoadInspections,
+  onCreateInspection,
 }: {
   selection: FieldSelection;
   station: FMStation | null;
@@ -36,6 +43,16 @@ export function FieldOpsBottomSheet({
   onCancelMarkSource?: () => void;
   onClearSource?: () => void;
   onSubmitSourceCoords?: (lat: number, lng: number) => void;
+  inspectionHistory?: StationInspection[];
+  inspectors?: { id: number; username: string; displayName: string }[];
+  currentUser?: { id: number; displayName: string };
+  onLoadInspections?: () => void;
+  onCreateInspection?: (input: {
+    stationId: number;
+    inspectedOn: string;
+    helperUserIds: number[];
+    notes?: string;
+  }) => Promise<void>;
 }) {
   const [expanded, setExpanded] = useState(false);
   const [coordsOpen, setCoordsOpen] = useState(false);
@@ -50,6 +67,14 @@ export function FieldOpsBottomSheet({
     setCoordError(null);
     setCoordsOpen(false);
   }, [intSiteId]);
+
+  // Refresh inspection history whenever a different FM station opens.
+  const fmStationId = selection?.kind === "fm" ? station?.id ?? null : null;
+  useEffect(() => {
+    if (fmStationId != null) {
+      onLoadInspections?.();
+    }
+  }, [fmStationId, onLoadInspections]);
 
   // Marking banner takes over the sheet so the map stays fully visible.
   if (marking && selection?.kind === "int") {
@@ -405,6 +430,18 @@ export function FieldOpsBottomSheet({
         </div>
       )}
 
+      {isFM && onCreateInspection && currentUser && inspectors && (
+        <div style={{ padding: "10px 16px 0" }}>
+          <InspectionPanel
+            stationId={Number(station!.id)}
+            history={inspectionHistory ?? []}
+            currentUser={currentUser}
+            inspectors={inspectors}
+            onCreate={onCreateInspection}
+          />
+        </div>
+      )}
+
       <div style={{ height: 12 }} />
 
       {expanded && (
@@ -540,9 +577,8 @@ export function FieldOpsBottomSheet({
               if (station!.transmitterPower !== undefined) {
                 cells.push(<Cell key="power" label="POWER" value={`${station!.transmitterPower} W`} />);
               }
-              if (station!.dateInspected) {
-                cells.push(<Cell key="inspected" label="INSPECTED" value={station!.dateInspected} />);
-              }
+              // INSPECTED cell removed — InspectionPanel below now shows the
+              // latest inspection (date + lead + helpers) in a richer form.
             } else {
               if (site!.estimateDistance !== null && site!.estimateDistance !== undefined) {
                 cells.push(<Cell key="dist" label="DIST" value={`${site!.estimateDistance.toFixed(1)} km`} />);
