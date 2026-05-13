@@ -1,8 +1,9 @@
 "use client";
 
-import type { FMStation } from "@/types/station";
+import type { FMStation, UserLocation } from "@/types/station";
 import type { InterferenceSite } from "@/types/interference";
 import type { TypeFilter } from "./FieldOpsFilters";
+import type { GeolocationStatus } from "@/hooks/useGeolocation";
 import { computeKpis } from "@/utils/fieldOpsKpi";
 
 export function FieldOpsHeader({
@@ -13,6 +14,9 @@ export function FieldOpsHeader({
   onToggleTheme,
   isMobile = false,
   onOpenDrawer,
+  locationStatus,
+  userLocation,
+  onRetryLocation,
 }: {
   stations: FMStation[];
   interference: InterferenceSite[];
@@ -21,6 +25,9 @@ export function FieldOpsHeader({
   onToggleTheme: () => void;
   isMobile?: boolean;
   onOpenDrawer?: () => void;
+  locationStatus?: GeolocationStatus;
+  userLocation?: UserLocation;
+  onRetryLocation?: () => void;
 }) {
   const kpis = computeKpis(stations, interference, type);
 
@@ -42,6 +49,10 @@ export function FieldOpsHeader({
       borderColor={borderColor}
       accentText={accentText}
       onOpenDrawer={onOpenDrawer}
+      locationStatus={locationStatus}
+      userLocation={userLocation}
+      onRetryLocation={onRetryLocation}
+      labelColor={labelColor}
     />;
   }
 
@@ -87,6 +98,14 @@ export function FieldOpsHeader({
         value={kpis.critical}
         warn
         textColor={textColor}
+        labelColor={labelColor}
+      />
+
+      <LocationBadge
+        status={locationStatus}
+        userLocation={userLocation}
+        onRetry={onRetryLocation}
+        accentText={accentText}
         labelColor={labelColor}
       />
 
@@ -177,6 +196,10 @@ function MobileHeader({
   borderColor,
   accentText,
   onOpenDrawer,
+  locationStatus,
+  userLocation,
+  onRetryLocation,
+  labelColor,
 }: {
   scopeLabel: string;
   headerBg: string;
@@ -184,6 +207,10 @@ function MobileHeader({
   borderColor: string;
   accentText: string;
   onOpenDrawer?: () => void;
+  locationStatus?: GeolocationStatus;
+  userLocation?: UserLocation;
+  onRetryLocation?: () => void;
+  labelColor: string;
 }) {
   return (
     <header
@@ -223,6 +250,63 @@ function MobileHeader({
           Field Operations
         </div>
       </div>
+      <LocationBadge
+        status={locationStatus}
+        userLocation={userLocation}
+        onRetry={onRetryLocation}
+        accentText={accentText}
+        labelColor={labelColor}
+      />
     </header>
+  );
+}
+
+function LocationBadge({
+  status,
+  userLocation,
+  onRetry,
+  accentText,
+  labelColor,
+}: {
+  status: GeolocationStatus | undefined;
+  userLocation: UserLocation | undefined;
+  onRetry: (() => void) | undefined;
+  accentText: string;
+  labelColor: string;
+}) {
+  if (!status || status === 'unsupported') return null;
+
+  const pillStyle: React.CSSProperties = {
+    padding: '6px 12px',
+    border: `1px solid ${accentText}`,
+    color: accentText,
+    borderRadius: 999,
+    fontSize: 10,
+    letterSpacing: '0.16em',
+    background: 'transparent',
+    cursor:
+      status === 'denied' || status === 'timeout' || status === 'unavailable'
+        ? 'pointer'
+        : 'default',
+  };
+
+  if (status === 'locating') {
+    return <div className="fo-mono" style={pillStyle}>○ LOCATING…</div>;
+  }
+  if (status === 'granted') {
+    const acc = userLocation?.accuracy;
+    const label = acc != null ? `● ±${Math.round(acc)}m` : '● LOCATED';
+    return <div className="fo-mono" style={pillStyle}>{label}</div>;
+  }
+  const buttonLabel = status === 'denied' ? '⚠ ENABLE LOCATION' : '↻ RETRY LOCATION';
+  return (
+    <button
+      type="button"
+      className="fo-mono"
+      onClick={onRetry}
+      style={{ ...pillStyle, color: labelColor, borderColor: labelColor }}
+    >
+      {buttonLabel}
+    </button>
   );
 }

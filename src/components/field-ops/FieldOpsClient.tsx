@@ -76,7 +76,6 @@ export default function FieldOpsClient({
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [theme, setTheme] = useState<"dark" | "light">("dark");
   const [markingSourceForId, setMarkingSourceForId] = useState<number | null>(null);
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const { userLocation, status: locationStatus, retry: retryLocation } = useGeolocation();
 
   useEffect(() => {
@@ -397,6 +396,9 @@ export default function FieldOpsClient({
         onToggleTheme={() => setTheme((t) => (t === "dark" ? "light" : "dark"))}
         isMobile={isMobile}
         onOpenDrawer={() => setDrawerOpen(true)}
+        locationStatus={locationStatus}
+        userLocation={userLocation}
+        onRetryLocation={retryLocation}
       />
 
       <div style={{ flex: 1, display: "flex", minHeight: 0 }}>
