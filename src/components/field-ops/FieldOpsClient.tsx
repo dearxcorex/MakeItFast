@@ -8,6 +8,7 @@ import { FieldOpsNav, type FieldOpsTab } from "./FieldOpsNav";
 import { FieldOpsHeader } from "./FieldOpsHeader";
 import { FieldOpsFilters, DEFAULT_FILTERS, type FieldFilters } from "./FieldOpsFilters";
 import { dedupeInterferenceSites } from "@/utils/dedupeInterference";
+import { useGeolocation } from "@/hooks/useGeolocation";
 import { haversineDistanceKm } from "@/utils/distance";
 import { FieldOpsCurrentFM, FieldOpsCurrentINT } from "./FieldOpsCurrent";
 import { FieldOpsBottomSheet } from "./FieldOpsBottomSheet";
@@ -75,6 +76,8 @@ export default function FieldOpsClient({
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [theme, setTheme] = useState<"dark" | "light">("dark");
   const [markingSourceForId, setMarkingSourceForId] = useState<number | null>(null);
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  const { userLocation, status: locationStatus, retry: retryLocation } = useGeolocation();
 
   useEffect(() => {
     const check = () => setIsMobile(window.innerWidth < 900);
@@ -431,6 +434,7 @@ export default function FieldOpsClient({
                     markingSourceForId={markingSourceForId}
                     onMarkSource={handleMarkSource}
                     onCancelMarkSource={() => setMarkingSourceForId(null)}
+                    userLocation={userLocation}
                   />
                 </div>
 
