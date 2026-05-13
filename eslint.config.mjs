@@ -21,6 +21,13 @@ const eslintConfig = [
       "scripts/**",
     ],
   },
+  {
+    // Test files routinely use `as any` to stub mocked Prisma rows and similar fixtures.
+    files: ["src/__tests__/**/*.{ts,tsx}"],
+    rules: {
+      "@typescript-eslint/no-explicit-any": "off",
+    },
+  },
 ];
 
 export default eslintConfig;
