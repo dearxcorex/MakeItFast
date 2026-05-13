@@ -3,7 +3,7 @@
 // Names with internal whitespace are normalized (\s+ → single space) before lookup.
 export const INSPECTOR_MAP: Record<string, string> = {
   'นางสาว ปิยาพัชร เกิดไพบูลย์(เจ้าหน้าที่ตรวจสอบและปฏิบัติการ)': 'iff',
-  'พรคุณพระ กิตติวราพล': 'dao',
+  'พรคุณพระ กิตติวราพล(นตป. ก2)': 'dao',
   'นายภูวกฤต พลชิงชัย (นตป. ก2)': 'admin',
   'นายภควัต ทะสังขา(วก. ก1)': 'ice',
   'นาย ธีราทร ภิรมย์ไกรภักดิ์(ลูกจ้างประจำ)': 'daf',
