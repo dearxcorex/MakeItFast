@@ -12,6 +12,8 @@ vi.mock('leaflet', async () => {
   };
 });
 
+const setViewCalls: Array<{ center: [number, number]; zoom: number }> = [];
+
 vi.mock('react-leaflet', async () => {
   return {
     MapContainer: ({ children }: { children: React.ReactNode }) => <div data-testid="map">{children}</div>,
@@ -25,7 +27,12 @@ vi.mock('react-leaflet', async () => {
       />
     ),
     Polyline: () => null,
-    useMap: () => ({ flyTo: vi.fn(), setView: vi.fn() }),
+    useMap: () => ({
+      flyTo: vi.fn(),
+      setView: (center: [number, number], zoom: number) => {
+        setViewCalls.push({ center, zoom });
+      },
+    }),
     useMapEvents: () => null,
   };
 });
@@ -78,5 +85,40 @@ describe('FieldOpsMap — current location pin', () => {
       (m.getAttribute('data-html') ?? '').includes('location-dot')
     );
     expect(locMarker).toBeUndefined();
+  });
+
+  it('pans map to user location exactly once on first fix', async () => {
+    setViewCalls.length = 0;
+    const userLocation: UserLocation = {
+      latitude: 13.7563,
+      longitude: 100.5018,
+      accuracy: 25,
+    };
+    const { rerender } = render(
+      <FieldOpsMap
+        stations={[]}
+        interference={[]}
+        selection={null}
+        onSelect={vi.fn()}
+        flyTarget={null}
+        userLocation={userLocation}
+      />
+    );
+
+    expect(setViewCalls).toHaveLength(1);
+    expect(setViewCalls[0].center).toEqual([13.7563, 100.5018]);
+
+    rerender(
+      <FieldOpsMap
+        stations={[]}
+        interference={[]}
+        selection={null}
+        onSelect={vi.fn()}
+        flyTarget={null}
+        userLocation={{ latitude: 14.0, longitude: 101.0, accuracy: 30 }}
+      />
+    );
+
+    expect(setViewCalls).toHaveLength(1);
   });
 });

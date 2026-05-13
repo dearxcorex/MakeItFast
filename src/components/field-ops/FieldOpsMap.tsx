@@ -282,6 +282,18 @@ function ClickToMark({
   return null;
 }
 
+function InitialLocationPan({ location }: { location: UserLocation | undefined }) {
+  const map = useMap();
+  const didPanRef = useRef(false);
+  useEffect(() => {
+    if (didPanRef.current) return;
+    if (!location) return;
+    map.setView([location.latitude, location.longitude], 13);
+    didPanRef.current = true;
+  }, [location, map]);
+  return null;
+}
+
 export function FieldOpsMap({
   stations,
   interference,
@@ -524,6 +536,7 @@ export function FieldOpsMap({
         />
       )}
 
+      <InitialLocationPan location={userLocation} />
       {userLocation && (
         <Marker
           position={[userLocation.latitude, userLocation.longitude]}
