@@ -45,6 +45,7 @@ export function ResetPasswordModal({ user, onClose, onDone }: Props) {
       <form
         onSubmit={onSubmit}
         className="w-full max-w-sm rounded-2xl bg-[var(--fo-band)] p-6 space-y-4"
+        style={{ color: "var(--fo-text)" }}
       >
         <h2 className="text-lg font-semibold">
           Reset password for{" "}

@@ -50,7 +50,10 @@ export default function AdminUsersPage() {
   }
 
   return (
-    <div className="field-ops-root min-h-screen bg-[var(--fo-canvas)] text-[var(--fo-text)] p-6">
+    <div
+      className="field-ops-root min-h-screen bg-[var(--fo-canvas)] p-6"
+      style={{ color: "var(--fo-text)" }}
+    >
       <header className="flex items-center justify-between mb-4">
         <h1 className="text-xl font-semibold">Manage users</h1>
         <button
