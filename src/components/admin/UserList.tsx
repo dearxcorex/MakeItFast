@@ -35,7 +35,7 @@ export function UserList({
             <tr
               key={u.id}
               data-userid={u.id}
-              className={`border-t border-[var(--fo-border)] ${
+              className={`border-t border-[var(--fo-divider)] ${
                 u.active ? "" : "opacity-50"
               }`}
             >

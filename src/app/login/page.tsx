@@ -43,10 +43,10 @@ export default function LoginPage() {
   }
 
   return (
-    <div className="field-ops-root min-h-screen flex items-center justify-center bg-[var(--fo-bg)] text-[var(--fo-fg)] p-6">
+    <div className="field-ops-root min-h-screen flex items-center justify-center bg-[var(--fo-canvas)] text-[var(--fo-text)] p-6">
       <form
         onSubmit={onSubmit}
-        className="w-full max-w-sm rounded-2xl bg-[var(--fo-surface)] p-6 shadow-xl space-y-4"
+        className="w-full max-w-sm rounded-2xl bg-[var(--fo-band)] p-6 shadow-xl space-y-4"
       >
         <h1 className="text-2xl font-semibold text-center">Field Ops</h1>
 
@@ -60,7 +60,7 @@ export default function LoginPage() {
             autoComplete="username"
             value={username}
             onChange={(e) => setUsername(e.target.value)}
-            className="w-full rounded-md border border-[var(--fo-border)] bg-transparent px-3 py-2"
+            className="w-full rounded-md border border-[var(--fo-divider)] bg-transparent px-3 py-2"
             required
           />
         </div>
@@ -77,7 +77,7 @@ export default function LoginPage() {
               autoComplete="current-password"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
-              className="w-full rounded-md border border-[var(--fo-border)] bg-transparent px-3 py-2 pr-10"
+              className="w-full rounded-md border border-[var(--fo-divider)] bg-transparent px-3 py-2 pr-10"
               required
             />
             <button

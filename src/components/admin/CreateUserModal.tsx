@@ -56,7 +56,7 @@ export function CreateUserModal({ onClose, onCreated }: Props) {
     <div className="fixed inset-0 bg-black/60 flex items-center justify-center p-4 z-50">
       <form
         onSubmit={onSubmit}
-        className="w-full max-w-sm rounded-2xl bg-[var(--fo-surface)] p-6 space-y-4"
+        className="w-full max-w-sm rounded-2xl bg-[var(--fo-band)] p-6 space-y-4"
       >
         <h2 className="text-lg font-semibold">New user</h2>
 
@@ -65,7 +65,7 @@ export function CreateUserModal({ onClose, onCreated }: Props) {
           <input
             value={username}
             onChange={(e) => setUsername(e.target.value)}
-            className="mt-1 w-full rounded-md border border-[var(--fo-border)] bg-transparent px-3 py-2"
+            className="mt-1 w-full rounded-md border border-[var(--fo-divider)] bg-transparent px-3 py-2"
             autoFocus
           />
           {username && !usernameOk && (
@@ -80,7 +80,7 @@ export function CreateUserModal({ onClose, onCreated }: Props) {
           <input
             value={displayName}
             onChange={(e) => setDisplayName(e.target.value)}
-            className="mt-1 w-full rounded-md border border-[var(--fo-border)] bg-transparent px-3 py-2"
+            className="mt-1 w-full rounded-md border border-[var(--fo-divider)] bg-transparent px-3 py-2"
           />
         </label>
 
@@ -91,7 +91,7 @@ export function CreateUserModal({ onClose, onCreated }: Props) {
               type={showPw ? "text" : "password"}
               value={password}
               onChange={(e) => setPassword(e.target.value)}
-              className="mt-1 w-full rounded-md border border-[var(--fo-border)] bg-transparent px-3 py-2 pr-10"
+              className="mt-1 w-full rounded-md border border-[var(--fo-divider)] bg-transparent px-3 py-2 pr-10"
             />
             <button
               type="button"

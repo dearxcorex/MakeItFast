@@ -44,7 +44,7 @@ export function ResetPasswordModal({ user, onClose, onDone }: Props) {
     <div className="fixed inset-0 bg-black/60 flex items-center justify-center p-4 z-50">
       <form
         onSubmit={onSubmit}
-        className="w-full max-w-sm rounded-2xl bg-[var(--fo-surface)] p-6 space-y-4"
+        className="w-full max-w-sm rounded-2xl bg-[var(--fo-band)] p-6 space-y-4"
       >
         <h2 className="text-lg font-semibold">
           Reset password for{" "}
@@ -79,7 +79,7 @@ export function ResetPasswordModal({ user, onClose, onDone }: Props) {
                   type={showPw ? "text" : "password"}
                   value={newPassword}
                   onChange={(e) => setNewPassword(e.target.value)}
-                  className="mt-1 w-full rounded-md border border-[var(--fo-border)] bg-transparent px-3 py-2 pr-10"
+                  className="mt-1 w-full rounded-md border border-[var(--fo-divider)] bg-transparent px-3 py-2 pr-10"
                   autoFocus
                 />
                 <button
@@ -102,7 +102,7 @@ export function ResetPasswordModal({ user, onClose, onDone }: Props) {
                 type={showPw ? "text" : "password"}
                 value={confirm}
                 onChange={(e) => setConfirm(e.target.value)}
-                className="mt-1 w-full rounded-md border border-[var(--fo-border)] bg-transparent px-3 py-2"
+                className="mt-1 w-full rounded-md border border-[var(--fo-divider)] bg-transparent px-3 py-2"
               />
               {mismatch && (
                 <span className="text-xs text-red-400">
