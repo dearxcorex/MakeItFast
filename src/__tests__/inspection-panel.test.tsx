@@ -46,7 +46,8 @@ describe('InspectionPanel', () => {
     // History toggle present
     const toggle = screen.getByRole('button', { name: /History/i });
     fireEvent.click(toggle);
-    expect(screen.getByText(/2026-02-12|2026|ก\.พ\./).textContent).toBeTruthy();
+    // formatInspectionDate emits th-TH long form (Buddhist year + full Thai month name).
+    expect(screen.getByText(/กุมภาพันธ์.*2569/).textContent).toBeTruthy();
 
     // Open record form
     fireEvent.click(screen.getByRole('button', { name: /Record/i }));
