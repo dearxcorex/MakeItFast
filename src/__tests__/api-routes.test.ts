@@ -237,7 +237,7 @@ describe('PATCH /api/stations/[id]', () => {
     expect(res.status).toBe(200);
   });
 
-  it('sets date_inspected when inspection69 is true', async () => {
+  it('toggles inspection69 to true without touching date_inspected', async () => {
     vi.mocked(prisma.fm_station.update).mockResolvedValue({ id_fm: 1 } as never);
     const { PATCH } = await import('@/app/api/stations/[id]/route');
     const req = new Request('http://localhost', {
@@ -248,15 +248,17 @@ describe('PATCH /api/stations/[id]', () => {
     expect(res.status).toBe(200);
     expect(prisma.fm_station.update).toHaveBeenCalledWith(
       expect.objectContaining({
-        data: expect.objectContaining({
-          inspection_69: true,
-          date_inspected: expect.any(String),
-        }),
+        data: expect.objectContaining({ inspection_69: true }),
+      })
+    );
+    expect(prisma.fm_station.update).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: expect.not.objectContaining({ date_inspected: expect.anything() }),
       })
     );
   });
 
-  it('clears date_inspected when inspection69 is false', async () => {
+  it('toggles inspection69 to false without touching date_inspected', async () => {
     vi.mocked(prisma.fm_station.update).mockResolvedValue({ id_fm: 1 } as never);
     const { PATCH } = await import('@/app/api/stations/[id]/route');
     const req = new Request('http://localhost', {
@@ -267,10 +269,12 @@ describe('PATCH /api/stations/[id]', () => {
     expect(res.status).toBe(200);
     expect(prisma.fm_station.update).toHaveBeenCalledWith(
       expect.objectContaining({
-        data: expect.objectContaining({
-          inspection_69: false,
-          date_inspected: null,
-        }),
+        data: expect.objectContaining({ inspection_69: false }),
+      })
+    );
+    expect(prisma.fm_station.update).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: expect.not.objectContaining({ date_inspected: expect.anything() }),
       })
     );
   });

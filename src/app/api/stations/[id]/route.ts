@@ -39,14 +39,10 @@ export async function PATCH(
       updates.inspection_68 = inspection68 === 'ตรวจแล้ว' || inspection68 === true;
     }
     if (inspection69 !== undefined) {
+      // NOTE: date_inspected is now derived from station_inspection rows.
+      // PATCH only toggles the legacy boolean for back-compat tooling; UI uses
+      // POST /api/stations/:id/inspections to record new inspections.
       updates.inspection_69 = inspection69 === 'ตรวจแล้ว' || inspection69 === true;
-
-      // Only inspection_69 controls date_inspected (it's the primary inspection field)
-      if (updates.inspection_69) {
-        updates.date_inspected = new Date().toISOString().split('T')[0];
-      } else {
-        updates.date_inspected = null;
-      }
     }
 
     if (Object.keys(updates).length === 0) {
