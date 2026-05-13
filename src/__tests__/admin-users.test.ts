@@ -7,6 +7,7 @@ vi.mock("@/lib/prisma", () => ({
       findUnique: vi.fn(),
       findMany: vi.fn(),
       create: vi.fn(),
+      update: vi.fn(),
     },
   },
 }));
@@ -153,5 +154,64 @@ describe("POST /api/admin/users", () => {
     const body = await res.json();
     expect(body.user.id).toBe(7);
     expect(JSON.stringify(body)).not.toContain("SHOULD-NEVER-LEAK");
+  });
+});
+
+import { PATCH } from "@/app/api/admin/users/[id]/route";
+
+function patchReq(id: string, body: any) {
+  return new NextRequest(`http://localhost/api/admin/users/${id}`, {
+    method: "PATCH",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify(body),
+  });
+}
+
+describe("PATCH /api/admin/users/[id]", () => {
+  it("updates active flag and returns 200", async () => {
+    const c = await mintAdminCookie({ userId: 1 });
+    cookieStore.set(COOKIE_NAME, c.value);
+    vi.mocked(prisma.user.findUnique).mockResolvedValue(adminRow() as any);
+    vi.mocked(prisma.user.update).mockResolvedValue(
+      adminRow({ id: 5, active: false }) as any
+    );
+    const res = await PATCH(patchReq("5", { active: false }), {
+      params: Promise.resolve({ id: "5" }),
+    });
+    expect(res.status).toBe(200);
+  });
+
+  it("rejects self-disable with 400 cannot_modify_self", async () => {
+    const c = await mintAdminCookie({ userId: 1 });
+    cookieStore.set(COOKIE_NAME, c.value);
+    vi.mocked(prisma.user.findUnique).mockResolvedValue(adminRow() as any);
+    const res = await PATCH(patchReq("1", { active: false }), {
+      params: Promise.resolve({ id: "1" }),
+    });
+    expect(res.status).toBe(400);
+    const body = await res.json();
+    expect(body.error).toBe("cannot_modify_self");
+  });
+
+  it("rejects self-demote with 400", async () => {
+    const c = await mintAdminCookie({ userId: 1 });
+    cookieStore.set(COOKIE_NAME, c.value);
+    vi.mocked(prisma.user.findUnique).mockResolvedValue(adminRow() as any);
+    const res = await PATCH(patchReq("1", { role: "inspector" }), {
+      params: Promise.resolve({ id: "1" }),
+    });
+    expect(res.status).toBe(400);
+  });
+
+  it("403 for inspector", async () => {
+    const c = await mintCookie({ role: "inspector", userId: 9 });
+    cookieStore.set(COOKIE_NAME, c.value);
+    vi.mocked(prisma.user.findUnique).mockResolvedValue(
+      adminRow({ id: 9, role: "inspector" }) as any
+    );
+    const res = await PATCH(patchReq("5", { active: false }), {
+      params: Promise.resolve({ id: "5" }),
+    });
+    expect(res.status).toBe(403);
   });
 });
