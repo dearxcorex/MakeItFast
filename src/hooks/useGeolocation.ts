@@ -64,7 +64,8 @@ export function useGeolocation(): UseGeolocationResult {
         watchIdRef.current = null;
       }
     };
-  }, [attempt, status === 'unsupported']);
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- status is read inside effect for an early-return gate; only `attempt` should trigger re-subscription
+  }, [attempt]);
 
   const retry = () => {
     if (status === 'unsupported') return;
