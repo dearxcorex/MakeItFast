@@ -3,19 +3,44 @@
 import { FMStation } from '@/types/station';
 import StationCard from './StationCard';
 import NavigateButton from './NavigateButton';
+import type { StationInspection } from '@/types/inspection';
 
 interface StationPopupSingleProps {
   station: FMStation;
   distance: number | null;
   onUpdateStation?: (stationId: string | number, updates: Partial<FMStation>) => void;
+  inspectors?: { id: number; username: string; displayName: string }[];
+  inspectionHistory?: StationInspection[];
+  currentUser?: { id: number; displayName: string };
+  onLoadInspections?: () => void;
+  onCreateInspection?: (input: {
+    stationId: number;
+    inspectedOn: string;
+    helperUserIds: number[];
+    notes?: string;
+  }) => Promise<void>;
 }
 
-export default function StationPopupSingle({ station, distance, onUpdateStation }: StationPopupSingleProps) {
+export default function StationPopupSingle({
+  station,
+  distance,
+  onUpdateStation,
+  inspectors,
+  inspectionHistory,
+  currentUser,
+  onLoadInspections,
+  onCreateInspection,
+}: StationPopupSingleProps) {
   return (
     <div className="w-full max-w-[300px] sm:max-w-[340px] p-3">
       <StationCard
         station={station}
         onUpdateStation={onUpdateStation}
+        inspectors={inspectors}
+        inspectionHistory={inspectionHistory}
+        currentUser={currentUser}
+        onLoadInspections={onLoadInspections}
+        onCreateInspection={onCreateInspection}
       />
 
       {distance && (

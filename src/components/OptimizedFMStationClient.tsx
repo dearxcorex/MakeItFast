@@ -12,6 +12,7 @@ import { useOptimizedFilters, useMemoryMonitor } from '@/hooks/useOptimizedFilte
 import NavSidebar from '@/components/NavSidebar';
 import AppHeader from '@/components/client/AppHeader';
 import MobileFilterBar from '@/components/client/MobileFilterBar';
+import type { StationInspection } from '@/types/inspection';
 
 import type { InterferenceStats } from '@/components/interference/InterferenceAnalysis';
 import { initialHeadingState, updateHeading, type HeadingSample } from '@/utils/headingTracking';
@@ -61,13 +62,15 @@ interface OptimizedFMStationClientProps {
   initialCities: string[];
   initialProvinces: string[];
   initialInspectionStatuses: string[];
+  currentUser?: { id: number; displayName: string };
 }
 
 export default function OptimizedFMStationClient({
   initialStations,
   initialCities,
   initialProvinces,
-  initialInspectionStatuses
+  initialInspectionStatuses,
+  currentUser,
 }: OptimizedFMStationClientProps) {
   // State management
   const [selectedStation, setSelectedStation] = useState<FMStation | undefined>();
@@ -87,6 +90,16 @@ export default function OptimizedFMStationClient({
   const [flyToStations, setFlyToStations] = useState<{ lat1: number; lng1: number; lat2: number; lng2: number; timestamp: number } | null>(null);
   const [showFilters, setShowFilters] = useState(false);
   const [interferenceStats, setInterferenceStats] = useState<InterferenceStats | null>(null);
+  const [inspectors, setInspectors] = useState<{ id: number; username: string; displayName: string }[]>([]);
+  const [inspectionHistory, setInspectionHistory] = useState<Record<number, StationInspection[]>>({});
+
+  // Fetch inspectors once on mount.
+  useEffect(() => {
+    fetch('/api/users/inspectors')
+      .then((r) => (r.ok ? r.json() : { users: [] }))
+      .then((j) => setInspectors(j.users ?? []))
+      .catch(() => setInspectors([]));
+  }, []);
 
   // Performance monitoring
   const { checkMemoryUsage } = useMemoryMonitor();
@@ -394,6 +407,38 @@ export default function OptimizedFMStationClient({
     }
   }, []);
 
+  const loadInspectionsFor = useCallback(async (stationId: number) => {
+    const r = await fetch(`/api/stations/${stationId}/inspections`);
+    if (!r.ok) return;
+    const j = await r.json();
+    setInspectionHistory((prev) => ({ ...prev, [stationId]: j.inspections ?? [] }));
+  }, []);
+
+  const handleCreateInspection = useCallback(async (input: {
+    stationId: number;
+    inspectedOn: string;
+    helperUserIds: number[];
+    notes?: string;
+  }) => {
+    const r = await fetch(`/api/stations/${input.stationId}/inspections`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        inspectedOn: input.inspectedOn,
+        helperUserIds: input.helperUserIds,
+        notes: input.notes,
+      }),
+    });
+    if (!r.ok) throw new Error('Failed to record inspection');
+    const j = await r.json();
+    // Optimistically merge updated FMStation back into stationsRef.
+    if (j.station) {
+      handleUpdateStation(input.stationId, j.station);
+    }
+    // Refresh history for this station.
+    await loadInspectionsFor(input.stationId);
+  }, [handleUpdateStation, loadInspectionsFor]);
+
   // Handle empty stations
   if (stations.length === 0) {
     return (
@@ -463,6 +508,11 @@ export default function OptimizedFMStationClient({
                       onUpdateStation={handleUpdateStation}
                       highlightedStationIds={highlightedStationIds}
                       flyToStations={flyToStations}
+                      inspectors={inspectors}
+                      inspectionHistory={inspectionHistory}
+                      currentUser={currentUser}
+                      onLoadInspections={loadInspectionsFor}
+                      onCreateInspection={handleCreateInspection}
                     />
                   </div>
                 </div>

@@ -4,6 +4,7 @@ import { useEffect, useRef } from 'react';
 import { FMStation } from '@/types/station';
 import StationCard from './StationCard';
 import NavigateButton from './NavigateButton';
+import type { StationInspection } from '@/types/inspection';
 
 interface StationPopupMultipleProps {
   stationGroup: FMStation[];
@@ -14,6 +15,16 @@ interface StationPopupMultipleProps {
   setCurrentPage: (page: number) => void;
   isMobile: boolean;
   onUpdateStation?: (stationId: string | number, updates: Partial<FMStation>) => void;
+  inspectors?: { id: number; username: string; displayName: string }[];
+  inspectionHistory?: Record<number, StationInspection[]>;
+  currentUser?: { id: number; displayName: string };
+  onLoadInspections?: (stationId: number) => void;
+  onCreateInspection?: (input: {
+    stationId: number;
+    inspectedOn: string;
+    helperUserIds: number[];
+    notes?: string;
+  }) => Promise<void>;
 }
 
 export default function StationPopupMultiple({
@@ -25,6 +36,11 @@ export default function StationPopupMultiple({
   setCurrentPage,
   isMobile,
   onUpdateStation,
+  inspectors,
+  inspectionHistory,
+  currentUser,
+  onLoadInspections,
+  onCreateInspection,
 }: StationPopupMultipleProps) {
   const containerRef = useRef<HTMLDivElement>(null);
 
@@ -180,6 +196,11 @@ export default function StationPopupMultiple({
                   station={station}
                   onUpdateStation={onUpdateStation}
                   isMobile
+                  inspectors={inspectors}
+                  inspectionHistory={inspectionHistory?.[Number(station.id)] ?? []}
+                  currentUser={currentUser}
+                  onLoadInspections={() => onLoadInspections?.(Number(station.id))}
+                  onCreateInspection={onCreateInspection}
                 />
               ))}
             </div>
@@ -195,6 +216,11 @@ export default function StationPopupMultiple({
                 station={station}
                 onUpdateStation={onUpdateStation}
                 showStationIndex={stationGroup.length > 1 ? { current: index + 1, total: stationGroup.length } : undefined}
+                inspectors={inspectors}
+                inspectionHistory={inspectionHistory?.[Number(station.id)] ?? []}
+                currentUser={currentUser}
+                onLoadInspections={() => onLoadInspections?.(Number(station.id))}
+                onCreateInspection={onCreateInspection}
               />
             ))}
           </div>

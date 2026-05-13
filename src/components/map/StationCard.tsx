@@ -4,10 +4,18 @@ import { useState } from 'react';
 import { FMStation } from '@/types/station';
 import { formatInspectionDate } from '@/utils/mapHelpers';
 import LoadingSpinner from './LoadingSpinner';
+import type { StationInspection } from '@/types/inspection';
 
 interface StationCardProps {
   station: FMStation;
   onUpdateStation?: (stationId: string | number, updates: Partial<FMStation>) => void;
+  inspectionHistory?: StationInspection[];
+  inspectors?: { id: number; username: string; displayName: string }[];
+  currentUser?: { id: number; displayName: string };
+  onLoadInspections?: () => void;
+  onCreateInspection?: (input: {
+    stationId: number; inspectedOn: string; helperUserIds: number[]; notes?: string;
+  }) => Promise<void>;
   isMobile?: boolean;
   showStationIndex?: { current: number; total: number };
 }
