@@ -6,6 +6,7 @@ import FoKPI from "./FoKPI";
 import FoLineChart from "./charts/FoLineChart";
 import FoBarChart from "./charts/FoBarChart";
 import FoDonut from "./charts/FoDonut";
+import InspectorsSection from "./InspectorsSection";
 
 const RANGES = ["7D", "30D", "90D", "YTD"] as const;
 type Range = (typeof RANGES)[number];
@@ -453,6 +454,7 @@ export default function AnalyticsDashboard() {
           </div>
         </div>
       </div>
+      <InspectorsSection />
     </div>
   );
 }
