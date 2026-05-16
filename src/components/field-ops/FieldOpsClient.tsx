@@ -246,37 +246,20 @@ export default function FieldOpsClient({
     }
   };
 
-  const handleToggleInspection = async () => {
-    if (!selection) return;
+  const handleToggleInterferenceInspection = async () => {
+    if (!selection || selection.kind !== "int" || !selectedSite) return;
     setPending(true);
     try {
-      if (selection.kind === "fm" && selectedStation) {
-        const next = selectedStation.inspection69 === "ตรวจแล้ว" ? "ยังไม่ตรวจ" : "ตรวจแล้ว";
-        setStations((all) =>
-          all.map((s) =>
-            s.id === selectedStation.id
-              ? { ...s, inspection69: next, dateInspected: next === "ตรวจแล้ว" ? new Date().toISOString().split("T")[0] : undefined }
-              : s
-          )
-        );
-        const res = await fetch(`/api/stations/${selectedStation.id}`, {
-          method: "PATCH",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ inspection69: next }),
-        });
-        if (!res.ok) throw new Error("FM update failed");
-      } else if (selection.kind === "int" && selectedSite) {
-        const next = selectedSite.status === "ตรวจแล้ว" ? "ยังไม่ตรวจ" : "ตรวจแล้ว";
-        setInterference((all) =>
-          all.map((s) => (s.id === selectedSite.id ? { ...s, status: next } : s))
-        );
-        const res = await fetch(`/api/interference/${selectedSite.id}`, {
-          method: "PATCH",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ status: next }),
-        });
-        if (!res.ok) throw new Error("Interference update failed");
-      }
+      const next = selectedSite.status === "ตรวจแล้ว" ? "ยังไม่ตรวจ" : "ตรวจแล้ว";
+      setInterference((all) =>
+        all.map((s) => (s.id === selectedSite.id ? { ...s, status: next } : s))
+      );
+      const res = await fetch(`/api/interference/${selectedSite.id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ status: next }),
+      });
+      if (!res.ok) throw new Error("Interference update failed");
     } catch (err) {
       console.error(err);
       window.location.reload();
@@ -530,7 +513,7 @@ export default function FieldOpsClient({
                         site={selectedSite}
                         coLocated={coLocatedSites}
                         onSelectSite={(id) => handleSelect({ kind: "int", id })}
-                        onToggleInspection={handleToggleInspection}
+                        onToggleInspection={handleToggleInterferenceInspection}
                         onToggleLawPaper={handleToggleLawPaper}
                         pending={pending}
                         marking={markingSourceForId === selectedSite.id}
@@ -559,7 +542,7 @@ export default function FieldOpsClient({
                   selection={selection}
                   station={selectedStation}
                   site={selectedSite}
-                  onToggleInspection={handleToggleInspection}
+                  onToggleInspection={handleToggleInterferenceInspection}
                   onToggleLawPaper={handleToggleLawPaper}
                   onClose={() => setSelection(null)}
                   pending={pending}
