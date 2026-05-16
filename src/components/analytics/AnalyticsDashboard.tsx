@@ -453,8 +453,8 @@ export default function AnalyticsDashboard() {
             />
           </div>
         </div>
+        <InspectorsSection />
       </div>
-      <InspectorsSection />
     </div>
   );
 }
