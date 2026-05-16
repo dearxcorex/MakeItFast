@@ -59,7 +59,7 @@ describe('FieldOpsCurrentFM — inspection panel', () => {
     expect(queryByTestId('field-ops-inspection-panel')).toBeNull();
   });
 
-  it('calls onLoadInspections on mount', () => {
+  it('calls onLoadInspections on mount with the station id', () => {
     const onLoadInspections = vi.fn();
     render(
       <FieldOpsCurrentFM
@@ -72,6 +72,6 @@ describe('FieldOpsCurrentFM — inspection panel', () => {
         onLoadInspections={onLoadInspections}
       />,
     );
-    expect(onLoadInspections).toHaveBeenCalled();
+    expect(onLoadInspections).toHaveBeenCalledWith(Number(baseStation.id));
   });
 });

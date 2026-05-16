@@ -12,7 +12,7 @@ interface StationCardProps {
   inspectionHistory?: StationInspection[];
   inspectors?: { id: number; username: string; displayName: string }[];
   currentUser?: { id: number; displayName: string };
-  onLoadInspections?: () => void;
+  onLoadInspections?: (stationId: number) => void;
   onCreateInspection?: (input: {
     stationId: number; inspectedOn: string; helperUserIds: number[]; notes?: string;
   }) => Promise<void>;
@@ -35,7 +35,7 @@ export default function StationCard({
   const [loadingDetails, setLoadingDetails] = useState(false);
 
   useEffect(() => {
-    onLoadInspections?.();
+    onLoadInspections?.(Number(station.id));
   }, [station.id, onLoadInspections]);
 
   const handleOnAirToggle = async (e: React.MouseEvent) => {

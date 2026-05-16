@@ -294,7 +294,7 @@ export default function Map({ stations, selectedStation, onStationSelect, onUpda
                     inspectors={inspectors}
                     inspectionHistory={inspectionHistory?.[Number(representativeStation.id)] ?? []}
                     currentUser={currentUser}
-                    onLoadInspections={() => onLoadInspections?.(Number(representativeStation.id))}
+                    onLoadInspections={onLoadInspections}
                     onCreateInspection={onCreateInspection}
                   />
                 )}

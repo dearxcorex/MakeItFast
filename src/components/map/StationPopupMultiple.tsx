@@ -199,7 +199,7 @@ export default function StationPopupMultiple({
                   inspectors={inspectors}
                   inspectionHistory={inspectionHistory?.[Number(station.id)] ?? []}
                   currentUser={currentUser}
-                  onLoadInspections={() => onLoadInspections?.(Number(station.id))}
+                  onLoadInspections={onLoadInspections}
                   onCreateInspection={onCreateInspection}
                 />
               ))}
@@ -219,7 +219,7 @@ export default function StationPopupMultiple({
                 inspectors={inspectors}
                 inspectionHistory={inspectionHistory?.[Number(station.id)] ?? []}
                 currentUser={currentUser}
-                onLoadInspections={() => onLoadInspections?.(Number(station.id))}
+                onLoadInspections={onLoadInspections}
                 onCreateInspection={onCreateInspection}
               />
             ))}

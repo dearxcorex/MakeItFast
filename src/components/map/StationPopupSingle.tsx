@@ -12,7 +12,7 @@ interface StationPopupSingleProps {
   inspectors?: { id: number; username: string; displayName: string }[];
   inspectionHistory?: StationInspection[];
   currentUser?: { id: number; displayName: string };
-  onLoadInspections?: () => void;
+  onLoadInspections?: (stationId: number) => void;
   onCreateInspection?: (input: {
     stationId: number;
     inspectedOn: string;

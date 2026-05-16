@@ -44,7 +44,7 @@ export function FieldOpsCurrentFM({
   inspectionHistory?: StationInspection[];
   inspectors?: InspectorOption[];
   currentUser?: { id: number; displayName: string };
-  onLoadInspections?: () => void;
+  onLoadInspections?: (stationId: number) => void;
   onCreateInspection?: (input: {
     stationId: number;
     inspectedOn: string;
@@ -57,7 +57,7 @@ export function FieldOpsCurrentFM({
   const others = (coLocated ?? []).filter((s) => s.id !== station.id);
 
   useEffect(() => {
-    onLoadInspections?.();
+    onLoadInspections?.(Number(station.id));
   }, [station.id, onLoadInspections]);
 
   return (

@@ -46,7 +46,7 @@ export function FieldOpsBottomSheet({
   inspectionHistory?: StationInspection[];
   inspectors?: { id: number; username: string; displayName: string }[];
   currentUser?: { id: number; displayName: string };
-  onLoadInspections?: () => void;
+  onLoadInspections?: (stationId: number) => void;
   onCreateInspection?: (input: {
     stationId: number;
     inspectedOn: string;
@@ -72,7 +72,7 @@ export function FieldOpsBottomSheet({
   const fmStationId = selection?.kind === "fm" ? station?.id ?? null : null;
   useEffect(() => {
     if (fmStationId != null) {
-      onLoadInspections?.();
+      onLoadInspections?.(Number(fmStationId));
     }
   }, [fmStationId, onLoadInspections]);
 

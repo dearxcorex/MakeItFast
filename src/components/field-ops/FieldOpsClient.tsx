@@ -504,7 +504,7 @@ export default function FieldOpsClient({
                         inspectors={inspectors}
                         inspectionHistory={inspectionHistory[Number(selectedStation.id)] ?? []}
                         currentUser={currentUser}
-                        onLoadInspections={() => loadInspectionsFor(Number(selectedStation.id))}
+                        onLoadInspections={loadInspectionsFor}
                         onCreateInspection={handleCreateInspection}
                       />
                     )}
@@ -566,11 +566,7 @@ export default function FieldOpsClient({
                       : []
                   }
                   currentUser={currentUser}
-                  onLoadInspections={
-                    selectedStation
-                      ? () => loadInspectionsFor(Number(selectedStation.id))
-                      : undefined
-                  }
+                  onLoadInspections={loadInspectionsFor}
                   onCreateInspection={handleCreateInspection}
                 />
               )}
