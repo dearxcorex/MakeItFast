@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import type { FMStation } from "@/types/station";
 import type { InterferenceSite } from "@/types/interference";
 import { parseLatLngInput } from "@/utils/parseLatLng";
+import TeammatePicker, { type InspectorOption } from "./TeammatePicker";
 
 interface CommonAction {
   label: string;
@@ -29,6 +30,10 @@ export function FieldOpsCurrentFM({
   onToggleInspection,
   onToggleOnAir,
   pending,
+  inspectors,
+  currentUser,
+  helperUserIds,
+  onHelperUserIdsChange,
 }: {
   station: FMStation;
   coLocated?: FMStation[];
@@ -36,6 +41,10 @@ export function FieldOpsCurrentFM({
   onToggleInspection: () => void;
   onToggleOnAir?: () => void;
   pending: boolean;
+  inspectors?: InspectorOption[];
+  currentUser?: { id: number; displayName: string };
+  helperUserIds?: number[];
+  onHelperUserIdsChange?: (helperUserIds: number[]) => void;
 }) {
   const inspected = station.inspection69 === "ตรวจแล้ว";
   const main = isMain(station);
@@ -125,6 +134,19 @@ export function FieldOpsCurrentFM({
         ]}
         loading={pending}
       />
+
+      {station.inspection69 !== 'ตรวจแล้ว'
+        && onHelperUserIdsChange
+        && inspectors
+        && currentUser && (
+        <TeammatePicker
+          inspectors={inspectors}
+          currentUserId={currentUser.id}
+          value={helperUserIds ?? []}
+          onChange={onHelperUserIdsChange}
+          disabled={pending}
+        />
+      )}
 
       {onToggleOnAir && (
         <ButtonRow

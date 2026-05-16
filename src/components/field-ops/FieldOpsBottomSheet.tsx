@@ -5,6 +5,7 @@ import type { FMStation } from "@/types/station";
 import type { InterferenceSite } from "@/types/interference";
 import type { FieldSelection } from "./FieldOpsMap";
 import { parseLatLngInput } from "@/utils/parseLatLng";
+import TeammatePicker, { type InspectorOption } from "./TeammatePicker";
 
 function googleMapsUrl(lat: number, lng: number) {
   return `https://www.google.com/maps/dir/?api=1&destination=${lat},${lng}&travelmode=driving`;
@@ -23,6 +24,10 @@ export function FieldOpsBottomSheet({
   onCancelMarkSource,
   onClearSource,
   onSubmitSourceCoords,
+  inspectors,
+  currentUser,
+  helperUserIds,
+  onHelperUserIdsChange,
 }: {
   selection: FieldSelection;
   station: FMStation | null;
@@ -36,6 +41,10 @@ export function FieldOpsBottomSheet({
   onCancelMarkSource?: () => void;
   onClearSource?: () => void;
   onSubmitSourceCoords?: (lat: number, lng: number) => void;
+  inspectors?: InspectorOption[];
+  currentUser?: { id: number; displayName: string };
+  helperUserIds?: number[];
+  onHelperUserIdsChange?: (helperUserIds: number[]) => void;
 }) {
   const [expanded, setExpanded] = useState(false);
   const [coordsOpen, setCoordsOpen] = useState(false);
@@ -334,6 +343,21 @@ export function FieldOpsBottomSheet({
           {inspected ? "✓ INSPECTED" : "✓ INSPECT"}
         </button>
       </div>
+
+      {isFM && station!.inspection69 !== 'ตรวจแล้ว'
+        && onHelperUserIdsChange
+        && inspectors
+        && currentUser && (
+        <div style={{ padding: '0 16px' }}>
+          <TeammatePicker
+            inspectors={inspectors}
+            currentUserId={currentUser.id}
+            value={helperUserIds ?? []}
+            onChange={onHelperUserIdsChange}
+            disabled={pending}
+          />
+        </div>
+      )}
 
       {showSourceControls && (
         <div style={{ padding: "10px 16px 0" }}>

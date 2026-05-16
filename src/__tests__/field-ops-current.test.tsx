@@ -1,7 +1,10 @@
-import { describe, it, expect, vi } from 'vitest';
-import { render } from '@testing-library/react';
+import { describe, it, expect, vi, afterEach } from 'vitest';
+import { render, cleanup } from '@testing-library/react';
 import { FieldOpsCurrentFM } from '@/components/field-ops/FieldOpsCurrent';
+import TeammatePicker from '@/components/field-ops/TeammatePicker'; // eslint-disable-line @typescript-eslint/no-unused-vars
 import type { FMStation } from '@/types/station';
+
+afterEach(() => cleanup());
 
 const baseStation: FMStation = {
   id: 5520117,
@@ -91,5 +94,45 @@ describe('FieldOpsCurrentFM — revoked station', () => {
     const inspectBtn = Array.from(buttons).find(btn => btn.textContent === '✓ INSPECT')!;
     expect(inspectBtn.getAttribute('style')).toContain('var(--fo-accent)');
     expect(inspectBtn.getAttribute('style')).not.toContain('var(--fo-crit)');
+  });
+});
+
+describe('FieldOpsCurrentFM — teammate picker', () => {
+  it('renders the teammate picker when station is PENDING and all picker props are provided', () => {
+    const station: FMStation = { ...baseStation, inspection69: 'ยังไม่ตรวจ' };
+    const { getByRole } = render(
+      <FieldOpsCurrentFM
+        station={station}
+        onToggleInspection={vi.fn()}
+        pending={false}
+        inspectors={[
+          { id: 3, username: 'iff', displayName: 'iff' },
+          { id: 6, username: 'daf', displayName: 'daf' },
+        ]}
+        currentUser={{ id: 3, displayName: 'iff' }}
+        helperUserIds={[]}
+        onHelperUserIdsChange={vi.fn()}
+      />,
+    );
+    expect(getByRole('button', { name: /\+ tag teammates/i })).toBeTruthy();
+  });
+
+  it('does NOT render the teammate picker when station is INSPECTED', () => {
+    const station: FMStation = { ...baseStation, inspection69: 'ตรวจแล้ว' };
+    const { queryByRole } = render(
+      <FieldOpsCurrentFM
+        station={station}
+        onToggleInspection={vi.fn()}
+        pending={false}
+        inspectors={[
+          { id: 3, username: 'iff', displayName: 'iff' },
+          { id: 6, username: 'daf', displayName: 'daf' },
+        ]}
+        currentUser={{ id: 3, displayName: 'iff' }}
+        helperUserIds={[]}
+        onHelperUserIdsChange={vi.fn()}
+      />,
+    );
+    expect(queryByRole('button', { name: /\+ tag teammates/i })).toBeNull();
   });
 });
