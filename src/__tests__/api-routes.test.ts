@@ -306,6 +306,86 @@ describe('PATCH /api/stations/[id]', () => {
     );
     createInspectionSpy.mockRestore();
   });
+
+  it('PATCH forwards helperUserIds to the inspection-history sidecar', async () => {
+    const inspectionService = await import('@/services/inspectionService');
+    const createSpy = vi
+      .spyOn(inspectionService, 'createInspection')
+      .mockResolvedValue({} as never);
+    const sessionLib = await import('@/lib/session');
+    const getSessionSpy = vi
+      .spyOn(sessionLib, 'getSession')
+      .mockResolvedValue({
+        userId: 3,
+        username: 'iff',
+        displayName: 'iff',
+        role: 'inspector',
+        issuedAt: Date.now(),
+      } as never);
+
+    vi.mocked(prisma.fm_station.update).mockResolvedValue({ id_fm: 1 } as never);
+
+    const c = await mintCookie({ userId: 3, username: 'iff', displayName: 'iff', role: 'inspector' });
+    const headers = new Headers();
+    headers.set('Cookie', c.header);
+    headers.set('Content-Type', 'application/json');
+    const req = new NextRequest('http://t/api/stations/1', {
+      method: 'PATCH',
+      headers,
+      body: JSON.stringify({ inspection69: 'ตรวจแล้ว', helperUserIds: [6, 2] }),
+    });
+
+    const { PATCH } = await import('@/app/api/stations/[id]/route');
+    const r = await PATCH(req, { params: Promise.resolve({ id: '1' }) });
+    expect(r.status).toBe(200);
+    expect(createSpy).toHaveBeenCalledWith(expect.objectContaining({
+      stationId: 1,
+      leadUserId: 3,
+      helperUserIds: [6, 2],
+    }));
+
+    createSpy.mockRestore();
+    getSessionSpy.mockRestore();
+  });
+
+  it('PATCH defaults to empty helperUserIds when not provided', async () => {
+    const inspectionService = await import('@/services/inspectionService');
+    const createSpy = vi
+      .spyOn(inspectionService, 'createInspection')
+      .mockResolvedValue({} as never);
+    const sessionLib = await import('@/lib/session');
+    const getSessionSpy = vi
+      .spyOn(sessionLib, 'getSession')
+      .mockResolvedValue({
+        userId: 3,
+        username: 'iff',
+        displayName: 'iff',
+        role: 'inspector',
+        issuedAt: Date.now(),
+      } as never);
+
+    vi.mocked(prisma.fm_station.update).mockResolvedValue({ id_fm: 1 } as never);
+
+    const c = await mintCookie({ userId: 3, username: 'iff', displayName: 'iff', role: 'inspector' });
+    const headers = new Headers();
+    headers.set('Cookie', c.header);
+    headers.set('Content-Type', 'application/json');
+    const req = new NextRequest('http://t/api/stations/1', {
+      method: 'PATCH',
+      headers,
+      body: JSON.stringify({ inspection69: 'ตรวจแล้ว' }),
+    });
+
+    const { PATCH } = await import('@/app/api/stations/[id]/route');
+    const r = await PATCH(req, { params: Promise.resolve({ id: '1' }) });
+    expect(r.status).toBe(200);
+    expect(createSpy).toHaveBeenCalledWith(expect.objectContaining({
+      helperUserIds: [],
+    }));
+
+    createSpy.mockRestore();
+    getSessionSpy.mockRestore();
+  });
 });
 
 // ==================

@@ -15,7 +15,7 @@ export async function PATCH(
     }
 
     const body = await request.json();
-    const { onAir, inspection68, inspection69, details } = body;
+    const { onAir, inspection68, inspection69, details, helperUserIds } = body;
 
     // Build update object with only provided fields
     const updates: Record<string, boolean | string | null> = {};
@@ -67,7 +67,9 @@ export async function PATCH(
             stationId,
             inspectedOn: new Date().toISOString().split('T')[0],
             leadUserId: session.userId,
-            helperUserIds: [],
+            helperUserIds: Array.isArray(helperUserIds)
+              ? helperUserIds.filter((x: unknown): x is number => typeof x === 'number' && Number.isInteger(x))
+              : [],
           });
         }
       } catch (err) {
