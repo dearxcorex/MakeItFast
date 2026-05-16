@@ -1,9 +1,10 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import dynamic from "next/dynamic";
 import type { FMStation } from "@/types/station";
 import type { InterferenceSite } from "@/types/interference";
+import type { StationInspection } from "@/types/inspection";
 import { FieldOpsNav, type FieldOpsTab } from "./FieldOpsNav";
 import { FieldOpsHeader } from "./FieldOpsHeader";
 import { FieldOpsFilters, DEFAULT_FILTERS, type FieldFilters } from "./FieldOpsFilters";
@@ -37,6 +38,7 @@ interface Props {
   initialInterference: InterferenceSite[];
   initialCities: string[];
   initialProvinces: string[];
+  currentUser?: { id: number; displayName: string };
 }
 
 /**
@@ -64,6 +66,7 @@ export default function FieldOpsClient({
   initialStations,
   initialInterference,
   initialProvinces,
+  currentUser,
 }: Props) {
   const [tab, setTab] = useState<FieldOpsTab>("field-ops");
   const [stations, setStations] = useState<FMStation[]>(initialStations);
@@ -76,7 +79,48 @@ export default function FieldOpsClient({
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [theme, setTheme] = useState<"dark" | "light">("dark");
   const [markingSourceForId, setMarkingSourceForId] = useState<number | null>(null);
+  const [inspectors, setInspectors] = useState<{ id: number; username: string; displayName: string }[]>([]);
+  const [inspectionHistory, setInspectionHistory] = useState<Record<number, StationInspection[]>>({});
   const { userLocation, status: locationStatus, retry: retryLocation } = useGeolocation();
+
+  useEffect(() => {
+    fetch("/api/users/inspectors")
+      .then((r) => (r.ok ? r.json() : { users: [] }))
+      .then((j) => setInspectors(j.users ?? []))
+      .catch(() => setInspectors([]));
+  }, []);
+
+  const loadInspectionsFor = useCallback(async (stationId: number) => {
+    const r = await fetch(`/api/stations/${stationId}/inspections`);
+    if (!r.ok) return;
+    const j = await r.json();
+    setInspectionHistory((prev) => ({ ...prev, [stationId]: j.inspections ?? [] }));
+  }, []);
+
+  const handleCreateInspection = useCallback(async (input: {
+    stationId: number;
+    inspectedOn: string;
+    helperUserIds: number[];
+    notes?: string;
+  }) => {
+    const r = await fetch(`/api/stations/${input.stationId}/inspections`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        inspectedOn: input.inspectedOn,
+        helperUserIds: input.helperUserIds,
+        notes: input.notes,
+      }),
+    });
+    if (!r.ok) throw new Error("Failed to record inspection");
+    const j = await r.json();
+    if (j.station) {
+      setStations((all) =>
+        all.map((s) => (s.id === input.stationId ? { ...s, ...j.station } : s))
+      );
+    }
+    await loadInspectionsFor(input.stationId);
+  }, [loadInspectionsFor]);
 
   useEffect(() => {
     const check = () => setIsMobile(window.innerWidth < 900);
@@ -528,6 +572,19 @@ export default function FieldOpsClient({
                       ? (lat, lng) => handleMarkSource(selectedSite.id, lat, lng)
                       : undefined
                   }
+                  inspectors={inspectors}
+                  inspectionHistory={
+                    selectedStation
+                      ? inspectionHistory[Number(selectedStation.id)] ?? []
+                      : []
+                  }
+                  currentUser={currentUser}
+                  onLoadInspections={
+                    selectedStation
+                      ? () => loadInspectionsFor(Number(selectedStation.id))
+                      : undefined
+                  }
+                  onCreateInspection={handleCreateInspection}
                 />
               )}
             </>
