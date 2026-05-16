@@ -1,10 +1,12 @@
 import prisma from "@/lib/prisma";
 import { convertToFMStation } from "@/services/stationService";
 import { convertToInterferenceSite } from "@/services/interferenceService";
+import { getSession } from "@/lib/session";
 import FieldOpsClient from "./FieldOpsClient";
 
 export default async function FieldOpsFetcher() {
   try {
+    const session = await getSession();
     const [stations, interferenceRows, fmCityData, fmProvinceData] = await Promise.all([
       prisma.fm_station.findMany({ orderBy: { name: "asc" } }),
       prisma.interference_site.findMany({ orderBy: { site_name: "asc" } }),
@@ -35,12 +37,17 @@ export default async function FieldOpsFetcher() {
 
     const provinces = Array.from(new Set([...fmProvinces, ...interferenceProvinces])).sort();
 
+    const currentUser = session.userId
+      ? { id: session.userId, displayName: session.displayName }
+      : undefined;
+
     return (
       <FieldOpsClient
         initialStations={transformedStations}
         initialInterference={transformedInterference}
         initialCities={fmCities}
         initialProvinces={provinces}
+        currentUser={currentUser}
       />
     );
   } catch (error) {

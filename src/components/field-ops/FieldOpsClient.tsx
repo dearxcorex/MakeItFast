@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import dynamic from "next/dynamic";
 import type { FMStation } from "@/types/station";
 import type { InterferenceSite } from "@/types/interference";
@@ -37,6 +37,7 @@ interface Props {
   initialInterference: InterferenceSite[];
   initialCities: string[];
   initialProvinces: string[];
+  currentUser?: { id: number; displayName: string };
 }
 
 /**
@@ -64,6 +65,7 @@ export default function FieldOpsClient({
   initialStations,
   initialInterference,
   initialProvinces,
+  currentUser,
 }: Props) {
   const [tab, setTab] = useState<FieldOpsTab>("field-ops");
   const [stations, setStations] = useState<FMStation[]>(initialStations);
@@ -76,7 +78,16 @@ export default function FieldOpsClient({
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [theme, setTheme] = useState<"dark" | "light">("dark");
   const [markingSourceForId, setMarkingSourceForId] = useState<number | null>(null);
+  const [inspectors, setInspectors] = useState<{ id: number; username: string; displayName: string }[]>([]);
+  const [helperUserIds, setHelperUserIds] = useState<number[]>([]);
   const { userLocation, status: locationStatus, retry: retryLocation } = useGeolocation();
+
+  useEffect(() => {
+    fetch("/api/users/inspectors")
+      .then((r) => (r.ok ? r.json() : { users: [] }))
+      .then((j) => setInspectors(j.users ?? []))
+      .catch(() => setInspectors([]));
+  }, []);
 
   useEffect(() => {
     const check = () => setIsMobile(window.innerWidth < 900);
@@ -142,6 +153,9 @@ export default function FieldOpsClient({
     selection?.kind === "fm" ? stations.find((s) => s.id === selection.id) ?? null : null;
   const selectedSite =
     selection?.kind === "int" ? interference.find((s) => s.id === selection.id) ?? null : null;
+
+  const fmStationId = selection?.kind === "fm" && selectedStation ? selectedStation.id : null;
+  useEffect(() => { setHelperUserIds([]); }, [fmStationId]);
 
   // Auto-dismiss the selection (and its details panel / bottom sheet) when
   // the current filter no longer includes the selected item — e.g. switching
@@ -218,9 +232,13 @@ export default function FieldOpsClient({
         const res = await fetch(`/api/stations/${selectedStation.id}`, {
           method: "PATCH",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ inspection69: next }),
+          body: JSON.stringify({
+            inspection69: next,
+            ...(next === "ตรวจแล้ว" ? { helperUserIds } : {}),
+          }),
         });
         if (!res.ok) throw new Error("FM update failed");
+        if (next === "ตรวจแล้ว") setHelperUserIds([]);
       } else if (selection.kind === "int" && selectedSite) {
         const next = selectedSite.status === "ตรวจแล้ว" ? "ยังไม่ตรวจ" : "ตรวจแล้ว";
         setInterference((all) =>
@@ -475,6 +493,10 @@ export default function FieldOpsClient({
                         onToggleInspection={handleToggleInspection}
                         onToggleOnAir={handleToggleOnAir}
                         pending={pending}
+                        inspectors={inspectors}
+                        currentUser={currentUser}
+                        helperUserIds={helperUserIds}
+                        onHelperUserIdsChange={setHelperUserIds}
                       />
                     )}
                     {selection?.kind === "int" && selectedSite && (
@@ -528,6 +550,10 @@ export default function FieldOpsClient({
                       ? (lat, lng) => handleMarkSource(selectedSite.id, lat, lng)
                       : undefined
                   }
+                  inspectors={inspectors}
+                  currentUser={currentUser}
+                  helperUserIds={helperUserIds}
+                  onHelperUserIdsChange={setHelperUserIds}
                 />
               )}
             </>
