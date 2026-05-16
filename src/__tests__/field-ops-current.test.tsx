@@ -1,9 +1,7 @@
-import { describe, it, expect, vi, afterEach } from 'vitest';
-import { render, cleanup } from '@testing-library/react';
+import { describe, it, expect, vi } from 'vitest';
+import { render } from '@testing-library/react';
 import { FieldOpsCurrentFM } from '@/components/field-ops/FieldOpsCurrent';
 import type { FMStation } from '@/types/station';
-
-afterEach(() => cleanup());
 
 const baseStation: FMStation = {
   id: 5520117,
@@ -23,55 +21,75 @@ describe('FieldOpsCurrentFM — revoked station', () => {
   it('renders the REVOKED chip when station.revoked is true', () => {
     const station: FMStation = { ...baseStation, revoked: true, revokedNote: 'NBTC สทช2304/266/2569' };
     const { container } = render(
-      <FieldOpsCurrentFM station={station} pending={false} />,
+      <FieldOpsCurrentFM
+        station={station}
+        onToggleInspection={vi.fn()}
+        pending={false}
+      />
     );
     expect(container.textContent).toContain('REVOKED');
   });
 
   it('does NOT render the REVOKED chip when station.revoked is false or undefined', () => {
     const { container } = render(
-      <FieldOpsCurrentFM station={baseStation} pending={false} />,
+      <FieldOpsCurrentFM
+        station={baseStation}
+        onToggleInspection={vi.fn()}
+        pending={false}
+      />
     );
     expect(container.textContent).not.toContain('REVOKED');
   });
-});
 
-describe('FieldOpsCurrentFM — inspection panel', () => {
-  it('renders the FieldOpsInspectionPanel when inspection props are provided', () => {
-    const { getByTestId } = render(
+  it('still renders the INSPECT button when revoked', () => {
+    const station: FMStation = { ...baseStation, revoked: true };
+    const { container } = render(
       <FieldOpsCurrentFM
-        station={baseStation}
+        station={station}
+        onToggleInspection={vi.fn()}
         pending={false}
-        inspectors={[]}
-        inspectionHistory={[]}
-        currentUser={{ id: 3, displayName: 'iff' }}
-        onCreateInspection={vi.fn()}
-        onLoadInspections={vi.fn()}
-      />,
+      />
     );
-    expect(getByTestId('field-ops-inspection-panel')).toBeTruthy();
+    expect(container.textContent).toContain('✓ INSPECT');
   });
 
-  it('does NOT render the panel when inspection props are missing', () => {
-    const { queryByTestId } = render(
-      <FieldOpsCurrentFM station={baseStation} pending={false} />,
+  it('renders INSPECT with the danger palette for a revoked station', () => {
+    const station: FMStation = {
+      ...baseStation,
+      revoked: true,
+      onAir: false,
+      inspection69: 'ยังไม่ตรวจ',
+    };
+    const { container } = render(
+      <FieldOpsCurrentFM
+        station={station}
+        onToggleInspection={vi.fn()}
+        onToggleOnAir={vi.fn()}
+        pending={false}
+      />
     );
-    expect(queryByTestId('field-ops-inspection-panel')).toBeNull();
+    const buttons = container.querySelectorAll('button');
+    const inspectBtn = Array.from(buttons).find(btn => btn.textContent === '✓ INSPECT')!;
+    expect(inspectBtn.getAttribute('style')).toContain('var(--fo-crit)');
   });
 
-  it('calls onLoadInspections on mount with the station id', () => {
-    const onLoadInspections = vi.fn();
-    render(
+  it('renders INSPECT with the primary palette for a non-revoked pending station', () => {
+    const station: FMStation = {
+      ...baseStation,
+      revoked: false,
+      onAir: false,
+      inspection69: 'ยังไม่ตรวจ',
+    };
+    const { container } = render(
       <FieldOpsCurrentFM
-        station={baseStation}
+        station={station}
+        onToggleInspection={vi.fn()}
         pending={false}
-        inspectors={[]}
-        inspectionHistory={[]}
-        currentUser={{ id: 3, displayName: 'iff' }}
-        onCreateInspection={vi.fn()}
-        onLoadInspections={onLoadInspections}
-      />,
+      />
     );
-    expect(onLoadInspections).toHaveBeenCalledWith(Number(baseStation.id));
+    const buttons = container.querySelectorAll('button');
+    const inspectBtn = Array.from(buttons).find(btn => btn.textContent === '✓ INSPECT')!;
+    expect(inspectBtn.getAttribute('style')).toContain('var(--fo-accent)');
+    expect(inspectBtn.getAttribute('style')).not.toContain('var(--fo-crit)');
   });
 });

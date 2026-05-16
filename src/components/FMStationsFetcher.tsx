@@ -1,11 +1,9 @@
 import prisma from '@/lib/prisma';
 import { convertToFMStation } from '@/services/stationService';
 import OptimizedFMStationClient from './OptimizedFMStationClient';
-import { getSession } from '@/lib/session';
 
 export default async function FMStationsFetcher() {
   try {
-    const session = await getSession();
     const [stations, cityData, provinceData] = await Promise.all([
       prisma.fm_station.findMany({ orderBy: { name: 'asc' } }),
       prisma.fm_station.findMany({ select: { district: true }, distinct: ['district'], orderBy: { district: 'asc' } }),
@@ -18,10 +16,6 @@ export default async function FMStationsFetcher() {
     const onAirStatuses = [true, false];
     const inspectionStatuses = ['ตรวจแล้ว', 'ยังไม่ตรวจ'];
 
-    const currentUser = session.userId
-      ? { id: session.userId, displayName: session.displayName }
-      : undefined;
-
     return (
       <OptimizedFMStationClient
         initialStations={transformedStations}
@@ -29,7 +23,6 @@ export default async function FMStationsFetcher() {
         initialCities={cities}
         initialProvinces={provinces}
         initialInspectionStatuses={inspectionStatuses}
-        currentUser={currentUser}
       />
     );
   } catch (error) {

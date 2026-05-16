@@ -135,6 +135,16 @@ describe('StationCard', () => {
     expect(container.textContent).toContain('Off Air');
   });
 
+  it('shows inspection status ตรวจแล้ว', () => {
+    const { container } = render(<StationCard station={mockStation} />);
+    expect(container.textContent).toContain('ตรวจแล้ว');
+  });
+
+  it('shows inspection status ยังไม่ตรวจ', () => {
+    const { container } = render(<StationCard station={mockStationOffAir} />);
+    expect(container.textContent).toContain('ยังไม่ตรวจ');
+  });
+
   it('shows station genre', () => {
     const { container } = render(<StationCard station={mockStation} />);
     expect(container.textContent).toContain('ศาสนา');
@@ -149,7 +159,7 @@ describe('StationCard', () => {
     const onUpdate = vi.fn();
     const { container } = render(<StationCard station={mockStation} onUpdateStation={onUpdate} />);
     const buttons = container.querySelectorAll('button');
-    // Should have: on/off toggle, #deviation, #intermod (inspection moved to InspectionPanel)
+    // Should have: on/off toggle, inspection toggle, #deviation, #intermod
     expect(buttons.length).toBeGreaterThanOrEqual(3);
   });
 
@@ -172,18 +182,9 @@ describe('StationCard', () => {
     expect(container.textContent).toContain('ไม่ยื่นคำขอ');
   });
 
-  it('renders Record inspection button when inspection props are provided', () => {
-    const onCreate = vi.fn().mockResolvedValue(undefined);
-    const { container } = render(
-      <StationCard
-        station={mockStation}
-        currentUser={{ id: 1, displayName: 'iff' }}
-        inspectors={[]}
-        inspectionHistory={[]}
-        onCreateInspection={onCreate}
-      />
-    );
-    expect(container.textContent).toContain('Record inspection');
+  it('shows inspection date when dateInspected is set', () => {
+    const { container } = render(<StationCard station={mockStation} />);
+    expect(container.textContent).toContain('Inspected:');
   });
 
   it('shows #deviation and #intermod buttons with onUpdateStation', () => {

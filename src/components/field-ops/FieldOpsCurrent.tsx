@@ -4,8 +4,6 @@ import { useEffect, useState } from "react";
 import type { FMStation } from "@/types/station";
 import type { InterferenceSite } from "@/types/interference";
 import { parseLatLngInput } from "@/utils/parseLatLng";
-import FieldOpsInspectionPanel, { type InspectorOption } from "./FieldOpsInspectionPanel";
-import type { StationInspection } from "@/types/inspection";
 
 interface CommonAction {
   label: string;
@@ -28,37 +26,20 @@ export function FieldOpsCurrentFM({
   station,
   coLocated,
   onSelectStation,
+  onToggleInspection,
   onToggleOnAir,
   pending,
-  inspectionHistory,
-  inspectors,
-  currentUser,
-  onLoadInspections,
-  onCreateInspection,
 }: {
   station: FMStation;
   coLocated?: FMStation[];
   onSelectStation?: (id: string | number) => void;
+  onToggleInspection: () => void;
   onToggleOnAir?: () => void;
   pending: boolean;
-  inspectionHistory?: StationInspection[];
-  inspectors?: InspectorOption[];
-  currentUser?: { id: number; displayName: string };
-  onLoadInspections?: (stationId: number) => void;
-  onCreateInspection?: (input: {
-    stationId: number;
-    inspectedOn: string;
-    helperUserIds: number[];
-    notes?: string;
-  }) => Promise<void>;
 }) {
   const inspected = station.inspection69 === "ตรวจแล้ว";
   const main = isMain(station);
   const others = (coLocated ?? []).filter((s) => s.id !== station.id);
-
-  useEffect(() => {
-    onLoadInspections?.(Number(station.id));
-  }, [station.id, onLoadInspections]);
 
   return (
     <div style={{ padding: "20px 20px", display: "flex", flexDirection: "column", gap: 12 }}>
@@ -132,25 +113,18 @@ export function FieldOpsCurrentFM({
 
       <ButtonRow
         actions={[
+          { label: "▶ NAVIGATE", pending: "...", onClick: () => window.open(googleMapsUrl(station.latitude, station.longitude), "_blank"), variant: "primary" },
           {
-            label: "▶ NAVIGATE",
+            label: inspected ? "✓ INSPECTED" : "✓ INSPECT",
             pending: "...",
-            onClick: () => window.open(googleMapsUrl(station.latitude, station.longitude), "_blank"),
-            variant: "primary",
+            onClick: onToggleInspection,
+            variant: station.revoked ? "danger" : (inspected ? "ghost" : "primary"),
+            disabled: pending,
+            inverse: inspected,
           },
         ]}
         loading={pending}
       />
-
-      {onCreateInspection && currentUser && inspectors && (
-        <FieldOpsInspectionPanel
-          stationId={Number(station.id)}
-          history={inspectionHistory ?? []}
-          currentUser={currentUser}
-          inspectors={inspectors}
-          onCreate={onCreateInspection}
-        />
-      )}
 
       {onToggleOnAir && (
         <ButtonRow

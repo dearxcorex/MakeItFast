@@ -160,9 +160,6 @@ describe('OptimizedFMStationClient - handleUpdateStation', () => {
   });
 
   it('handles API failure without crashing', async () => {
-    // First call: on-mount /api/users/inspectors (handled by default mock).
-    // Second call: PATCH that returns 500.
-    mockFetch.mockResolvedValueOnce({ ok: true, json: () => Promise.resolve({ users: [] }) });
     mockFetch.mockResolvedValueOnce({
       ok: false,
       status: 500,
@@ -176,12 +173,11 @@ describe('OptimizedFMStationClient - handleUpdateStation', () => {
       await onUpdateStation('1', { onAir: false });
     });
 
-    // Should not crash. Two calls expected: inspectors (on mount) + PATCH.
-    expect(mockFetch).toHaveBeenCalledTimes(2);
+    // Should not crash. Only PATCH is expected.
+    expect(mockFetch).toHaveBeenCalledTimes(1);
   });
 
   it('handles network error without crashing', async () => {
-    mockFetch.mockResolvedValueOnce({ ok: true, json: () => Promise.resolve({ users: [] }) });
     mockFetch.mockRejectedValueOnce(new Error('Network error'));
 
     render(<OptimizedFMStationClient {...defaultProps} />);
@@ -192,7 +188,7 @@ describe('OptimizedFMStationClient - handleUpdateStation', () => {
       await onUpdateStation('1', { onAir: false });
     });
 
-    expect(mockFetch).toHaveBeenCalledTimes(2);
+    expect(mockFetch).toHaveBeenCalledTimes(1);
   });
 
   it('handles station not found gracefully', async () => {

@@ -237,7 +237,7 @@ describe('PATCH /api/stations/[id]', () => {
     expect(res.status).toBe(200);
   });
 
-  it('toggles inspection69 to true without touching date_inspected', async () => {
+  it('sets date_inspected when inspection69 is true', async () => {
     vi.mocked(prisma.fm_station.update).mockResolvedValue({ id_fm: 1 } as never);
     const { PATCH } = await import('@/app/api/stations/[id]/route');
     const req = new Request('http://localhost', {
@@ -248,17 +248,15 @@ describe('PATCH /api/stations/[id]', () => {
     expect(res.status).toBe(200);
     expect(prisma.fm_station.update).toHaveBeenCalledWith(
       expect.objectContaining({
-        data: expect.objectContaining({ inspection_69: true }),
-      })
-    );
-    expect(prisma.fm_station.update).toHaveBeenCalledWith(
-      expect.objectContaining({
-        data: expect.not.objectContaining({ date_inspected: expect.anything() }),
+        data: expect.objectContaining({
+          inspection_69: true,
+          date_inspected: expect.any(String),
+        }),
       })
     );
   });
 
-  it('toggles inspection69 to false without touching date_inspected', async () => {
+  it('clears date_inspected when inspection69 is false', async () => {
     vi.mocked(prisma.fm_station.update).mockResolvedValue({ id_fm: 1 } as never);
     const { PATCH } = await import('@/app/api/stations/[id]/route');
     const req = new Request('http://localhost', {
@@ -269,14 +267,44 @@ describe('PATCH /api/stations/[id]', () => {
     expect(res.status).toBe(200);
     expect(prisma.fm_station.update).toHaveBeenCalledWith(
       expect.objectContaining({
-        data: expect.objectContaining({ inspection_69: false }),
+        data: expect.objectContaining({
+          inspection_69: false,
+          date_inspected: null,
+        }),
       })
     );
-    expect(prisma.fm_station.update).toHaveBeenCalledWith(
+  });
+
+  it('records a station_inspection row via createInspection when toggling on', async () => {
+    vi.mocked(prisma.fm_station.update).mockResolvedValue({ id_fm: 1 } as never);
+    const inspectionService = await import('@/services/inspectionService');
+    const createInspectionSpy = vi
+      .spyOn(inspectionService, 'createInspection')
+      .mockResolvedValue({} as never);
+    const sessionLib = await import('@/lib/session');
+    vi.spyOn(sessionLib, 'getSession').mockResolvedValue({
+      userId: 42,
+      username: 'tester',
+      displayName: 'Test User',
+      role: 'inspector',
+      issuedAt: Date.now(),
+    } as never);
+    const { PATCH } = await import('@/app/api/stations/[id]/route');
+    const req = new Request('http://localhost', {
+      method: 'PATCH',
+      body: JSON.stringify({ inspection69: 'ตรวจแล้ว' }),
+    });
+    const res = await PATCH(req as never, { params: Promise.resolve({ id: '1' }) });
+    expect(res.status).toBe(200);
+    expect(createInspectionSpy).toHaveBeenCalledWith(
       expect.objectContaining({
-        data: expect.not.objectContaining({ date_inspected: expect.anything() }),
+        stationId: 1,
+        leadUserId: 42,
+        helperUserIds: [],
+        inspectedOn: expect.any(String),
       })
     );
+    createInspectionSpy.mockRestore();
   });
 });
 

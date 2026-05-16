@@ -1,5 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import prisma from '@/lib/prisma';
+import { createInspection } from '@/services/inspectionService';
+import { getSession } from '@/lib/session';
 
 export async function PATCH(
   request: NextRequest,
@@ -39,10 +41,9 @@ export async function PATCH(
       updates.inspection_68 = inspection68 === 'ตรวจแล้ว' || inspection68 === true;
     }
     if (inspection69 !== undefined) {
-      // NOTE: date_inspected is now derived from station_inspection rows.
-      // PATCH only toggles the legacy boolean for back-compat tooling; UI uses
-      // POST /api/stations/:id/inspections to record new inspections.
-      updates.inspection_69 = inspection69 === 'ตรวจแล้ว' || inspection69 === true;
+      const truthy = inspection69 === 'ตรวจแล้ว' || inspection69 === true;
+      updates.inspection_69 = truthy;
+      updates.date_inspected = truthy ? new Date().toISOString().split('T')[0] : null;
     }
 
     if (Object.keys(updates).length === 0) {
@@ -53,6 +54,30 @@ export async function PATCH(
       where: { id_fm: stationId },
       data: updates,
     });
+
+    // Sidecar: when toggling inspection ON, also record a station_inspection row
+    // so history continues to accumulate even though the UI no longer exposes
+    // the multi-helper form. Idempotent on (station_id, inspected_on,
+    // lead_user_id), so repeated toggles in the same day are safe.
+    if (updates.inspection_69 === true) {
+      try {
+        const session = await getSession();
+        if (session.userId) {
+          await createInspection({
+            stationId,
+            inspectedOn: new Date().toISOString().split('T')[0],
+            leadUserId: session.userId,
+            helperUserIds: [],
+          });
+        }
+      } catch (err) {
+        // Don't fail the PATCH if the history insert fails — the boolean
+        // update is the user's intent. The service is idempotent, so
+        // duplicates are not an error path here; this catches DB outages,
+        // missing-user races, etc.
+        console.warn(`Failed to record inspection history for station ${stationId}:`, err);
+      }
+    }
 
     return NextResponse.json({ success: true, data });
   } catch (error) {

@@ -1,10 +1,9 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import dynamic from "next/dynamic";
 import type { FMStation } from "@/types/station";
 import type { InterferenceSite } from "@/types/interference";
-import type { StationInspection } from "@/types/inspection";
 import { FieldOpsNav, type FieldOpsTab } from "./FieldOpsNav";
 import { FieldOpsHeader } from "./FieldOpsHeader";
 import { FieldOpsFilters, DEFAULT_FILTERS, type FieldFilters } from "./FieldOpsFilters";
@@ -38,7 +37,6 @@ interface Props {
   initialInterference: InterferenceSite[];
   initialCities: string[];
   initialProvinces: string[];
-  currentUser?: { id: number; displayName: string };
 }
 
 /**
@@ -66,7 +64,6 @@ export default function FieldOpsClient({
   initialStations,
   initialInterference,
   initialProvinces,
-  currentUser,
 }: Props) {
   const [tab, setTab] = useState<FieldOpsTab>("field-ops");
   const [stations, setStations] = useState<FMStation[]>(initialStations);
@@ -79,48 +76,7 @@ export default function FieldOpsClient({
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [theme, setTheme] = useState<"dark" | "light">("dark");
   const [markingSourceForId, setMarkingSourceForId] = useState<number | null>(null);
-  const [inspectors, setInspectors] = useState<{ id: number; username: string; displayName: string }[]>([]);
-  const [inspectionHistory, setInspectionHistory] = useState<Record<number, StationInspection[]>>({});
   const { userLocation, status: locationStatus, retry: retryLocation } = useGeolocation();
-
-  useEffect(() => {
-    fetch("/api/users/inspectors")
-      .then((r) => (r.ok ? r.json() : { users: [] }))
-      .then((j) => setInspectors(j.users ?? []))
-      .catch(() => setInspectors([]));
-  }, []);
-
-  const loadInspectionsFor = useCallback(async (stationId: number) => {
-    const r = await fetch(`/api/stations/${stationId}/inspections`);
-    if (!r.ok) return;
-    const j = await r.json();
-    setInspectionHistory((prev) => ({ ...prev, [stationId]: j.inspections ?? [] }));
-  }, []);
-
-  const handleCreateInspection = useCallback(async (input: {
-    stationId: number;
-    inspectedOn: string;
-    helperUserIds: number[];
-    notes?: string;
-  }) => {
-    const r = await fetch(`/api/stations/${input.stationId}/inspections`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        inspectedOn: input.inspectedOn,
-        helperUserIds: input.helperUserIds,
-        notes: input.notes,
-      }),
-    });
-    if (!r.ok) throw new Error("Failed to record inspection");
-    const j = await r.json();
-    if (j.station) {
-      setStations((all) =>
-        all.map((s) => (s.id === input.stationId ? { ...s, ...j.station } : s))
-      );
-    }
-    await loadInspectionsFor(input.stationId);
-  }, [loadInspectionsFor]);
 
   useEffect(() => {
     const check = () => setIsMobile(window.innerWidth < 900);
@@ -246,20 +202,37 @@ export default function FieldOpsClient({
     }
   };
 
-  const handleToggleInterferenceInspection = async () => {
-    if (!selection || selection.kind !== "int" || !selectedSite) return;
+  const handleToggleInspection = async () => {
+    if (!selection) return;
     setPending(true);
     try {
-      const next = selectedSite.status === "ตรวจแล้ว" ? "ยังไม่ตรวจ" : "ตรวจแล้ว";
-      setInterference((all) =>
-        all.map((s) => (s.id === selectedSite.id ? { ...s, status: next } : s))
-      );
-      const res = await fetch(`/api/interference/${selectedSite.id}`, {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ status: next }),
-      });
-      if (!res.ok) throw new Error("Interference update failed");
+      if (selection.kind === "fm" && selectedStation) {
+        const next = selectedStation.inspection69 === "ตรวจแล้ว" ? "ยังไม่ตรวจ" : "ตรวจแล้ว";
+        setStations((all) =>
+          all.map((s) =>
+            s.id === selectedStation.id
+              ? { ...s, inspection69: next, dateInspected: next === "ตรวจแล้ว" ? new Date().toISOString().split("T")[0] : undefined }
+              : s
+          )
+        );
+        const res = await fetch(`/api/stations/${selectedStation.id}`, {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ inspection69: next }),
+        });
+        if (!res.ok) throw new Error("FM update failed");
+      } else if (selection.kind === "int" && selectedSite) {
+        const next = selectedSite.status === "ตรวจแล้ว" ? "ยังไม่ตรวจ" : "ตรวจแล้ว";
+        setInterference((all) =>
+          all.map((s) => (s.id === selectedSite.id ? { ...s, status: next } : s))
+        );
+        const res = await fetch(`/api/interference/${selectedSite.id}`, {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ status: next }),
+        });
+        if (!res.ok) throw new Error("Interference update failed");
+      }
     } catch (err) {
       console.error(err);
       window.location.reload();
@@ -499,13 +472,9 @@ export default function FieldOpsClient({
                         station={selectedStation}
                         coLocated={coLocatedStations}
                         onSelectStation={(id) => handleSelect({ kind: "fm", id })}
+                        onToggleInspection={handleToggleInspection}
                         onToggleOnAir={handleToggleOnAir}
                         pending={pending}
-                        inspectors={inspectors}
-                        inspectionHistory={inspectionHistory[Number(selectedStation.id)] ?? []}
-                        currentUser={currentUser}
-                        onLoadInspections={loadInspectionsFor}
-                        onCreateInspection={handleCreateInspection}
                       />
                     )}
                     {selection?.kind === "int" && selectedSite && (
@@ -513,7 +482,7 @@ export default function FieldOpsClient({
                         site={selectedSite}
                         coLocated={coLocatedSites}
                         onSelectSite={(id) => handleSelect({ kind: "int", id })}
-                        onToggleInspection={handleToggleInterferenceInspection}
+                        onToggleInspection={handleToggleInspection}
                         onToggleLawPaper={handleToggleLawPaper}
                         pending={pending}
                         marking={markingSourceForId === selectedSite.id}
@@ -542,7 +511,7 @@ export default function FieldOpsClient({
                   selection={selection}
                   station={selectedStation}
                   site={selectedSite}
-                  onToggleInspection={handleToggleInterferenceInspection}
+                  onToggleInspection={handleToggleInspection}
                   onToggleLawPaper={handleToggleLawPaper}
                   onClose={() => setSelection(null)}
                   pending={pending}
@@ -559,15 +528,6 @@ export default function FieldOpsClient({
                       ? (lat, lng) => handleMarkSource(selectedSite.id, lat, lng)
                       : undefined
                   }
-                  inspectors={inspectors}
-                  inspectionHistory={
-                    selectedStation
-                      ? inspectionHistory[Number(selectedStation.id)] ?? []
-                      : []
-                  }
-                  currentUser={currentUser}
-                  onLoadInspections={loadInspectionsFor}
-                  onCreateInspection={handleCreateInspection}
                 />
               )}
             </>

@@ -9,7 +9,6 @@ import { calculateDistance, createLocationIcon, getStationIcon } from '@/utils/m
 import { initialHeadingState, updateHeading, type HeadingSample } from '@/utils/headingTracking';
 import StationPopupSingle from './map/StationPopupSingle';
 import StationPopupMultiple from './map/StationPopupMultiple';
-import type { StationInspection } from '@/types/inspection';
 
 // Fix for default markers in react-leaflet
 delete (L.Icon.Default.prototype as unknown as { _getIconUrl?: unknown })._getIconUrl;
@@ -34,16 +33,6 @@ interface MapProps {
   onUpdateStation?: (stationId: string | number, updates: Partial<FMStation>) => void;
   highlightedStationIds?: (string | number)[];
   flyToStations?: FlyToTarget | null;
-  inspectors?: { id: number; username: string; displayName: string }[];
-  inspectionHistory?: Record<number, StationInspection[]>;
-  currentUser?: { id: number; displayName: string };
-  onLoadInspections?: (stationId: number) => void;
-  onCreateInspection?: (input: {
-    stationId: number;
-    inspectedOn: string;
-    helperUserIds: number[];
-    notes?: string;
-  }) => Promise<void>;
 }
 
 function LocationTracker({ onLocationUpdate }: { onLocationUpdate: (location: UserLocation) => void }) {
@@ -155,7 +144,7 @@ function FlyToHighlightedStations({ target }: { target: FlyToTarget | null }) {
   return null;
 }
 
-export default function Map({ stations, selectedStation, onStationSelect, onUpdateStation, highlightedStationIds = [], flyToStations, inspectors, inspectionHistory, currentUser, onLoadInspections, onCreateInspection }: MapProps) {
+export default function Map({ stations, selectedStation, onStationSelect, onUpdateStation, highlightedStationIds = [], flyToStations }: MapProps) {
   const [userLocation, setUserLocation] = useState<UserLocation | null>(null);
   const [isClient, setIsClient] = useState(false);
   const [isMobile, setIsMobile] = useState(false);
@@ -280,22 +269,12 @@ export default function Map({ stations, selectedStation, onStationSelect, onUpda
                     setCurrentPage={(page) => updatePaginationPage(coordKey, page)}
                     isMobile={isMobile}
                     onUpdateStation={onUpdateStation}
-                    inspectors={inspectors}
-                    inspectionHistory={inspectionHistory}
-                    currentUser={currentUser}
-                    onLoadInspections={onLoadInspections}
-                    onCreateInspection={onCreateInspection}
                   />
                 ) : (
                   <StationPopupSingle
                     station={representativeStation}
                     distance={distance}
                     onUpdateStation={onUpdateStation}
-                    inspectors={inspectors}
-                    inspectionHistory={inspectionHistory?.[Number(representativeStation.id)] ?? []}
-                    currentUser={currentUser}
-                    onLoadInspections={onLoadInspections}
-                    onCreateInspection={onCreateInspection}
                   />
                 )}
               </Popup>
