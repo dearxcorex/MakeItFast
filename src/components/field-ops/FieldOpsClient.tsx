@@ -516,9 +516,13 @@ export default function FieldOpsClient({
                         station={selectedStation}
                         coLocated={coLocatedStations}
                         onSelectStation={(id) => handleSelect({ kind: "fm", id })}
-                        onToggleInspection={handleToggleInspection}
                         onToggleOnAir={handleToggleOnAir}
                         pending={pending}
+                        inspectors={inspectors}
+                        inspectionHistory={inspectionHistory[Number(selectedStation.id)] ?? []}
+                        currentUser={currentUser}
+                        onLoadInspections={() => loadInspectionsFor(Number(selectedStation.id))}
+                        onCreateInspection={handleCreateInspection}
                       />
                     )}
                     {selection?.kind === "int" && selectedSite && (
