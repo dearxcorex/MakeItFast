@@ -4,7 +4,7 @@
 
 **Goal:** Add a first-mount modal that lets each inspector pick a default crew once, pre-fills the per-station `TeammatePicker` from that crew, and is re-openable via a header indicator — all without changing the existing helper attribution path.
 
-**Architecture:** One nullable `Int[]` column on the `user` table encodes a 3-state machine (`NULL` undecided / `[]` solo / `[1,2,…]` crew). A thin `userPreferencesService` exposes get/set with self-healing against deactivated users; a session-gated `/api/users/me/crew` route wraps it. `FieldOpsClient` boots the value on mount, opens `CrewModal` when `NULL`, and threads the value into the existing `helperUserIds` state so the existing `TeammatePicker` and PATCH path pick it up unchanged.
+**Architecture:** Two columns on the `user` table encode a 3-state machine: `default_helper_user_ids Int[]` (helpers) + `crew_decided Boolean` (undecided vs. decided). (Prisma 5 forbids nullable scalar arrays — see Task 1.) A thin `userPreferencesService` exposes get/set with self-healing against deactivated users and returns `number[] | null` (null when `crew_decided=false`); a session-gated `/api/users/me/crew` route wraps it. `FieldOpsClient` boots the value on mount, opens `CrewModal` when null, and threads the value into the existing `helperUserIds` state so the existing `TeammatePicker` and PATCH path pick it up unchanged.
 
 **Tech Stack:** Next.js 15 App Router, TypeScript, Prisma + PostgreSQL (Neon), Vitest + @testing-library/react, iron-session.
 
