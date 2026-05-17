@@ -14,6 +14,7 @@ import { FieldOpsCurrentFM, FieldOpsCurrentINT } from "./FieldOpsCurrent";
 import { FieldOpsBottomSheet } from "./FieldOpsBottomSheet";
 import { FieldOpsDrawer } from "./FieldOpsDrawer";
 import { MobileFilterBar } from "./MobileFilterBar";
+import CrewModal from "./CrewModal";
 import { computeKpis } from "@/utils/fieldOpsKpi";
 import type { FieldSelection } from "./FieldOpsMap";
 
@@ -80,7 +81,28 @@ export default function FieldOpsClient({
   const [markingSourceForId, setMarkingSourceForId] = useState<number | null>(null);
   const [inspectors, setInspectors] = useState<{ id: number; username: string; displayName: string }[]>([]);
   const [helperUserIds, setHelperUserIds] = useState<number[]>([]);
+  const [defaultCrew, setDefaultCrew] = useState<number[] | null>(null);
+  const [crewModalOpen, setCrewModalOpen] = useState(false);
+  const [crewSaveError, setCrewSaveError] = useState<string | undefined>(undefined);
+  const [crewSaving, setCrewSaving] = useState(false);
   const { userLocation, status: locationStatus, retry: retryLocation } = useGeolocation();
+
+  useEffect(() => {
+    let cancelled = false;
+    fetch('/api/users/me/crew')
+      .then((r) => (r.ok ? r.json() : { defaultHelperUserIds: null }))
+      .then((j: { defaultHelperUserIds: number[] | null }) => {
+        if (cancelled) return;
+        setDefaultCrew(j.defaultHelperUserIds);
+        if (j.defaultHelperUserIds === null) setCrewModalOpen(true);
+      })
+      .catch(() => {
+        if (cancelled) return;
+        setDefaultCrew(null);
+        setCrewModalOpen(true);
+      });
+    return () => { cancelled = true; };
+  }, []);
 
   useEffect(() => {
     fetch("/api/users/inspectors")
@@ -155,7 +177,9 @@ export default function FieldOpsClient({
     selection?.kind === "int" ? interference.find((s) => s.id === selection.id) ?? null : null;
 
   const fmStationId = selection?.kind === "fm" && selectedStation ? selectedStation.id : null;
-  useEffect(() => { setHelperUserIds([]); }, [fmStationId]);
+  useEffect(() => {
+    setHelperUserIds(defaultCrew ?? []);
+  }, [fmStationId, defaultCrew]);
 
   // Auto-dismiss the selection (and its details panel / bottom sheet) when
   // the current filter no longer includes the selected item — e.g. switching
@@ -215,6 +239,36 @@ export default function FieldOpsClient({
       if (s && s.lat !== null && s.long !== null) setFlyTarget([s.lat, s.long]);
     }
   };
+
+  async function persistCrew(ids: number[]) {
+    setCrewSaving(true);
+    setCrewSaveError(undefined);
+    try {
+      const res = await fetch('/api/users/me/crew', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ defaultHelperUserIds: ids }),
+      });
+      if (!res.ok) {
+        const j = await res.json().catch(() => ({}));
+        throw new Error(j?.error ?? 'crew_save_failed');
+      }
+      const j = (await res.json()) as { defaultHelperUserIds: number[] };
+      setDefaultCrew(j.defaultHelperUserIds);
+      setCrewModalOpen(false);
+    } catch (err) {
+      const code = err instanceof Error ? err.message : 'crew_save_failed';
+      const friendly =
+        code === 'invalid_helper'   ? 'That teammate is no longer active.' :
+        code === 'self_in_list'     ? "You can't add yourself." :
+        code === 'too_many'         ? 'You can pick up to 5 teammates.' :
+        code === 'invalid_body'     ? "Something's wrong with the form." :
+                                      "Couldn't save — try again.";
+      setCrewSaveError(friendly);
+    } finally {
+      setCrewSaving(false);
+    }
+  }
 
   const handleToggleInspection = async () => {
     if (!selection) return;
@@ -591,6 +645,17 @@ export default function FieldOpsClient({
           onClose={() => setDrawerOpen(false)}
         />
       )}
+      <CrewModal
+        open={crewModalOpen}
+        inspectors={inspectors}
+        currentUserId={currentUser?.id ?? -1}
+        initialSelected={defaultCrew ?? []}
+        onSave={(ids) => persistCrew(ids)}
+        onSolo={() => persistCrew([])}
+        onClose={() => setCrewModalOpen(false)}
+        error={crewSaveError}
+        pending={crewSaving}
+      />
     </div>
   );
 }
