@@ -177,7 +177,7 @@ export function FieldOpsDrawer({
           >
             <span className="fo-mono" style={{ color: "var(--fo-rail-mute)" }}>MY CREW</span>
             <CrewIndicator
-              defaultCrew={defaultCrew}
+              defaultCrew={defaultCrew ?? null}
               inspectors={inspectors ?? []}
               onOpen={onOpenCrew}
               compact={false}
