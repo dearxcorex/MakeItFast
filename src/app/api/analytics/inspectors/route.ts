@@ -155,11 +155,16 @@ async function buildPayload(): Promise<InspectorsAnalytics> {
     const monthAsLead = leadMonthMap.get(u.id) ?? 0;
     const monthAsHelper = memberMonthMap.get(u.id) ?? 0;
     const monthFromSeries = thisMonthPerUser[u.username] ?? 0;
-    // Reconcile the two data sources: take whichever count is higher.
-    // monthlySeries is sourced from a raw bucketed query; the groupBy queries
-    // are scoped narrowly to the current month. They normally agree; when
-    // they don't, the higher value is the truthful count.
-    const monthTotal = Math.max(monthFromSeries, monthAsLead + monthAsHelper);
+    // Raw query is the source for the monthly chart the user sees — make it
+    // the source of truth for the leaderboard total too. If the groupBy
+    // numbers disagree, that's a real divergence worth investigating, not a
+    // discrepancy to paper over with max().
+    const monthTotal = monthFromSeries;
+    if (monthFromSeries !== monthAsLead + monthAsHelper) {
+      console.warn(
+        `[analytics] count divergence for ${u.username}: chart=${monthFromSeries}, groupBy=${monthAsLead + monthAsHelper}`,
+      );
+    }
     const leadMaxDate = leadMaxMap.get(u.id) ?? null;
     const helperMaxDate = helperMaxMap.get(u.id) ?? null;
     let lastActive: Date | null = null;

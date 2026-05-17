@@ -170,7 +170,7 @@ describe('GET /api/analytics/inspectors', () => {
       ytdAsLead: 11, ytdAsHelper: 3, ytdTotal: 14, monthTotal: 3, lastActive: '2026-05-12',
     });
     expect(daf).toMatchObject({
-      ytdAsLead: 4, ytdAsHelper: 5, ytdTotal: 9, monthTotal: 1, lastActive: '2026-04-25',
+      ytdAsLead: 4, ytdAsHelper: 5, ytdTotal: 9, monthTotal: 0, lastActive: '2026-04-25',
     });
 
     expect(json.monthlySeries).toHaveLength(12);
@@ -201,6 +201,39 @@ describe('GET /api/analytics/inspectors', () => {
     expect(json.kpis.largestTeam).toBeNull();
     expect(json.kpis.mostTaggedHelperThisYear).toBeNull();
     expect(json.kpis.activeThisMonth).toBe(0);
+  });
+
+  it('uses the raw monthly bucket as truth even when groupBy disagrees', async () => {
+    vi.mocked(prisma.user.findMany).mockResolvedValue([
+      { id: 3, username: 'iff', display_name: 'iff' },
+    ] as never);
+
+    // groupBy says: this month iff led 5 inspections, helped 0
+    vi.mocked(prisma.station_inspection.groupBy)
+      .mockResolvedValueOnce([] as never)                                         // ytd-lead
+      .mockResolvedValueOnce([{ lead_user_id: 3, _count: { _all: 5 } }] as never)  // month-lead
+      .mockResolvedValueOnce([] as never);                                        // lead-max
+    vi.mocked(prisma.station_inspection_member.groupBy)
+      .mockResolvedValueOnce([] as never)   // ytd-helper
+      .mockResolvedValueOnce([] as never);  // month-helper
+
+    // Raw monthly bucket says: this month iff appeared only twice.
+    // Disagreement — Math.max would pick 5; truth picks 2.
+    vi.mocked(prisma.$queryRawUnsafe)
+      .mockResolvedValueOnce([
+        { month: new Date().toISOString().slice(0, 7), lead_user_id: 3, n: 2 },
+      ] as never)
+      .mockResolvedValueOnce([] as never)
+      .mockResolvedValueOnce([] as never)
+      .mockResolvedValueOnce([] as never);
+
+    const c = await mintCookie({ userId: 3, username: 'iff', displayName: 'iff', role: 'inspector' });
+    const getInspectors = await loadRoute();
+    const r = await getInspectors(await req(c.header));
+    const json = await r.json();
+    const iff = json.inspectors.find((u: { username: string }) => u.username === 'iff');
+    // monthTotal must match the chart (raw query) — 2, not 5.
+    expect(iff.monthTotal).toBe(2);
   });
 
   it('skips deactivated top helper and surfaces the next active helper', async () => {
