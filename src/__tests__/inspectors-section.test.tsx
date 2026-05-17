@@ -42,21 +42,21 @@ describe('InspectorsSection', () => {
     expect(container.textContent).toMatch(/loading|skeleton|\.\.\./i);
   });
 
-  it('renders leaderboard rows in DESC ytdTotal order with KPI strip and donuts', async () => {
+  it('renders leaderboard rows in DESC ytdTotal order with TopPerformer hero', async () => {
     const fetchMock = vi.fn().mockResolvedValue({
       ok: true,
       json: async () => SAMPLE,
     });
     vi.stubGlobal('fetch', fetchMock);
 
-    render(<InspectorsSection />);
+    const { container } = render(<InspectorsSection />);
 
-    await waitFor(() => expect(screen.getByText('iff')).toBeTruthy());
+    // wait for data — 'iff' appears in both the hero card and the leaderboard table
+    await waitFor(() => expect(screen.getAllByText('iff').length).toBeGreaterThanOrEqual(1));
 
-    // KPIs
-    expect(screen.getByText(/Active inspectors/i)).toBeTruthy();
-    expect(screen.getByText(/Largest team/i)).toBeTruthy();
-    expect(screen.getByText(/Most-tagged helper/i)).toBeTruthy();
+    // TopPerformer hero card
+    expect(container.textContent).toContain('TOP PERFORMER');
+    expect(container.textContent).toContain('14');
 
     // Leaderboard: rows in order iff, daf, ice (sorted DESC by ytdTotal)
     const rows = screen.getAllByRole('row');
@@ -64,9 +64,6 @@ describe('InspectorsSection', () => {
     expect(rows[1].textContent).toContain('iff');
     expect(rows[2].textContent).toContain('daf');
     expect(rows[3].textContent).toContain('ice');
-
-    // largestTeam KPI value
-    expect(screen.getByText(/กว้างไกล ฟ้าใส/)).toBeTruthy();
   });
 
   it('shows error banner when fetch fails', async () => {
