@@ -202,4 +202,45 @@ describe('GET /api/analytics/inspectors', () => {
     expect(json.kpis.mostTaggedHelperThisYear).toBeNull();
     expect(json.kpis.activeThisMonth).toBe(0);
   });
+
+  it('skips deactivated top helper and surfaces the next active helper', async () => {
+    // active users list excludes the deactivated user `aom` (id 99)
+    vi.mocked(prisma.user.findMany).mockResolvedValue([
+      { id: 3, username: 'iff', display_name: 'iff' },
+      { id: 6, username: 'daf', display_name: 'daf' },
+    ] as never);
+
+    // No lead activity.
+    vi.mocked(prisma.station_inspection.groupBy)
+      .mockResolvedValueOnce([] as never)
+      .mockResolvedValueOnce([] as never)
+      .mockResolvedValueOnce([] as never);
+
+    // memberYtd returns the deactivated aom on top with 99 hits,
+    // then daf with 5, then iff with 3.
+    vi.mocked(prisma.station_inspection_member.groupBy)
+      .mockResolvedValueOnce([
+        { user_id: 99, _count: { _all: 99 } },
+        { user_id: 6,  _count: { _all: 5 } },
+        { user_id: 3,  _count: { _all: 3 } },
+      ] as never)
+      .mockResolvedValueOnce([] as never);
+
+    vi.mocked(prisma.$queryRawUnsafe)
+      .mockResolvedValueOnce([] as never)
+      .mockResolvedValueOnce([] as never)
+      .mockResolvedValueOnce([] as never)
+      .mockResolvedValueOnce([] as never);
+
+    const c = await mintCookie({ userId: 3, username: 'iff', displayName: 'iff', role: 'inspector' });
+    const getInspectors = await loadRoute();
+    const r = await getInspectors(await req(c.header));
+    expect(r.status).toBe(200);
+    const json = await r.json();
+    // The deactivated aom (99) should be skipped; daf (5) wins.
+    expect(json.kpis.mostTaggedHelperThisYear).toMatchObject({
+      username: 'daf',
+      count: 5,
+    });
+  });
 });

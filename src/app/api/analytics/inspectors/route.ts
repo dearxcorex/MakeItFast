@@ -202,10 +202,8 @@ async function buildPayload(): Promise<InspectorsAnalytics> {
   }
 
   let mostTaggedHelperThisYear: InspectorsAnalytics['kpis']['mostTaggedHelperThisYear'] = null;
-  const helperTop = memberYtd
-    .slice()
-    .sort((a, b) => b._count._all - a._count._all)[0];
-  if (helperTop) {
+  const sortedHelpers = memberYtd.slice().sort((a, b) => b._count._all - a._count._all);
+  for (const helperTop of sortedHelpers) {
     const u = userById.get(helperTop.user_id);
     if (u) {
       mostTaggedHelperThisYear = {
@@ -213,6 +211,7 @@ async function buildPayload(): Promise<InspectorsAnalytics> {
         displayName: u.display_name,
         count: helperTop._count._all,
       };
+      break;
     }
   }
 
