@@ -59,7 +59,6 @@ function dedupe(ids: number[]): number[] {
   const seen = new Set<number>();
   const out: number[] = [];
   for (const id of ids) {
-    if (!Number.isInteger(id)) throw new CrewValidationError('invalid_helper');
     if (seen.has(id)) continue;
     seen.add(id);
     out.push(id);
@@ -71,6 +70,9 @@ export async function setDefaultCrew(
   userId: number,
   rawIds: number[],
 ): Promise<number[]> {
+  for (const id of rawIds) {
+    if (!Number.isInteger(id)) throw new CrewValidationError('invalid_helper');
+  }
   const ids = dedupe(rawIds);
   if (ids.some((id) => id === userId)) {
     throw new CrewValidationError('self_in_list');

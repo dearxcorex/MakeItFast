@@ -12,7 +12,7 @@ vi.mock('@/lib/prisma', () => ({
 }));
 
 import prisma from '@/lib/prisma';
-import { getDefaultCrew, setDefaultCrew, MAX_DEFAULT_HELPERS } from '@/services/userPreferencesService';
+import { getDefaultCrew, setDefaultCrew, MAX_DEFAULT_HELPERS, CrewValidationError } from '@/services/userPreferencesService';
 
 beforeEach(() => {
   vi.clearAllMocks();
@@ -136,6 +136,7 @@ describe('setDefaultCrew', () => {
 
   it('rejects self in the crew', async () => {
     await expect(setDefaultCrew(3, [3])).rejects.toThrow('self_in_list');
+    await expect(setDefaultCrew(3, [3])).rejects.toBeInstanceOf(CrewValidationError);
   });
 
   it('rejects more than MAX_DEFAULT_HELPERS helpers', async () => {
