@@ -8,12 +8,7 @@ vi.mock('@/lib/prisma', () => ({
   default: {
     user: { findMany: vi.fn() },
     fm_station: { findUnique: vi.fn() },
-    station_inspection: {
-      groupBy: vi.fn(),
-    },
-    station_inspection_member: {
-      groupBy: vi.fn(),
-    },
+    interference_site: { findUnique: vi.fn() },
     $queryRawUnsafe: vi.fn(),
   },
 }));
@@ -40,6 +35,7 @@ let prisma: typeof prismaOriginal = prismaOriginal;
 // Helper that re-imports the route fresh each call so the route's
 // module-level 60-second cache does not leak between tests. Also re-imports
 // the prisma module so the test's mocks land on the same instance the route uses.
+// IMPORTANT: call this first, then set up mocks on the updated `prisma` reference.
 async function loadRoute() {
   const prismaMod = await import('@/lib/prisma');
   prisma = prismaMod.default;
@@ -56,7 +52,7 @@ beforeEach(async () => {
   // then clear all mock call histories on the fresh fns.
   const prismaMod = await import('@/lib/prisma');
   prisma = prismaMod.default;
-  vi.clearAllMocks();
+  vi.resetAllMocks();
 });
 
 async function req(cookie?: string): Promise<NextRequest> {
@@ -69,24 +65,35 @@ async function req(cookie?: string): Promise<NextRequest> {
   return new NextRequest('http://t/api/analytics/inspectors', { method: 'GET', headers });
 }
 
+// Mock all 9 $queryRawUnsafe calls with empty arrays.
+// Call AFTER loadRoute() so `prisma` is bound to the fresh module instance.
 function mockEmptyAggregates() {
-  vi.mocked(prisma.station_inspection.groupBy).mockResolvedValue([] as never);
-  vi.mocked(prisma.station_inspection_member.groupBy).mockResolvedValue([] as never);
-  vi.mocked(prisma.$queryRawUnsafe).mockResolvedValue([] as never);
+  vi.mocked(prisma.$queryRawUnsafe)
+    .mockResolvedValueOnce([] as never) // 1 leadYtd
+    .mockResolvedValueOnce([] as never) // 2 leadMonth
+    .mockResolvedValueOnce([] as never) // 3 leadMax
+    .mockResolvedValueOnce([] as never) // 4 memberYtd
+    .mockResolvedValueOnce([] as never) // 5 memberMonth
+    .mockResolvedValueOnce([] as never) // 6 leadMonthly
+    .mockResolvedValueOnce([] as never) // 7 helperMonthly
+    .mockResolvedValueOnce([] as never) // 8 helperMax
+    .mockResolvedValueOnce([] as never); // 9 largestTeamRows
   vi.mocked(prisma.fm_station.findUnique).mockResolvedValue(null);
 }
 
 describe('GET /api/analytics/inspectors', () => {
   it('returns 401 without a session', async () => {
-    mockEmptyAggregates();
-    vi.mocked(prisma.user.findMany).mockResolvedValue([] as never);
-
     const getInspectors = await loadRoute();
+    vi.mocked(prisma.user.findMany).mockResolvedValue([] as never);
+    mockEmptyAggregates();
+
     const r = await getInspectors(await req());
     expect(r.status).toBe(401);
   });
 
   it('excludes inactive users (aom) from the inspectors list', async () => {
+    const getInspectors = await loadRoute();
+
     vi.mocked(prisma.user.findMany).mockResolvedValue([
       { id: 3, username: 'iff', display_name: 'iff' },
       { id: 6, username: 'daf', display_name: 'daf' },
@@ -94,7 +101,6 @@ describe('GET /api/analytics/inspectors', () => {
     mockEmptyAggregates();
 
     const c = await mintCookie({ userId: 3, username: 'iff', displayName: 'iff', role: 'inspector' });
-    const getInspectors = await loadRoute();
     const r = await getInspectors(await req(c.header));
     expect(r.status).toBe(200);
     const json = await r.json();
@@ -105,51 +111,54 @@ describe('GET /api/analytics/inspectors', () => {
   });
 
   it('aggregates ytdAsLead + ytdAsHelper + monthTotal + lastActive per user', async () => {
+    const getInspectors = await loadRoute();
+
     vi.mocked(prisma.user.findMany).mockResolvedValue([
       { id: 3, username: 'iff', display_name: 'iff' },
       { id: 6, username: 'daf', display_name: 'daf' },
     ] as never);
 
-    // groupBy calls fire in declared order in the route: ytd-lead, month-lead, ytd-lead-last, then helper queries via $queryRawUnsafe + helper groupBy.
-    // The route uses prisma.station_inspection.groupBy twice (ytd-lead count, month-lead count, max-lead-date).
-    // We return the three result sets in order via mockResolvedValueOnce.
-    vi.mocked(prisma.station_inspection.groupBy)
-      .mockResolvedValueOnce([
-        { lead_user_id: 3, _count: { _all: 11 } },
-        { lead_user_id: 6, _count: { _all: 4 } },
-      ] as never)
-      .mockResolvedValueOnce([
-        { lead_user_id: 3, _count: { _all: 2 } },
-      ] as never)
-      .mockResolvedValueOnce([
-        { lead_user_id: 3, _max: { inspected_on: new Date('2026-05-10T00:00:00Z') } },
-        { lead_user_id: 6, _max: { inspected_on: new Date('2026-04-21T00:00:00Z') } },
-      ] as never);
-
-    vi.mocked(prisma.station_inspection_member.groupBy)
-      .mockResolvedValueOnce([
-        { user_id: 3, _count: { _all: 3 } },
-        { user_id: 6, _count: { _all: 5 } },
-      ] as never)
-      .mockResolvedValueOnce([] as never);
-
-    // $queryRawUnsafe is used for: monthlySeries lead bucket, monthlySeries helper bucket, helper max date, largestTeam.
     vi.mocked(prisma.$queryRawUnsafe)
+      // 1. leadYtd
+      .mockResolvedValueOnce([
+        { lead_user_id: 3, n: 11 },
+        { lead_user_id: 6, n: 4 },
+      ] as never)
+      // 2. leadMonth
+      .mockResolvedValueOnce([
+        { lead_user_id: 3, n: 2 },
+      ] as never)
+      // 3. leadMax
+      .mockResolvedValueOnce([
+        { lead_user_id: 3, last: new Date('2026-05-10T00:00:00Z') },
+        { lead_user_id: 6, last: new Date('2026-04-21T00:00:00Z') },
+      ] as never)
+      // 4. memberYtd
+      .mockResolvedValueOnce([
+        { user_id: 3, n: 3 },
+        { user_id: 6, n: 5 },
+      ] as never)
+      // 5. memberMonth (kept empty so chart agrees with groupBy for the divergence-warn contract)
+      .mockResolvedValueOnce([] as never)
+      // 6. leadMonthly
       .mockResolvedValueOnce([
         { month: '2026-05', lead_user_id: 3, n: 2 },
         { month: '2026-04', lead_user_id: 3, n: 5 },
         { month: '2026-04', lead_user_id: 6, n: 3 },
       ] as never)
+      // 7. helperMonthly
       .mockResolvedValueOnce([
         { month: '2026-04', user_id: 6, n: 4 },
         { month: '2026-05', user_id: 3, n: 1 },
       ] as never)
+      // 8. helperMax
       .mockResolvedValueOnce([
         { user_id: 3, last: new Date('2026-05-12T00:00:00Z') },
         { user_id: 6, last: new Date('2026-04-25T00:00:00Z') },
       ] as never)
+      // 9. largestTeamRows (FM site)
       .mockResolvedValueOnce([
-        { id: 42, station_id: 5520014, inspected_on: new Date('2026-04-21T00:00:00Z'), member_count: 3 },
+        { id: 42, target_type: 'fm', target_id: 5520014, inspected_on: new Date('2026-04-21T00:00:00Z'), member_count: 3 },
       ] as never);
 
     vi.mocked(prisma.fm_station.findUnique).mockResolvedValue({
@@ -157,7 +166,6 @@ describe('GET /api/analytics/inspectors', () => {
     } as never);
 
     const c = await mintCookie({ userId: 3, username: 'iff', displayName: 'iff', role: 'inspector' });
-    const getInspectors = await loadRoute();
     const r = await getInspectors(await req(c.header));
     expect(r.status).toBe(200);
     const json = await r.json();
@@ -190,13 +198,14 @@ describe('GET /api/analytics/inspectors', () => {
   });
 
   it('returns null kpi fields when no data', async () => {
+    const getInspectors = await loadRoute();
+
     vi.mocked(prisma.user.findMany).mockResolvedValue([
       { id: 3, username: 'iff', display_name: 'iff' },
     ] as never);
     mockEmptyAggregates();
 
     const c = await mintCookie({ userId: 3, username: 'iff', displayName: 'iff', role: 'inspector' });
-    const getInspectors = await loadRoute();
     const r = await getInspectors(await req(c.header));
     const json = await r.json();
     expect(json.kpis.largestTeam).toBeNull();
@@ -205,31 +214,30 @@ describe('GET /api/analytics/inspectors', () => {
   });
 
   it('uses the raw monthly bucket as truth even when groupBy disagrees', async () => {
+    const getInspectors = await loadRoute();
+
     vi.mocked(prisma.user.findMany).mockResolvedValue([
       { id: 3, username: 'iff', display_name: 'iff' },
     ] as never);
 
-    // groupBy says: this month iff led 5 inspections, helped 0
-    vi.mocked(prisma.station_inspection.groupBy)
-      .mockResolvedValueOnce([] as never)                                         // ytd-lead
-      .mockResolvedValueOnce([{ lead_user_id: 3, _count: { _all: 5 } }] as never)  // month-lead
-      .mockResolvedValueOnce([] as never);                                        // lead-max
-    vi.mocked(prisma.station_inspection_member.groupBy)
-      .mockResolvedValueOnce([] as never)   // ytd-helper
-      .mockResolvedValueOnce([] as never);  // month-helper
-
     // Raw monthly bucket says: this month iff appeared only twice.
     // Disagreement — Math.max would pick 5; truth picks 2.
     vi.mocked(prisma.$queryRawUnsafe)
+      .mockResolvedValueOnce([] as never)                                       // 1 leadYtd
+      .mockResolvedValueOnce([{ lead_user_id: 3, n: 5 }] as never)              // 2 leadMonth (says 5)
+      .mockResolvedValueOnce([] as never)                                       // 3 leadMax
+      .mockResolvedValueOnce([] as never)                                       // 4 memberYtd
+      .mockResolvedValueOnce([] as never)                                       // 5 memberMonth (says 0)
       .mockResolvedValueOnce([
         { month: new Date().toISOString().slice(0, 7), lead_user_id: 3, n: 2 },
-      ] as never)
-      .mockResolvedValueOnce([] as never)
-      .mockResolvedValueOnce([] as never)
-      .mockResolvedValueOnce([] as never);
+      ] as never)                                                                // 6 leadMonthly (says 2 — chart truth)
+      .mockResolvedValueOnce([] as never)                                       // 7 helperMonthly
+      .mockResolvedValueOnce([] as never)                                       // 8 helperMax
+      .mockResolvedValueOnce([] as never);                                      // 9 largestTeamRows
+
+    vi.mocked(prisma.fm_station.findUnique).mockResolvedValue(null);
 
     const c = await mintCookie({ userId: 3, username: 'iff', displayName: 'iff', role: 'inspector' });
-    const getInspectors = await loadRoute();
     const r = await getInspectors(await req(c.header));
     const json = await r.json();
     const iff = json.inspectors.find((u: { username: string }) => u.username === 'iff');
@@ -239,35 +247,31 @@ describe('GET /api/analytics/inspectors', () => {
 
   it('skips deactivated top helper and surfaces the next active helper', async () => {
     // active users list excludes the deactivated user `aom` (id 99)
+    const getInspectors = await loadRoute();
+
     vi.mocked(prisma.user.findMany).mockResolvedValue([
       { id: 3, username: 'iff', display_name: 'iff' },
       { id: 6, username: 'daf', display_name: 'daf' },
     ] as never);
 
-    // No lead activity.
-    vi.mocked(prisma.station_inspection.groupBy)
-      .mockResolvedValueOnce([] as never)
-      .mockResolvedValueOnce([] as never)
-      .mockResolvedValueOnce([] as never);
-
-    // memberYtd returns the deactivated aom on top with 99 hits,
-    // then daf with 5, then iff with 3.
-    vi.mocked(prisma.station_inspection_member.groupBy)
-      .mockResolvedValueOnce([
-        { user_id: 99, _count: { _all: 99 } },
-        { user_id: 6,  _count: { _all: 5 } },
-        { user_id: 3,  _count: { _all: 3 } },
-      ] as never)
-      .mockResolvedValueOnce([] as never);
-
     vi.mocked(prisma.$queryRawUnsafe)
-      .mockResolvedValueOnce([] as never)
-      .mockResolvedValueOnce([] as never)
-      .mockResolvedValueOnce([] as never)
-      .mockResolvedValueOnce([] as never);
+      .mockResolvedValueOnce([] as never) // 1 leadYtd
+      .mockResolvedValueOnce([] as never) // 2 leadMonth
+      .mockResolvedValueOnce([] as never) // 3 leadMax
+      .mockResolvedValueOnce([
+        { user_id: 99, n: 99 },
+        { user_id: 6,  n: 5 },
+        { user_id: 3,  n: 3 },
+      ] as never)                          // 4 memberYtd
+      .mockResolvedValueOnce([] as never) // 5 memberMonth
+      .mockResolvedValueOnce([] as never) // 6 leadMonthly
+      .mockResolvedValueOnce([] as never) // 7 helperMonthly
+      .mockResolvedValueOnce([] as never) // 8 helperMax
+      .mockResolvedValueOnce([] as never); // 9 largestTeamRows
+
+    vi.mocked(prisma.fm_station.findUnique).mockResolvedValue(null);
 
     const c = await mintCookie({ userId: 3, username: 'iff', displayName: 'iff', role: 'inspector' });
-    const getInspectors = await loadRoute();
     const r = await getInspectors(await req(c.header));
     expect(r.status).toBe(200);
     const json = await r.json();
