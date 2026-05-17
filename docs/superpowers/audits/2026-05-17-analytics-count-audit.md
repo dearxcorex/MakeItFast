@@ -40,7 +40,7 @@
 
 | Fix | Description | Commit |
 |---|---|---|
-| Fix 1 | Toggle OFF deletes today's caller-owned history row | TBD |
+| Fix 1 | Toggle OFF deletes today's caller-owned history row | a8ec31f |
 | Fix 2 | Remove Math.max; raw query is source of truth | ba5810c |
 | Fix 3 | mostTaggedHelperThisYear iterates past deactivated | df40683 |
 
