@@ -29,6 +29,9 @@ vi.mock('@/lib/prisma', () => ({
       upsert: vi.fn(),
       delete: vi.fn(),
     },
+    station_inspection: {
+      deleteMany: vi.fn(),
+    },
     $transaction: vi.fn(),
   },
 }));
@@ -384,6 +387,102 @@ describe('PATCH /api/stations/[id]', () => {
     }));
 
     createSpy.mockRestore();
+    getSessionSpy.mockRestore();
+  });
+
+  it('deletes today\'s caller-owned station_inspection row when toggling OFF', async () => {
+    vi.mocked(prisma.fm_station.update).mockResolvedValue({ id_fm: 1 } as never);
+    vi.mocked(prisma.station_inspection.deleteMany).mockResolvedValue({ count: 1 } as never);
+
+    const inspectionService = await import('@/services/inspectionService');
+    const recomputeSpy = vi
+      .spyOn(inspectionService, 'recomputeStationInspectionState')
+      .mockResolvedValue(undefined as never);
+
+    const sessionLib = await import('@/lib/session');
+    const getSessionSpy = vi.spyOn(sessionLib, 'getSession').mockResolvedValue({
+      userId: 3, username: 'iff', displayName: 'iff', role: 'inspector', issuedAt: Date.now(),
+    } as never);
+
+    const { PATCH } = await import('@/app/api/stations/[id]/route');
+    const req = new Request('http://localhost', {
+      method: 'PATCH',
+      body: JSON.stringify({ inspection69: false }),
+    });
+    const res = await PATCH(req as never, { params: Promise.resolve({ id: '1' }) });
+
+    expect(res.status).toBe(200);
+    expect(prisma.station_inspection.deleteMany).toHaveBeenCalledWith({
+      where: {
+        station_id: 1,
+        lead_user_id: 3,
+        inspected_on: expect.any(Date),
+      },
+    });
+    expect(recomputeSpy).toHaveBeenCalledWith(1);
+
+    recomputeSpy.mockRestore();
+    getSessionSpy.mockRestore();
+  });
+
+  it('does NOT fail when toggling OFF with no matching history row', async () => {
+    vi.mocked(prisma.fm_station.update).mockResolvedValue({ id_fm: 1 } as never);
+    vi.mocked(prisma.station_inspection.deleteMany).mockResolvedValue({ count: 0 } as never);
+
+    const inspectionService = await import('@/services/inspectionService');
+    const recomputeSpy = vi
+      .spyOn(inspectionService, 'recomputeStationInspectionState')
+      .mockResolvedValue(undefined as never);
+
+    const sessionLib = await import('@/lib/session');
+    const getSessionSpy = vi.spyOn(sessionLib, 'getSession').mockResolvedValue({
+      userId: 3, username: 'iff', displayName: 'iff', role: 'inspector', issuedAt: Date.now(),
+    } as never);
+
+    const { PATCH } = await import('@/app/api/stations/[id]/route');
+    const req = new Request('http://localhost', {
+      method: 'PATCH',
+      body: JSON.stringify({ inspection69: false }),
+    });
+    const res = await PATCH(req as never, { params: Promise.resolve({ id: '1' }) });
+
+    expect(res.status).toBe(200);
+    expect(prisma.station_inspection.deleteMany).toHaveBeenCalled();
+    expect(recomputeSpy).toHaveBeenCalledWith(1);
+
+    recomputeSpy.mockRestore();
+    getSessionSpy.mockRestore();
+  });
+
+  it('toggle OFF still succeeds when deleteMany throws (best-effort sidecar)', async () => {
+    vi.mocked(prisma.fm_station.update).mockResolvedValue({ id_fm: 1 } as never);
+    vi.mocked(prisma.station_inspection.deleteMany).mockRejectedValue(new Error('connection refused') as never);
+
+    const inspectionService = await import('@/services/inspectionService');
+    const recomputeSpy = vi
+      .spyOn(inspectionService, 'recomputeStationInspectionState')
+      .mockResolvedValue(undefined as never);
+
+    const sessionLib = await import('@/lib/session');
+    const getSessionSpy = vi.spyOn(sessionLib, 'getSession').mockResolvedValue({
+      userId: 3, username: 'iff', displayName: 'iff', role: 'inspector', issuedAt: Date.now(),
+    } as never);
+
+    const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
+
+    const { PATCH } = await import('@/app/api/stations/[id]/route');
+    const req = new Request('http://localhost', {
+      method: 'PATCH',
+      body: JSON.stringify({ inspection69: false }),
+    });
+    const res = await PATCH(req as never, { params: Promise.resolve({ id: '1' }) });
+
+    expect(res.status).toBe(200);                  // boolean update still succeeds
+    expect(warnSpy).toHaveBeenCalled();            // logs the failure
+    expect(recomputeSpy).not.toHaveBeenCalled();   // skipped after deleteMany throws
+
+    warnSpy.mockRestore();
+    recomputeSpy.mockRestore();
     getSessionSpy.mockRestore();
   });
 });

@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import prisma from '@/lib/prisma';
-import { createInspection } from '@/services/inspectionService';
+import { createInspection, recomputeStationInspectionState } from '@/services/inspectionService';
 import { getSession } from '@/lib/session';
 
 export async function PATCH(
@@ -78,6 +78,31 @@ export async function PATCH(
         // duplicates are not an error path here; this catches DB outages,
         // missing-user races, etc.
         console.warn(`Failed to record inspection history for station ${stationId}:`, err);
+      }
+    }
+
+    // Sidecar: when toggling inspection OFF, delete the caller's
+    // station_inspection row for TODAY. Semantic: the toggle is "today's
+    // action"; OFF can only undo today's action. Older inspections by the
+    // same user, or inspections by other leads, are untouched.
+    // recomputeStationInspectionState keeps fm_station.inspection_69 = true
+    // if any remaining history exists for the station.
+    if (updates.inspection_69 === false) {
+      try {
+        const session = await getSession();
+        if (session.userId) {
+          const today = new Date().toISOString().split('T')[0];
+          await prisma.station_inspection.deleteMany({
+            where: {
+              station_id: stationId,
+              lead_user_id: session.userId,
+              inspected_on: new Date(`${today}T00:00:00Z`),
+            },
+          });
+          await recomputeStationInspectionState(stationId);
+        }
+      } catch (err) {
+        console.warn(`Failed to delete inspection history for station ${stationId}:`, err);
       }
     }
 
