@@ -80,4 +80,28 @@ describe('getDefaultCrew', () => {
       data: { default_helper_user_ids: [6] },
     });
   });
+
+  it('returns null when the user row does not exist', async () => {
+    vi.mocked(prisma.user.findUnique).mockResolvedValueOnce(null as never);
+    const result = await getDefaultCrew(3);
+    expect(result).toBeNull();
+    expect(prisma.user.findMany).not.toHaveBeenCalled();
+  });
+
+  it('returns null and resets crew_decided when the entire crew is deactivated', async () => {
+    vi.mocked(prisma.user.findUnique).mockResolvedValueOnce({
+      id: 3,
+      default_helper_user_ids: [6, 9],
+      crew_decided: true,
+    } as never);
+    vi.mocked(prisma.user.findMany).mockResolvedValueOnce([] as never);
+    vi.mocked(prisma.user.update).mockResolvedValueOnce({} as never);
+    const result = await getDefaultCrew(3);
+    expect(result).toBeNull();
+    await new Promise((r) => setTimeout(r, 0));
+    expect(prisma.user.update).toHaveBeenCalledWith({
+      where: { id: 3 },
+      data: { default_helper_user_ids: [], crew_decided: false },
+    });
+  });
 });

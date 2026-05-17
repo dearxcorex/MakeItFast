@@ -27,9 +27,20 @@ export async function getDefaultCrew(userId: number): Promise<number[] | null> {
   const raw = row.default_helper_user_ids;
   if (raw.length === 0) return [];
   const valid = await loadValidIds(raw);
+  if (valid.length === 0) {
+    // Entire stored crew has been deactivated. Treat as undecided so the
+    // user is re-prompted; reset crew_decided so future GETs are
+    // consistent. Fire-and-forget; we already know the right answer.
+    void prisma.user
+      .update({
+        where: { id: userId },
+        data: { default_helper_user_ids: [], crew_decided: false },
+      })
+      .catch(() => {});
+    return null;
+  }
   if (valid.length !== raw.length) {
-    // Self-heal: persist the filtered set. Fire-and-forget; we already
-    // know the right answer to return to the caller.
+    // Self-heal partial staleness: persist the filtered set. Fire-and-forget.
     void prisma.user
       .update({ where: { id: userId }, data: { default_helper_user_ids: valid } })
       .catch(() => {});
