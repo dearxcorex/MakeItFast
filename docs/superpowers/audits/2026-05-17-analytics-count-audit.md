@@ -16,7 +16,7 @@
 | Q4 | Inspections with deactivated/non-inspector lead | **0** | none | No action needed. All historic leads are still active inspectors. |
 | Q5 | Inspections with no matching station | **0** | none | No action needed. FK to fm_station is intact. |
 | Q6 | fm_station.inspection_69=true but no history | **10** | `id_fm=2 "สวท. จังหวัดชัยภูมิ" date_inspected=2026-02-20`; `id_fm=5520287 "HOT RADIO" date_inspected=2026-04-21`; `id_fm=5520203 "Youth Crazy" date_inspected=2026-02-19` (+ 7 more) | Leave alone. These are pre-history toggles — legitimate inspections recorded before the station_inspection table existed. Count (10) is well under the 50-row escalation threshold. |
-| Q7 | History rows for stations where inspection_69=false (B1 drift) | **1** | `inspection.id=27, station_id=5520076, name="คนหมื่นไวย", inspection_69=false` | **B1 drift confirmed.** Recommended remediation (DO NOT RUN without controller approval): `DELETE FROM station_inspection WHERE id IN (SELECT i.id FROM station_inspection i JOIN fm_station s ON s.id_fm = i.station_id WHERE s.inspection_69 = false);` |
+| Q7 | History rows for stations where inspection_69=false (B1 drift) | **1 → 0** (remediated) | `inspection.id=27, station_id=5520076, name="คนหมื่นไวย", inspection_69=false` | **B1 drift confirmed and remediated.** User authorized `DELETE FROM station_inspection WHERE id = 27;` after the audit surfaced it. Verified post-delete: Q7 re-run returns 0 rows. |
 
 ### Q6 detail (all 5 rows returned by sample query)
 
@@ -30,11 +30,11 @@
 
 (5 shown; 10 total — all under the 50-row escalation threshold)
 
-### Q7 detail (the 1 B1 drift row)
+### Q7 detail (the 1 B1 drift row — now deleted)
 
-| inspection.id | station_id | station name | inspection_69 |
-|---|---|---|---|
-| 27 | 5520076 | คนหมื่นไวย | false |
+| inspection.id | station_id | station name | inspection_69 | status |
+|---|---|---|---|---|
+| 27 | 5520076 | คนหมื่นไวย | false | deleted 2026-05-17 (user-authorized) |
 
 ## Phase 2 — Fix commits
 
