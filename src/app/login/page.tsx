@@ -113,9 +113,15 @@ export default function LoginPage() {
         <button
           type="submit"
           disabled={submitting}
-          className="w-full rounded-md bg-[var(--fo-accent)] text-black font-medium py-2 disabled:opacity-60"
+          className="w-full rounded-md bg-[var(--fo-accent)] text-black font-medium py-2 disabled:opacity-60 flex items-center justify-center gap-2"
         >
-          {submitting ? "..." : "Sign in"}
+          {submitting && (
+            <span
+              aria-hidden
+              className="inline-block w-4 h-4 rounded-full border-2 border-black border-t-transparent animate-spin"
+            />
+          )}
+          {submitting ? "Signing in…" : "Sign in"}
         </button>
 
         {error && (
