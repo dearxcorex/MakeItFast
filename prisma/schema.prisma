@@ -22,6 +22,13 @@ model fm_station {
   submit_a_request Boolean? @default(false)
   date_inspected   String?
   note             String?
+  revoked          Boolean? @default(false)
+  revoked_note     String?
+  permit           String?
+
+  inspections   station_inspection[]
+
+  @@index([revoked])
 }
 
 model interference_site {
@@ -58,6 +65,8 @@ model interference_site {
   created_at        DateTime @default(now())
   updated_at        DateTime @updatedAt
 
+  inspections interference_inspection[]
+
   @@index([changwat])
   @@index([ranking])
   @@index([nbtc_area])
@@ -75,4 +84,87 @@ model cloudrf_cache {
   site_id        Int?
   created_at     DateTime @default(now())
   expires_at     DateTime
+}
+
+model user {
+  id            Int      @id @default(autoincrement())
+  username      String   @unique
+  password_hash String
+  display_name  String
+  role          String   @default("inspector")
+  active        Boolean  @default(true)
+  created_at    DateTime @default(now())
+  updated_at    DateTime @updatedAt
+  created_by    Int?
+  default_helper_user_ids Int[]     @default([])
+  crew_decided            Boolean   @default(false)
+
+  inspections_led        station_inspection[]             @relation("inspection_lead")
+  inspection_members     station_inspection_member[]
+  int_inspections_led    interference_inspection[]        @relation("int_inspection_lead")
+  int_inspection_members interference_inspection_member[] @relation("int_inspection_member")
+
+  @@index([username])
+}
+
+model station_inspection {
+  id            Int       @id @default(autoincrement())
+  station_id    Int
+  inspected_on  DateTime  @db.Date
+  lead_user_id  Int
+  notes         String?
+  source        String    @default("app")
+  created_at    DateTime  @default(now())
+  updated_at    DateTime  @updatedAt
+
+  station fm_station @relation(fields: [station_id], references: [id_fm])
+  lead    user       @relation("inspection_lead", fields: [lead_user_id], references: [id])
+  members station_inspection_member[]
+
+  @@index([station_id, inspected_on(sort: Desc)])
+  @@index([lead_user_id])
+  @@unique([station_id, inspected_on, lead_user_id])
+}
+
+model station_inspection_member {
+  inspection_id Int
+  user_id       Int
+  role          String  @default("helper")
+
+  inspection station_inspection @relation(fields: [inspection_id], references: [id], onDelete: Cascade)
+  member     user               @relation(fields: [user_id], references: [id])
+
+  @@id([inspection_id, user_id])
+  @@index([user_id])
+}
+
+model interference_inspection {
+  id                Int       @id @default(autoincrement())
+  interference_id   Int
+  inspected_on      DateTime  @db.Date
+  lead_user_id      Int
+  notes             String?
+  source            String    @default("app")
+  created_at        DateTime  @default(now())
+  updated_at        DateTime  @updatedAt
+
+  site    interference_site               @relation(fields: [interference_id], references: [id])
+  lead    user                             @relation("int_inspection_lead", fields: [lead_user_id], references: [id])
+  members interference_inspection_member[]
+
+  @@index([interference_id, inspected_on(sort: Desc)])
+  @@index([lead_user_id])
+  @@unique([interference_id, inspected_on, lead_user_id])
+}
+
+model interference_inspection_member {
+  inspection_id Int
+  user_id       Int
+  role          String  @default("helper")
+
+  inspection interference_inspection @relation(fields: [inspection_id], references: [id], onDelete: Cascade)
+  member     user                     @relation("int_inspection_member", fields: [user_id], references: [id])
+
+  @@id([inspection_id, user_id])
+  @@index([user_id])
 }

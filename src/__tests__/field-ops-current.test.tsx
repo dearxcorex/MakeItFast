@@ -1,0 +1,216 @@
+import { describe, it, expect, vi, afterEach } from 'vitest';
+import { render, cleanup } from '@testing-library/react';
+import { FieldOpsCurrentFM, FieldOpsCurrentINT } from '@/components/field-ops/FieldOpsCurrent';
+import TeammatePicker from '@/components/field-ops/TeammatePicker'; // eslint-disable-line @typescript-eslint/no-unused-vars
+import type { FMStation } from '@/types/station';
+import type { InterferenceSite } from '@/types/interference';
+
+afterEach(() => cleanup());
+
+const baseStation: FMStation = {
+  id: 5520117,
+  name: 'เสียงชนเสรี',
+  frequency: 106,
+  latitude: 14.96,
+  longitude: 102.07,
+  city: 'คง',
+  state: 'นครราชสีมา',
+  genre: 'ธุรกิจ',
+  type: 'ธุรกิจ',
+  inspection69: 'ยังไม่ตรวจ',
+  onAir: true,
+};
+
+describe('FieldOpsCurrentFM — revoked station', () => {
+  it('renders the REVOKED chip when station.revoked is true', () => {
+    const station: FMStation = { ...baseStation, revoked: true, revokedNote: 'NBTC สทช2304/266/2569' };
+    const { container } = render(
+      <FieldOpsCurrentFM
+        station={station}
+        onToggleInspection={vi.fn()}
+        pending={false}
+      />
+    );
+    expect(container.textContent).toContain('REVOKED');
+  });
+
+  it('does NOT render the REVOKED chip when station.revoked is false or undefined', () => {
+    const { container } = render(
+      <FieldOpsCurrentFM
+        station={baseStation}
+        onToggleInspection={vi.fn()}
+        pending={false}
+      />
+    );
+    expect(container.textContent).not.toContain('REVOKED');
+  });
+
+  it('still renders the INSPECT button when revoked', () => {
+    const station: FMStation = { ...baseStation, revoked: true };
+    const { container } = render(
+      <FieldOpsCurrentFM
+        station={station}
+        onToggleInspection={vi.fn()}
+        pending={false}
+      />
+    );
+    expect(container.textContent).toContain('✓ INSPECT');
+  });
+
+  it('renders INSPECT with the danger palette for a revoked station', () => {
+    const station: FMStation = {
+      ...baseStation,
+      revoked: true,
+      onAir: false,
+      inspection69: 'ยังไม่ตรวจ',
+    };
+    const { container } = render(
+      <FieldOpsCurrentFM
+        station={station}
+        onToggleInspection={vi.fn()}
+        onToggleOnAir={vi.fn()}
+        pending={false}
+      />
+    );
+    const buttons = container.querySelectorAll('button');
+    const inspectBtn = Array.from(buttons).find(btn => btn.textContent === '✓ INSPECT')!;
+    expect(inspectBtn.getAttribute('style')).toContain('var(--fo-crit)');
+  });
+
+  it('renders INSPECT with the primary palette for a non-revoked pending station', () => {
+    const station: FMStation = {
+      ...baseStation,
+      revoked: false,
+      onAir: false,
+      inspection69: 'ยังไม่ตรวจ',
+    };
+    const { container } = render(
+      <FieldOpsCurrentFM
+        station={station}
+        onToggleInspection={vi.fn()}
+        pending={false}
+      />
+    );
+    const buttons = container.querySelectorAll('button');
+    const inspectBtn = Array.from(buttons).find(btn => btn.textContent === '✓ INSPECT')!;
+    expect(inspectBtn.getAttribute('style')).toContain('var(--fo-accent)');
+    expect(inspectBtn.getAttribute('style')).not.toContain('var(--fo-crit)');
+  });
+});
+
+describe('FieldOpsCurrentFM — teammate picker', () => {
+  it('renders the teammate picker when station is PENDING and all picker props are provided', () => {
+    const station: FMStation = { ...baseStation, inspection69: 'ยังไม่ตรวจ' };
+    const { getByRole } = render(
+      <FieldOpsCurrentFM
+        station={station}
+        onToggleInspection={vi.fn()}
+        pending={false}
+        inspectors={[
+          { id: 3, username: 'iff', displayName: 'iff' },
+          { id: 6, username: 'daf', displayName: 'daf' },
+        ]}
+        currentUser={{ id: 3, displayName: 'iff' }}
+        helperUserIds={[]}
+        onHelperUserIdsChange={vi.fn()}
+      />,
+    );
+    expect(getByRole('button', { name: /\+ tag teammates/i })).toBeTruthy();
+  });
+
+  it('does NOT render the teammate picker when station is INSPECTED', () => {
+    const station: FMStation = { ...baseStation, inspection69: 'ตรวจแล้ว' };
+    const { queryByRole } = render(
+      <FieldOpsCurrentFM
+        station={station}
+        onToggleInspection={vi.fn()}
+        pending={false}
+        inspectors={[
+          { id: 3, username: 'iff', displayName: 'iff' },
+          { id: 6, username: 'daf', displayName: 'daf' },
+        ]}
+        currentUser={{ id: 3, displayName: 'iff' }}
+        helperUserIds={[]}
+        onHelperUserIdsChange={vi.fn()}
+      />,
+    );
+    expect(queryByRole('button', { name: /\+ tag teammates/i })).toBeNull();
+  });
+});
+
+const baseSite: InterferenceSite = {
+  id: 42,
+  siteCode: 'X-42',
+  siteName: 'Test site',
+  lat: 14.0,
+  long: 100.0,
+  mcZone: null,
+  changwat: 'นครราชสีมา',
+  cellName: null,
+  sectorName: null,
+  direction: null,
+  avgNiCarrier: null,
+  dayTime: null,
+  nightTime: null,
+  sourceLat: null,
+  sourceLong: null,
+  estimateDistance: null,
+  ranking: 'Minor',
+  status: 'ยังไม่ตรวจ',
+  nbtcArea: null,
+  awnContact: null,
+  lot: null,
+  onSiteScanBy: null,
+  onSiteScanDate: null,
+  checkRealtime: null,
+  sourceLocation1: null,
+  sourceLocation2: null,
+  cameraModel1: null,
+  cameraModel2: null,
+  notes: null,
+  lawPaperSent: false,
+  createdAt: new Date(),
+  updatedAt: new Date(),
+};
+
+describe('FieldOpsCurrentINT — teammate picker', () => {
+  it('renders the teammate picker when site is PENDING and all picker props are provided', () => {
+    const site: InterferenceSite = { ...baseSite, status: 'ยังไม่ตรวจ' };
+    const { getByRole } = render(
+      <FieldOpsCurrentINT
+        site={site}
+        onToggleInspection={vi.fn()}
+        onToggleLawPaper={vi.fn()}
+        pending={false}
+        inspectors={[
+          { id: 3, username: 'iff', displayName: 'iff' },
+          { id: 6, username: 'daf', displayName: 'daf' },
+        ]}
+        currentUser={{ id: 3, displayName: 'iff' }}
+        helperUserIds={[]}
+        onHelperUserIdsChange={vi.fn()}
+      />,
+    );
+    expect(getByRole('button', { name: /\+ tag teammates/i })).toBeTruthy();
+  });
+
+  it('does NOT render the teammate picker when site is INSPECTED', () => {
+    const site: InterferenceSite = { ...baseSite, status: 'ตรวจแล้ว' };
+    const { queryByRole } = render(
+      <FieldOpsCurrentINT
+        site={site}
+        onToggleInspection={vi.fn()}
+        onToggleLawPaper={vi.fn()}
+        pending={false}
+        inspectors={[
+          { id: 3, username: 'iff', displayName: 'iff' },
+          { id: 6, username: 'daf', displayName: 'daf' },
+        ]}
+        currentUser={{ id: 3, displayName: 'iff' }}
+        helperUserIds={[]}
+        onHelperUserIdsChange={vi.fn()}
+      />,
+    );
+    expect(queryByRole('button', { name: /\+ tag teammates/i })).toBeNull();
+  });
+});

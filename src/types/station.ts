@@ -18,6 +18,8 @@ export interface FMStation {
   details?: string; // Hashtags like #deviation, #intermod for station details
   onAir?: boolean;
   submitRequest?: string;
+  revoked?: boolean;
+  revokedNote?: string;
   createdAt?: string;
   updatedAt?: string;
 }
@@ -28,6 +30,7 @@ export interface UserLocation {
   accuracy?: number;
   heading?: number | null;
   speed?: number | null;
+  stale?: boolean;
 }
 
 export type FilterType = {

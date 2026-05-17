@@ -10,7 +10,11 @@ interface StationPopupSingleProps {
   onUpdateStation?: (stationId: string | number, updates: Partial<FMStation>) => void;
 }
 
-export default function StationPopupSingle({ station, distance, onUpdateStation }: StationPopupSingleProps) {
+export default function StationPopupSingle({
+  station,
+  distance,
+  onUpdateStation,
+}: StationPopupSingleProps) {
   return (
     <div className="w-full max-w-[300px] sm:max-w-[340px] p-3">
       <StationCard

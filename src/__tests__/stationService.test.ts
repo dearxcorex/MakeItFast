@@ -19,6 +19,9 @@ function makeDbRow(overrides: Record<string, unknown> = {}) {
     inspection_68: true,
     inspection_69: false,
     date_inspected: '2024-01-01',
+    revoked: false,
+    revoked_note: null,
+    permit: null,
     created_at: null,
     updated_at: null,
     ...overrides,
@@ -92,10 +95,10 @@ describe('convertToFMStation', () => {
     expect(result.frequency).toBe(0);
   });
 
-  it('handles null lat/long', () => {
+  it('returns NaN for null lat/long so map filters skip the row', () => {
     const result = convertToFMStation(makeDbRow({ lat: null, long: null }));
-    expect(result.latitude).toBe(0);
-    expect(result.longitude).toBe(0);
+    expect(Number.isNaN(result.latitude)).toBe(true);
+    expect(Number.isNaN(result.longitude)).toBe(true);
   });
 
   it('handles null type', () => {
@@ -117,6 +120,16 @@ describe('convertToFMStation', () => {
   it('builds description from type and location', () => {
     const result = convertToFMStation(makeDbRow({ type: 'FM', district: 'Sathorn', province: 'Bangkok' }));
     expect(result.description).toBe('FM radio station in Sathorn, Bangkok');
+  });
+
+  it('maps row.permit to FMStation.permit', () => {
+    const result = convertToFMStation(makeDbRow({ permit: 'ห้างหุ้นส่วนจำกัด ABC' }));
+    expect(result.permit).toBe('ห้างหุ้นส่วนจำกัด ABC');
+  });
+
+  it('returns undefined permit when row.permit is null', () => {
+    const result = convertToFMStation(makeDbRow({ permit: null }));
+    expect(result.permit).toBeUndefined();
   });
 });
 

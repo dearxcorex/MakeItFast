@@ -1,5 +1,6 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { describe, it, expect, vi, beforeEach, beforeAll } from 'vitest';
 import { NextRequest } from 'next/server';
+import { mintCookie } from './helpers/session';
 
 // Mock prisma
 vi.mock('@/lib/prisma', () => ({
@@ -28,6 +29,9 @@ vi.mock('@/lib/prisma', () => ({
       upsert: vi.fn(),
       delete: vi.fn(),
     },
+    station_inspection: {
+      deleteMany: vi.fn(),
+    },
     $transaction: vi.fn(),
   },
 }));
@@ -55,6 +59,14 @@ vi.mock('@/services/interferenceService', () => ({
 }));
 
 import prisma from '@/lib/prisma';
+
+let TEST_COOKIE = "";
+beforeAll(async () => {
+  process.env.SESSION_PASSWORD =
+    "test-session-password-32-chars-or-more!!!";
+  const c = await mintCookie();
+  TEST_COOKIE = c.header;
+});
 
 beforeEach(() => {
   vi.clearAllMocks();
@@ -265,6 +277,214 @@ describe('PATCH /api/stations/[id]', () => {
       })
     );
   });
+
+  it('records a station_inspection row via createInspection when toggling on', async () => {
+    vi.mocked(prisma.fm_station.update).mockResolvedValue({ id_fm: 1 } as never);
+    const inspectionService = await import('@/services/inspectionService');
+    const createInspectionSpy = vi
+      .spyOn(inspectionService, 'createInspection')
+      .mockResolvedValue({} as never);
+    const sessionLib = await import('@/lib/session');
+    vi.spyOn(sessionLib, 'getSession').mockResolvedValue({
+      userId: 42,
+      username: 'tester',
+      displayName: 'Test User',
+      role: 'inspector',
+      issuedAt: Date.now(),
+    } as never);
+    const { PATCH } = await import('@/app/api/stations/[id]/route');
+    const req = new Request('http://localhost', {
+      method: 'PATCH',
+      body: JSON.stringify({ inspection69: 'ตรวจแล้ว' }),
+    });
+    const res = await PATCH(req as never, { params: Promise.resolve({ id: '1' }) });
+    expect(res.status).toBe(200);
+    expect(createInspectionSpy).toHaveBeenCalledWith(
+      expect.objectContaining({
+        stationId: 1,
+        leadUserId: 42,
+        helperUserIds: [],
+        inspectedOn: expect.any(String),
+      })
+    );
+    createInspectionSpy.mockRestore();
+  });
+
+  it('PATCH forwards helperUserIds to the inspection-history sidecar', async () => {
+    const inspectionService = await import('@/services/inspectionService');
+    const createSpy = vi
+      .spyOn(inspectionService, 'createInspection')
+      .mockResolvedValue({} as never);
+    const sessionLib = await import('@/lib/session');
+    const getSessionSpy = vi
+      .spyOn(sessionLib, 'getSession')
+      .mockResolvedValue({
+        userId: 3,
+        username: 'iff',
+        displayName: 'iff',
+        role: 'inspector',
+        issuedAt: Date.now(),
+      } as never);
+
+    vi.mocked(prisma.fm_station.update).mockResolvedValue({ id_fm: 1 } as never);
+
+    const c = await mintCookie({ userId: 3, username: 'iff', displayName: 'iff', role: 'inspector' });
+    const headers = new Headers();
+    headers.set('Cookie', c.header);
+    headers.set('Content-Type', 'application/json');
+    const req = new NextRequest('http://t/api/stations/1', {
+      method: 'PATCH',
+      headers,
+      body: JSON.stringify({ inspection69: 'ตรวจแล้ว', helperUserIds: [6, 2] }),
+    });
+
+    const { PATCH } = await import('@/app/api/stations/[id]/route');
+    const r = await PATCH(req, { params: Promise.resolve({ id: '1' }) });
+    expect(r.status).toBe(200);
+    expect(createSpy).toHaveBeenCalledWith(expect.objectContaining({
+      stationId: 1,
+      leadUserId: 3,
+      helperUserIds: [6, 2],
+    }));
+
+    createSpy.mockRestore();
+    getSessionSpy.mockRestore();
+  });
+
+  it('PATCH defaults to empty helperUserIds when not provided', async () => {
+    const inspectionService = await import('@/services/inspectionService');
+    const createSpy = vi
+      .spyOn(inspectionService, 'createInspection')
+      .mockResolvedValue({} as never);
+    const sessionLib = await import('@/lib/session');
+    const getSessionSpy = vi
+      .spyOn(sessionLib, 'getSession')
+      .mockResolvedValue({
+        userId: 3,
+        username: 'iff',
+        displayName: 'iff',
+        role: 'inspector',
+        issuedAt: Date.now(),
+      } as never);
+
+    vi.mocked(prisma.fm_station.update).mockResolvedValue({ id_fm: 1 } as never);
+
+    const c = await mintCookie({ userId: 3, username: 'iff', displayName: 'iff', role: 'inspector' });
+    const headers = new Headers();
+    headers.set('Cookie', c.header);
+    headers.set('Content-Type', 'application/json');
+    const req = new NextRequest('http://t/api/stations/1', {
+      method: 'PATCH',
+      headers,
+      body: JSON.stringify({ inspection69: 'ตรวจแล้ว' }),
+    });
+
+    const { PATCH } = await import('@/app/api/stations/[id]/route');
+    const r = await PATCH(req, { params: Promise.resolve({ id: '1' }) });
+    expect(r.status).toBe(200);
+    expect(createSpy).toHaveBeenCalledWith(expect.objectContaining({
+      helperUserIds: [],
+    }));
+
+    createSpy.mockRestore();
+    getSessionSpy.mockRestore();
+  });
+
+  it('deletes today\'s caller-owned station_inspection row when toggling OFF', async () => {
+    vi.mocked(prisma.fm_station.update).mockResolvedValue({ id_fm: 1 } as never);
+    vi.mocked(prisma.station_inspection.deleteMany).mockResolvedValue({ count: 1 } as never);
+
+    const inspectionService = await import('@/services/inspectionService');
+    const recomputeSpy = vi
+      .spyOn(inspectionService, 'recomputeStationInspectionState')
+      .mockResolvedValue(undefined as never);
+
+    const sessionLib = await import('@/lib/session');
+    const getSessionSpy = vi.spyOn(sessionLib, 'getSession').mockResolvedValue({
+      userId: 3, username: 'iff', displayName: 'iff', role: 'inspector', issuedAt: Date.now(),
+    } as never);
+
+    const { PATCH } = await import('@/app/api/stations/[id]/route');
+    const req = new Request('http://localhost', {
+      method: 'PATCH',
+      body: JSON.stringify({ inspection69: false }),
+    });
+    const res = await PATCH(req as never, { params: Promise.resolve({ id: '1' }) });
+
+    expect(res.status).toBe(200);
+    expect(prisma.station_inspection.deleteMany).toHaveBeenCalledWith({
+      where: {
+        station_id: 1,
+        lead_user_id: 3,
+        inspected_on: expect.any(Date),
+      },
+    });
+    expect(recomputeSpy).toHaveBeenCalledWith(1);
+
+    recomputeSpy.mockRestore();
+    getSessionSpy.mockRestore();
+  });
+
+  it('does NOT fail when toggling OFF with no matching history row', async () => {
+    vi.mocked(prisma.fm_station.update).mockResolvedValue({ id_fm: 1 } as never);
+    vi.mocked(prisma.station_inspection.deleteMany).mockResolvedValue({ count: 0 } as never);
+
+    const inspectionService = await import('@/services/inspectionService');
+    const recomputeSpy = vi
+      .spyOn(inspectionService, 'recomputeStationInspectionState')
+      .mockResolvedValue(undefined as never);
+
+    const sessionLib = await import('@/lib/session');
+    const getSessionSpy = vi.spyOn(sessionLib, 'getSession').mockResolvedValue({
+      userId: 3, username: 'iff', displayName: 'iff', role: 'inspector', issuedAt: Date.now(),
+    } as never);
+
+    const { PATCH } = await import('@/app/api/stations/[id]/route');
+    const req = new Request('http://localhost', {
+      method: 'PATCH',
+      body: JSON.stringify({ inspection69: false }),
+    });
+    const res = await PATCH(req as never, { params: Promise.resolve({ id: '1' }) });
+
+    expect(res.status).toBe(200);
+    expect(prisma.station_inspection.deleteMany).toHaveBeenCalled();
+    expect(recomputeSpy).toHaveBeenCalledWith(1);
+
+    recomputeSpy.mockRestore();
+    getSessionSpy.mockRestore();
+  });
+
+  it('toggle OFF still succeeds when deleteMany throws (best-effort sidecar)', async () => {
+    vi.mocked(prisma.fm_station.update).mockResolvedValue({ id_fm: 1 } as never);
+    vi.mocked(prisma.station_inspection.deleteMany).mockRejectedValue(new Error('connection refused') as never);
+
+    const inspectionService = await import('@/services/inspectionService');
+    const recomputeSpy = vi
+      .spyOn(inspectionService, 'recomputeStationInspectionState')
+      .mockResolvedValue(undefined as never);
+
+    const sessionLib = await import('@/lib/session');
+    const getSessionSpy = vi.spyOn(sessionLib, 'getSession').mockResolvedValue({
+      userId: 3, username: 'iff', displayName: 'iff', role: 'inspector', issuedAt: Date.now(),
+    } as never);
+
+    const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
+
+    const { PATCH } = await import('@/app/api/stations/[id]/route');
+    const req = new Request('http://localhost', {
+      method: 'PATCH',
+      body: JSON.stringify({ inspection69: false }),
+    });
+    const res = await PATCH(req as never, { params: Promise.resolve({ id: '1' }) });
+
+    expect(res.status).toBe(200);                  // boolean update still succeeds
+    expect(warnSpy).toHaveBeenCalled();            // logs the failure
+    expect(recomputeSpy).not.toHaveBeenCalled();   // skipped after deleteMany throws
+
+    warnSpy.mockRestore();
+    recomputeSpy.mockRestore();
+    getSessionSpy.mockRestore();
+  });
 });
 
 // ==================
@@ -275,7 +495,9 @@ describe('GET /api/interference', () => {
     const { fetchInterferenceSites } = await import('@/services/interferenceService');
     vi.mocked(fetchInterferenceSites).mockResolvedValue([]);
     const { GET } = await import('@/app/api/interference/route');
-    const req = new NextRequest('http://localhost/api/interference');
+    const req = new NextRequest('http://localhost/api/interference', {
+      headers: { cookie: TEST_COOKIE },
+    });
     const res = await GET(req);
     const data = await res.json();
     expect(res.status).toBe(200);
@@ -287,7 +509,9 @@ describe('GET /api/interference', () => {
     const { fetchInterferenceSites } = await import('@/services/interferenceService');
     vi.mocked(fetchInterferenceSites).mockResolvedValue([]);
     const { GET } = await import('@/app/api/interference/route');
-    const req = new NextRequest('http://localhost/api/interference?changwat=Bangkok&ranking=Critical');
+    const req = new NextRequest('http://localhost/api/interference?changwat=Bangkok&ranking=Critical', {
+      headers: { cookie: TEST_COOKIE },
+    });
     const res = await GET(req);
     expect(res.status).toBe(200);
     expect(fetchInterferenceSites).toHaveBeenCalledWith(
@@ -299,7 +523,9 @@ describe('GET /api/interference', () => {
     const { fetchInterferenceSites } = await import('@/services/interferenceService');
     vi.mocked(fetchInterferenceSites).mockRejectedValue(new Error('fail'));
     const { GET } = await import('@/app/api/interference/route');
-    const req = new NextRequest('http://localhost/api/interference');
+    const req = new NextRequest('http://localhost/api/interference', {
+      headers: { cookie: TEST_COOKIE },
+    });
     const res = await GET(req);
     expect(res.status).toBe(500);
   });

@@ -1,5 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import prisma from '@/lib/prisma';
+import { createInspection, recomputeStationInspectionState } from '@/services/inspectionService';
+import { getSession } from '@/lib/session';
 
 export async function PATCH(
   request: NextRequest,
@@ -13,7 +15,7 @@ export async function PATCH(
     }
 
     const body = await request.json();
-    const { onAir, inspection68, inspection69, details } = body;
+    const { onAir, inspection68, inspection69, details, helperUserIds } = body;
 
     // Build update object with only provided fields
     const updates: Record<string, boolean | string | null> = {};
@@ -39,14 +41,9 @@ export async function PATCH(
       updates.inspection_68 = inspection68 === 'ตรวจแล้ว' || inspection68 === true;
     }
     if (inspection69 !== undefined) {
-      updates.inspection_69 = inspection69 === 'ตรวจแล้ว' || inspection69 === true;
-
-      // Only inspection_69 controls date_inspected (it's the primary inspection field)
-      if (updates.inspection_69) {
-        updates.date_inspected = new Date().toISOString().split('T')[0];
-      } else {
-        updates.date_inspected = null;
-      }
+      const truthy = inspection69 === 'ตรวจแล้ว' || inspection69 === true;
+      updates.inspection_69 = truthy;
+      updates.date_inspected = truthy ? new Date().toISOString().split('T')[0] : null;
     }
 
     if (Object.keys(updates).length === 0) {
@@ -57,6 +54,57 @@ export async function PATCH(
       where: { id_fm: stationId },
       data: updates,
     });
+
+    // Sidecar: when toggling inspection ON, also record a station_inspection row
+    // so history continues to accumulate even though the UI no longer exposes
+    // the multi-helper form. Idempotent on (station_id, inspected_on,
+    // lead_user_id), so repeated toggles in the same day are safe.
+    if (updates.inspection_69 === true) {
+      try {
+        const session = await getSession();
+        if (session.userId) {
+          await createInspection({
+            stationId,
+            inspectedOn: new Date().toISOString().split('T')[0],
+            leadUserId: session.userId,
+            helperUserIds: Array.isArray(helperUserIds)
+              ? helperUserIds.filter((x: unknown): x is number => typeof x === 'number' && Number.isInteger(x))
+              : [],
+          });
+        }
+      } catch (err) {
+        // Don't fail the PATCH if the history insert fails — the boolean
+        // update is the user's intent. The service is idempotent, so
+        // duplicates are not an error path here; this catches DB outages,
+        // missing-user races, etc.
+        console.warn(`Failed to record inspection history for station ${stationId}:`, err);
+      }
+    }
+
+    // Sidecar: when toggling inspection OFF, delete the caller's
+    // station_inspection row for TODAY. Semantic: the toggle is "today's
+    // action"; OFF can only undo today's action. Older inspections by the
+    // same user, or inspections by other leads, are untouched.
+    // recomputeStationInspectionState keeps fm_station.inspection_69 = true
+    // if any remaining history exists for the station.
+    if (updates.inspection_69 === false) {
+      try {
+        const session = await getSession();
+        if (session.userId) {
+          const today = new Date().toISOString().split('T')[0];
+          await prisma.station_inspection.deleteMany({
+            where: {
+              station_id: stationId,
+              lead_user_id: session.userId,
+              inspected_on: new Date(`${today}T00:00:00Z`),
+            },
+          });
+          await recomputeStationInspectionState(stationId);
+        }
+      } catch (err) {
+        console.warn(`Failed to delete inspection history for station ${stationId}:`, err);
+      }
+    }
 
     return NextResponse.json({ success: true, data });
   } catch (error) {

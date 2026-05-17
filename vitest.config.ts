@@ -18,6 +18,8 @@ export default defineConfig({
     alias: {
       '@': path.resolve(__dirname, './src'),
       'leaflet/dist/leaflet.css': path.resolve(__dirname, './src/__tests__/css-stub.js'),
+      'leaflet.markercluster/dist/MarkerCluster.css': path.resolve(__dirname, './src/__tests__/css-stub.js'),
+      'leaflet.markercluster/dist/MarkerCluster.Default.css': path.resolve(__dirname, './src/__tests__/css-stub.js'),
     },
   },
 });

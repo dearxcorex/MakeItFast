@@ -14,6 +14,7 @@ import AppHeader from '@/components/client/AppHeader';
 import MobileFilterBar from '@/components/client/MobileFilterBar';
 
 import type { InterferenceStats } from '@/components/interference/InterferenceAnalysis';
+import { initialHeadingState, updateHeading, type HeadingSample } from '@/utils/headingTracking';
 
 type ActiveTab = 'stations' | 'intermod' | 'interference' | 'analytics';
 
@@ -66,7 +67,7 @@ export default function OptimizedFMStationClient({
   initialStations,
   initialCities,
   initialProvinces,
-  initialInspectionStatuses
+  initialInspectionStatuses,
 }: OptimizedFMStationClientProps) {
   // State management
   const [selectedStation, setSelectedStation] = useState<FMStation | undefined>();
@@ -90,6 +91,7 @@ export default function OptimizedFMStationClient({
   // Performance monitoring
   const { checkMemoryUsage } = useMemoryMonitor();
   const geolocationWatcherRef = useRef<number | null>(null);
+  const headingStateRef = useRef(initialHeadingState());
   const performanceMonitorRef = useRef<NodeJS.Timeout | null>(null);
 
   // Optimized filtering
@@ -183,12 +185,22 @@ export default function OptimizedFMStationClient({
     // Set up watching with lower accuracy for better compatibility
     const watchId = navigator.geolocation.watchPosition(
       (position) => {
+        const sample: HeadingSample = {
+          lat: position.coords.latitude,
+          lng: position.coords.longitude,
+          heading: position.coords.heading ?? null,
+          speed: position.coords.speed ?? null,
+        };
+        const next = updateHeading(headingStateRef.current, sample);
+        headingStateRef.current = next;
+
         const location: UserLocation = {
           latitude: position.coords.latitude,
           longitude: position.coords.longitude,
           accuracy: position.coords.accuracy,
-          heading: position.coords.heading || null,
-          speed: position.coords.speed || null
+          heading: next.heading,
+          speed: position.coords.speed ?? null,
+          stale: next.stale,
         };
         setUserLocation(location);
       },
@@ -199,9 +211,9 @@ export default function OptimizedFMStationClient({
         }
       },
       {
-        enableHighAccuracy: false, // Use low accuracy for better compatibility
+        enableHighAccuracy: false,
         timeout: 30000,
-        maximumAge: 30000 // Accept cached location up to 30 seconds old
+        maximumAge: 30000,
       }
     );
 

@@ -67,3 +67,38 @@ export interface AnalyticsSummary {
     notSubmitted: number;
   };
 }
+
+export interface InspectorsAnalytics {
+  generatedAt: string;
+  thisYear: number;
+  thisMonth: string;
+  inspectors: Array<{
+    userId: number;
+    username: string;
+    displayName: string;
+    ytdTotal: number;
+    monthTotal: number;
+    ytdAsLead: number;
+    ytdAsHelper: number;
+    lastActive: string | null;
+  }>;
+  monthlySeries: Array<{
+    month: string;
+    perUser: Record<string, number>;
+  }>;
+  kpis: {
+    activeThisMonth: number;
+    largestTeam: {
+      inspectionId: number;
+      stationId: number;
+      stationName: string;
+      inspectedOn: string;
+      memberCount: number;
+    } | null;
+    mostTaggedHelperThisYear: {
+      username: string;
+      displayName: string;
+      count: number;
+    } | null;
+  };
+}

@@ -1,11 +1,12 @@
 'use client';
 
-import { useEffect, useState, useMemo, useCallback } from 'react';
+import { useEffect, useRef, useState, useMemo, useCallback } from 'react';
 import { MapContainer, TileLayer, Marker, Popup, useMap } from 'react-leaflet';
 import L from 'leaflet';
 import { FMStation, UserLocation } from '@/types/station';
 import { groupStationsByCoordinates } from '@/services/stationService';
 import { calculateDistance, createLocationIcon, getStationIcon } from '@/utils/mapHelpers';
+import { initialHeadingState, updateHeading, type HeadingSample } from '@/utils/headingTracking';
 import StationPopupSingle from './map/StationPopupSingle';
 import StationPopupMultiple from './map/StationPopupMultiple';
 
@@ -36,13 +37,12 @@ interface MapProps {
 
 function LocationTracker({ onLocationUpdate }: { onLocationUpdate: (location: UserLocation) => void }) {
   const map = useMap();
+  const headingStateRef = useRef(initialHeadingState());
 
   useEffect(() => {
     let watchId: number;
     let isMounted = true;
 
-    // Guard against calling setView on an unmounted/detached map.
-    // mapPane existence is the cheapest check that the internal panes are still alive.
     const isMapAlive = () => {
       try {
         return isMounted && !!map.getContainer() && !!map.getPane('mapPane');
@@ -51,15 +51,28 @@ function LocationTracker({ onLocationUpdate }: { onLocationUpdate: (location: Us
       }
     };
 
+    const ingest = (sample: HeadingSample, base: Omit<UserLocation, 'heading' | 'stale'>): UserLocation => {
+      const next = updateHeading(headingStateRef.current, sample);
+      headingStateRef.current = next;
+      return { ...base, heading: next.heading, stale: next.stale };
+    };
+
     if (navigator.geolocation) {
       navigator.geolocation.getCurrentPosition(
         (position) => {
-          const location: UserLocation = {
+          if (!isMounted) return;
+          const sample: HeadingSample = {
+            lat: position.coords.latitude,
+            lng: position.coords.longitude,
+            heading: null,
+            speed: null,
+          };
+          const location = ingest(sample, {
             latitude: position.coords.latitude,
             longitude: position.coords.longitude,
-            accuracy: position.coords.accuracy
-          };
-          if (!isMounted) return;
+            accuracy: position.coords.accuracy,
+            speed: null,
+          });
           onLocationUpdate(location);
           if (isMapAlive()) {
             map.setView([location.latitude, location.longitude], 13);
@@ -68,7 +81,7 @@ function LocationTracker({ onLocationUpdate }: { onLocationUpdate: (location: Us
         (error) => {
           console.warn('Initial geolocation error:', error);
           if (!isMounted) return;
-          const defaultLocation = { latitude: 34.0522, longitude: -118.2437 };
+          const defaultLocation: UserLocation = { latitude: 34.0522, longitude: -118.2437 };
           onLocationUpdate(defaultLocation);
           if (isMapAlive()) {
             map.setView([defaultLocation.latitude, defaultLocation.longitude], 10);
@@ -80,13 +93,18 @@ function LocationTracker({ onLocationUpdate }: { onLocationUpdate: (location: Us
       watchId = navigator.geolocation.watchPosition(
         (position) => {
           if (!isMounted) return;
-          const location: UserLocation = {
+          const sample: HeadingSample = {
+            lat: position.coords.latitude,
+            lng: position.coords.longitude,
+            heading: position.coords.heading ?? null,
+            speed: position.coords.speed ?? null,
+          };
+          const location = ingest(sample, {
             latitude: position.coords.latitude,
             longitude: position.coords.longitude,
             accuracy: position.coords.accuracy,
-            heading: position.coords.heading || null,
-            speed: position.coords.speed || null
-          };
+            speed: position.coords.speed ?? null,
+          });
           onLocationUpdate(location);
         },
         (error) => {
@@ -189,7 +207,7 @@ export default function Map({ stations, selectedStation, onStationSelect, onUpda
         {userLocation && (
           <Marker
             position={[userLocation.latitude, userLocation.longitude]}
-            icon={createLocationIcon()}
+            icon={createLocationIcon({ heading: userLocation.heading, stale: userLocation.stale })}
             aria-label="Your current location"
             title="Your current location"
           >
