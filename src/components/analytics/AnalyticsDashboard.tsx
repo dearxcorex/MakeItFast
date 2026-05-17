@@ -18,12 +18,6 @@ const RANK_COLOR: Record<string, string> = {
   Unknown: "#b8c4c2",
 };
 
-const SIDEBAR_ANALYZE = [
-  { key: "Overview", active: true },
-  { key: "FM Stations", active: false },
-  { key: "Interference", active: false },
-  { key: "Provinces", active: false },
-] as const;
 
 function provinceShort(name: string): string {
   if (!name) return "—";
@@ -263,22 +257,19 @@ export default function AnalyticsDashboard() {
         <div className="fo-mono" style={{ marginBottom: 4 }}>
           ANALYZE
         </div>
-        {SIDEBAR_ANALYZE.map(({ key, active }) => (
-          <div
-            key={key}
-            style={{
-              padding: "8px 10px",
-              borderRadius: 8,
-              fontSize: 12,
-              fontWeight: 500,
-              background: active ? "rgba(0,104,74,0.08)" : "transparent",
-              border: active ? "1px solid var(--fo-accent-2)" : "1px solid transparent",
-              color: active ? "var(--fo-accent-2)" : "var(--fo-mute)",
-            }}
-          >
-            {key}
-          </div>
-        ))}
+        <div
+          style={{
+            padding: "8px 10px",
+            borderRadius: 8,
+            fontSize: 12,
+            fontWeight: 500,
+            background: "rgba(0,104,74,0.08)",
+            border: "1px solid var(--fo-accent-2)",
+            color: "var(--fo-accent-2)",
+          }}
+        >
+          Overview
+        </div>
 
         <div style={{ flex: 1 }} />
         {lastUpdated && (
@@ -349,6 +340,23 @@ export default function AnalyticsDashboard() {
               {loading ? "…" : "↻"}
             </button>
           </div>
+        </div>
+
+        <InspectorsSection />
+
+        {/* Operations overview (secondary) */}
+        <hr
+          style={{
+            border: "none",
+            borderTop: "2px dashed var(--fo-line)",
+            margin: "24px 0 16px",
+          }}
+        />
+        <div
+          className="fo-mono"
+          style={{ color: "var(--fo-mute)", marginBottom: 12 }}
+        >
+          OPERATIONS OVERVIEW
         </div>
 
         {/* KPI row */}
@@ -453,7 +461,6 @@ export default function AnalyticsDashboard() {
             />
           </div>
         </div>
-        <InspectorsSection />
       </div>
     </div>
   );
