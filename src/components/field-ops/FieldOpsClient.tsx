@@ -646,6 +646,12 @@ export default function FieldOpsClient({
           onChangeTab={setTab}
           onToggleTheme={() => setTheme((t) => (t === "dark" ? "light" : "dark"))}
           onClose={() => setDrawerOpen(false)}
+          defaultCrew={defaultCrew}
+          inspectors={inspectors}
+          onOpenCrew={() => {
+            setDrawerOpen(false);
+            setCrewModalOpen(true);
+          }}
         />
       )}
       <CrewModal

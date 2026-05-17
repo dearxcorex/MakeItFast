@@ -2,6 +2,7 @@
 
 import type { FieldOpsTab } from "./FieldOpsNav";
 import type { FieldOpsKpis } from "@/utils/fieldOpsKpi";
+import CrewIndicator from "./CrewIndicator";
 
 interface NavItem {
   id: FieldOpsTab;
@@ -23,6 +24,9 @@ export function FieldOpsDrawer({
   onChangeTab,
   onToggleTheme,
   onClose,
+  defaultCrew,
+  inspectors,
+  onOpenCrew,
 }: {
   open: boolean;
   activeTab: FieldOpsTab;
@@ -31,6 +35,9 @@ export function FieldOpsDrawer({
   onChangeTab: (id: FieldOpsTab) => void;
   onToggleTheme: () => void;
   onClose: () => void;
+  defaultCrew?: number[] | null;
+  inspectors?: { id: number; username: string; displayName: string }[];
+  onOpenCrew?: () => void;
 }) {
   if (!open) return null;
 
@@ -157,6 +164,26 @@ export function FieldOpsDrawer({
             <span style={{ lineHeight: 1 }}>LIVE</span>
           </span>
         </div>
+
+        {onOpenCrew && defaultCrew !== null && (
+          <div
+            style={{
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "space-between",
+              padding: "12px 16px",
+              borderTop: "1px solid var(--fo-rail-border)",
+            }}
+          >
+            <span className="fo-mono" style={{ color: "var(--fo-rail-mute)" }}>MY CREW</span>
+            <CrewIndicator
+              defaultCrew={defaultCrew}
+              inspectors={inspectors ?? []}
+              onOpen={onOpenCrew}
+              compact={false}
+            />
+          </div>
+        )}
 
         <div style={{ height: 1, background: "var(--fo-rail-border)", margin: "4px 0" }} />
 
