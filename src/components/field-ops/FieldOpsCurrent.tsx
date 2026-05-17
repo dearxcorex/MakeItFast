@@ -237,6 +237,10 @@ export function FieldOpsCurrentINT({
   onCancelMarkSource,
   onClearSource,
   onSubmitSourceCoords,
+  inspectors,
+  currentUser,
+  helperUserIds,
+  onHelperUserIdsChange,
 }: {
   site: InterferenceSite;
   coLocated?: InterferenceSite[];
@@ -249,6 +253,10 @@ export function FieldOpsCurrentINT({
   onCancelMarkSource?: () => void;
   onClearSource?: () => void;
   onSubmitSourceCoords?: (lat: number, lng: number) => void;
+  inspectors?: InspectorOption[];
+  currentUser?: { id: number; displayName: string };
+  helperUserIds?: number[];
+  onHelperUserIdsChange?: (helperUserIds: number[]) => void;
 }) {
   const inspected = site.status === "ตรวจแล้ว";
   const lawSent = !!site.lawPaperSent;

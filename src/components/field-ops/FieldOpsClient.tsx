@@ -176,10 +176,10 @@ export default function FieldOpsClient({
   const selectedSite =
     selection?.kind === "int" ? interference.find((s) => s.id === selection.id) ?? null : null;
 
-  const fmStationId = selection?.kind === "fm" && selectedStation ? selectedStation.id : null;
+  const selectedTargetKey = selection ? `${selection.kind}-${selection.id}` : null;
   useEffect(() => {
     setHelperUserIds(defaultCrew ?? []);
-  }, [fmStationId, defaultCrew]);
+  }, [selectedTargetKey, defaultCrew]);
 
   // Auto-dismiss the selection (and its details panel / bottom sheet) when
   // the current filter no longer includes the selected item — e.g. switching
@@ -301,9 +301,13 @@ export default function FieldOpsClient({
         const res = await fetch(`/api/interference/${selectedSite.id}`, {
           method: "PATCH",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ status: next }),
+          body: JSON.stringify({
+            status: next,
+            ...(next === "ตรวจแล้ว" ? { helperUserIds } : {}),
+          }),
         });
         if (!res.ok) throw new Error("Interference update failed");
+        if (next === "ตรวจแล้ว") setHelperUserIds(defaultCrew ?? []);
       }
     } catch (err) {
       console.error(err);
@@ -569,6 +573,10 @@ export default function FieldOpsClient({
                         onCancelMarkSource={() => setMarkingSourceForId(null)}
                         onClearSource={() => handleClearSource(selectedSite.id)}
                         onSubmitSourceCoords={(lat, lng) => handleMarkSource(selectedSite.id, lat, lng)}
+                        inspectors={inspectors}
+                        currentUser={currentUser}
+                        helperUserIds={helperUserIds}
+                        onHelperUserIdsChange={setHelperUserIds}
                       />
                     )}
                     {!selection && (
