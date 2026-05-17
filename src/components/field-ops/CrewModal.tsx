@@ -64,7 +64,9 @@ const chipBase: React.CSSProperties = {
   fontSize: 12,
   fontWeight: 600,
   cursor: 'pointer',
-  border: '1px solid var(--fo-rail-border)',
+  borderWidth: 1,
+  borderStyle: 'solid',
+  borderColor: 'var(--fo-rail-border)',
   background: 'transparent',
   color: 'var(--fo-rail-text)',
 };
