@@ -115,7 +115,7 @@ Layout (Mockup B, chip grid):
 - Centered card, dark field-ops palette (`--fo-rail-bg`, `--fo-accent`).
 - Header: `FIRST LOGIN` mono label + `Tag your default crew` serif title + subtitle "Pre-filled on every inspection — override per station."
 - Body: chip grid of all active inspectors except self. Selected chips use `--fo-accent` background; unselected use `--fo-rail-border` outline.
-- Footer: `SAVE CREW (n)` primary (live count, enabled at all counts including 0 — though 0 should suggest `I WORK SOLO` instead via copy hint), `I WORK SOLO` secondary.
+- Footer: `SAVE CREW (n)` primary (live count, **disabled when n = 0** — the SOLO button is the only way to save an empty pick), `I WORK SOLO` secondary.
 - `×` top-right ≡ `I WORK SOLO` (same dismiss intent).
 
 Keyboard:
