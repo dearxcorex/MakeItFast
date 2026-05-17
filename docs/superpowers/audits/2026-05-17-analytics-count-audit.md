@@ -53,4 +53,15 @@
 
 ## Reconciliation
 
-(filled at the end — describes "before this audit the dashboard could report X; after, it reports Y")
+**Before this audit:**
+- **B1** inflated per-user YTD counts whenever any user had toggled INSPECT OFF. Q7 surfaced **1 such row** in the live DB (inspection id=27, station 5520076 "คนหมื่นไวย"). That row was attributed to whichever inspector led it but the station itself shows PENDING.
+- **B2** silently picked the higher of two diverging count sources via `Math.max`, so the leaderboard's "this month" total could exceed the chart by an unknown amount. The existing analytics test fixture itself had a hidden divergence for `daf` in May (groupBy said 1, raw chart said 0) — that's exactly the kind of silent over-count the workaround was masking in production.
+- **B3** hid the "Most tagged helper this year" KPI when the top helper had been deactivated (e.g., `aom`). The KPI would just disappear instead of falling through to the next-most-tagged active helper.
+
+**After this audit:**
+- **B1 fixed** (`a8ec31f`): PATCH OFF now deletes the caller's `station_inspection` row for today and runs `recomputeStationInspectionState`. Semantic is "the toggle is today's action; OFF can only undo today's action." The one pre-fix legacy row from Q7 was deleted with the user's explicit authorization.
+- **B2 fixed** (`ba5810c`, `8c20937`): the raw bucketed query is now the single source of truth for `monthTotal`. The new `console.warn` surfaces any future divergence in logs instead of inflating counts. Existing test fixtures were aligned so the warn only fires on the dedicated divergence test (no CI noise on healthy paths).
+- **B3 fixed** (`df40683`): the KPI iterates the sorted helper list and picks the first active one, so deactivated users no longer hide the result.
+- **Invariant suite** (`7ae7a32`): 5 contracts in `analytics-invariants.test.ts` pin the post-fix behavior — `ytdTotal = lead + helper`, chart agreement with groupBy sources, `activeThisMonth` consistency, `mostTaggedHelper` non-nullness, deactivated-user isolation. Plus 3 cases in `api-routes.test.ts` pin the toggle-OFF deletion semantic.
+
+Final dashboard counts post-fix are accurate to the underlying `station_inspection` + `station_inspection_member` rows. Any future drift will manifest as a failing invariant test, a `console.warn` in logs, or both — not as a silently wrong number on the dashboard.
