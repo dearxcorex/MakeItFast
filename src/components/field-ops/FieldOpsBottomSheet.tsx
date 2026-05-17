@@ -344,7 +344,8 @@ export function FieldOpsBottomSheet({
         </button>
       </div>
 
-      {isFM && station!.inspection69 !== 'ตรวจแล้ว'
+      {((isFM && station!.inspection69 !== 'ตรวจแล้ว')
+        || (isINT && site!.status !== 'ตรวจแล้ว'))
         && onHelperUserIdsChange
         && inspectors
         && currentUser && (
