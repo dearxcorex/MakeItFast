@@ -27,7 +27,7 @@ vi.mock('next/headers', () => ({
 }));
 
 import prisma from '@/lib/prisma';
-import { GET as getCrew } from '@/app/api/users/me/crew/route';
+import { GET as getCrew, PUT as putCrew } from '@/app/api/users/me/crew/route';
 
 beforeEach(() => {
   process.env.SESSION_PASSWORD =
@@ -89,6 +89,114 @@ describe('GET /api/users/me/crew', () => {
     ] as never);
     const c = await mintCookie({ userId: 3, username: 'iff', displayName: 'iff' });
     const r = await getCrew(await req('http://t/api/users/me/crew', { cookie: c.header }));
+    expect(r.status).toBe(200);
+    expect(await r.json()).toEqual({ defaultHelperUserIds: [6, 7] });
+  });
+});
+
+describe('PUT /api/users/me/crew', () => {
+  it('401 when no session', async () => {
+    const r = await putCrew(await req('http://t/api/users/me/crew', {
+      method: 'PUT',
+      body: { defaultHelperUserIds: [] },
+    }));
+    expect(r.status).toBe(401);
+  });
+
+  it('400 when body is not an object', async () => {
+    const c = await mintCookie({ userId: 3 });
+    const r = await putCrew(await req('http://t/api/users/me/crew', {
+      method: 'PUT',
+      cookie: c.header,
+      body: [1, 2, 3] as unknown as object,
+    }));
+    expect(r.status).toBe(400);
+    expect(await r.json()).toEqual({ error: 'invalid_body' });
+  });
+
+  it('400 when defaultHelperUserIds is not an array', async () => {
+    const c = await mintCookie({ userId: 3 });
+    const r = await putCrew(await req('http://t/api/users/me/crew', {
+      method: 'PUT',
+      cookie: c.header,
+      body: { defaultHelperUserIds: 'nope' as unknown as number[] },
+    }));
+    expect(r.status).toBe(400);
+    expect(await r.json()).toEqual({ error: 'invalid_body' });
+  });
+
+  it('400 when array contains a non-integer', async () => {
+    const c = await mintCookie({ userId: 3 });
+    const r = await putCrew(await req('http://t/api/users/me/crew', {
+      method: 'PUT',
+      cookie: c.header,
+      body: { defaultHelperUserIds: [6, 'oops' as unknown as number] },
+    }));
+    expect(r.status).toBe(400);
+    expect(await r.json()).toEqual({ error: 'invalid_body' });
+  });
+
+  it('400 self_in_list', async () => {
+    const c = await mintCookie({ userId: 3 });
+    const r = await putCrew(await req('http://t/api/users/me/crew', {
+      method: 'PUT',
+      cookie: c.header,
+      body: { defaultHelperUserIds: [3] },
+    }));
+    expect(r.status).toBe(400);
+    expect(await r.json()).toEqual({ error: 'self_in_list' });
+  });
+
+  it('400 too_many', async () => {
+    const c = await mintCookie({ userId: 3 });
+    const r = await putCrew(await req('http://t/api/users/me/crew', {
+      method: 'PUT',
+      cookie: c.header,
+      body: { defaultHelperUserIds: [4, 5, 6, 7, 8, 9] },
+    }));
+    expect(r.status).toBe(400);
+    expect(await r.json()).toEqual({ error: 'too_many' });
+  });
+
+  it('400 invalid_helper when an id is not an active inspector', async () => {
+    vi.mocked(prisma.user.findMany).mockResolvedValueOnce([{ id: 6 }] as never);
+    const c = await mintCookie({ userId: 3 });
+    const r = await putCrew(await req('http://t/api/users/me/crew', {
+      method: 'PUT',
+      cookie: c.header,
+      body: { defaultHelperUserIds: [6, 9] },
+    }));
+    expect(r.status).toBe(400);
+    expect(await r.json()).toEqual({ error: 'invalid_helper' });
+  });
+
+  it('200 saves solo []', async () => {
+    vi.mocked(prisma.user.update).mockResolvedValueOnce({
+      id: 3, default_helper_user_ids: [], crew_decided: true,
+    } as never);
+    const c = await mintCookie({ userId: 3 });
+    const r = await putCrew(await req('http://t/api/users/me/crew', {
+      method: 'PUT',
+      cookie: c.header,
+      body: { defaultHelperUserIds: [] },
+    }));
+    expect(r.status).toBe(200);
+    expect(await r.json()).toEqual({ defaultHelperUserIds: [] });
+  });
+
+  it('200 saves a valid crew', async () => {
+    vi.mocked(prisma.user.findMany).mockResolvedValueOnce([
+      { id: 6 }, { id: 7 },
+    ] as never);
+    vi.mocked(prisma.user.update).mockResolvedValueOnce({
+      id: 3, default_helper_user_ids: [6, 7], crew_decided: true,
+    } as never);
+    const c = await mintCookie({ userId: 3 });
+    const r = await putCrew(await req('http://t/api/users/me/crew', {
+      method: 'PUT',
+      cookie: c.header,
+      body: { defaultHelperUserIds: [6, 7] },
+    }));
     expect(r.status).toBe(200);
     expect(await r.json()).toEqual({ defaultHelperUserIds: [6, 7] });
   });
