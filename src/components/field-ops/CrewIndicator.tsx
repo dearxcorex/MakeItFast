@@ -43,11 +43,11 @@ export default function CrewIndicator({
       <button
         type="button"
         onClick={onOpen}
-        aria-label="My crew"
+        aria-label={defaultCrew.length === 0 ? 'My crew (solo)' : 'My crew'}
         style={{ ...baseBtn, padding: '6px 10px' }}
       >
         <span aria-hidden>🧑</span>
-        <span>{defaultCrew.length}</span>
+        {defaultCrew.length > 0 && <span>{defaultCrew.length}</span>}
       </button>
     );
   }

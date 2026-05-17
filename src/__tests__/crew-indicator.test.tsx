@@ -64,7 +64,7 @@ describe('CrewIndicator', () => {
     expect(container.textContent).toContain('#99');
   });
 
-  it('compact mode shows only the count badge', () => {
+  it('compact mode shows the count badge when crew is non-empty', () => {
     const { container } = render(
       <CrewIndicator
         defaultCrew={[6, 7]}
@@ -74,6 +74,23 @@ describe('CrewIndicator', () => {
       />,
     );
     expect(container.textContent).toContain('2');
+    expect(container.textContent).not.toContain('daf');
+  });
+
+  it('compact mode renders icon only (no zero) when crew is solo', () => {
+    const { container, getByRole } = render(
+      <CrewIndicator
+        defaultCrew={[]}
+        inspectors={inspectors}
+        onOpen={vi.fn()}
+        compact={true}
+      />,
+    );
+    // Button is rendered (re-openable) but does NOT show "0" — that would be
+    // confusing. The 🧑 icon alone signals "you've chosen to work solo".
+    expect(getByRole('button')).toBeTruthy();
+    expect(container.textContent).not.toContain('0');
+    // No names either (compact mode never shows names).
     expect(container.textContent).not.toContain('daf');
   });
 

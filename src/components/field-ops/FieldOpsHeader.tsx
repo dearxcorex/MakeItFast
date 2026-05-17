@@ -62,6 +62,9 @@ export function FieldOpsHeader({
       userLocation={userLocation}
       onRetryLocation={onRetryLocation}
       labelColor={labelColor}
+      defaultCrew={defaultCrew}
+      inspectors={inspectors}
+      onOpenCrew={onOpenCrew}
     />;
   }
 
@@ -237,6 +240,9 @@ function MobileHeader({
   userLocation,
   onRetryLocation,
   labelColor,
+  defaultCrew,
+  inspectors,
+  onOpenCrew,
 }: {
   scopeLabel: string;
   headerBg: string;
@@ -248,6 +254,9 @@ function MobileHeader({
   userLocation?: UserLocation;
   onRetryLocation?: () => void;
   labelColor: string;
+  defaultCrew?: number[] | null;
+  inspectors?: { id: number; username: string; displayName: string }[];
+  onOpenCrew?: () => void;
 }) {
   return (
     <header
@@ -294,6 +303,14 @@ function MobileHeader({
         accentText={accentText}
         labelColor={labelColor}
       />
+      {onOpenCrew && (
+        <CrewIndicator
+          defaultCrew={defaultCrew ?? null}
+          inspectors={inspectors ?? []}
+          onOpen={onOpenCrew}
+          compact={true}
+        />
+      )}
       <UserChip accentText={accentText} textColor={textColor} borderColor={borderColor} compact />
     </header>
   );
