@@ -61,72 +61,122 @@ async function buildPayload(): Promise<InspectorsAnalytics> {
       select: { id: true, username: true, display_name: true },
       orderBy: { display_name: 'asc' },
     }),
-    prisma.station_inspection.groupBy({
-      by: ['lead_user_id'],
-      _count: { _all: true },
-      where: { inspected_on: { gte: yearStart } },
-    }),
-    prisma.station_inspection.groupBy({
-      by: ['lead_user_id'],
-      _count: { _all: true },
-      where: { inspected_on: { gte: monthStart } },
-    }),
-    prisma.station_inspection.groupBy({
-      by: ['lead_user_id'],
-      _max: { inspected_on: true },
-    }),
-    prisma.station_inspection_member.groupBy({
-      by: ['user_id'],
-      _count: { _all: true },
-      where: { inspection: { inspected_on: { gte: yearStart } } },
-    }),
-    prisma.station_inspection_member.groupBy({
-      by: ['user_id'],
-      _count: { _all: true },
-      where: { inspection: { inspected_on: { gte: monthStart } } },
-    }),
+    prisma.$queryRawUnsafe<Array<{ lead_user_id: number; n: number }>>(
+      `SELECT lead_user_id, COUNT(*)::int AS n FROM (
+         SELECT lead_user_id FROM station_inspection      WHERE inspected_on >= $1
+         UNION ALL
+         SELECT lead_user_id FROM interference_inspection WHERE inspected_on >= $1
+       ) x GROUP BY lead_user_id`,
+      yearStart,
+    ),
+    prisma.$queryRawUnsafe<Array<{ lead_user_id: number; n: number }>>(
+      `SELECT lead_user_id, COUNT(*)::int AS n FROM (
+         SELECT lead_user_id FROM station_inspection      WHERE inspected_on >= $1
+         UNION ALL
+         SELECT lead_user_id FROM interference_inspection WHERE inspected_on >= $1
+       ) x GROUP BY lead_user_id`,
+      monthStart,
+    ),
+    prisma.$queryRawUnsafe<Array<{ lead_user_id: number; last: Date }>>(
+      `SELECT lead_user_id, MAX(inspected_on) AS last FROM (
+         SELECT lead_user_id, inspected_on FROM station_inspection
+         UNION ALL
+         SELECT lead_user_id, inspected_on FROM interference_inspection
+       ) x GROUP BY lead_user_id`,
+    ),
+    prisma.$queryRawUnsafe<Array<{ user_id: number; n: number }>>(
+      `SELECT user_id, COUNT(*)::int AS n FROM (
+         SELECT m.user_id FROM station_inspection_member m
+           JOIN station_inspection i ON i.id = m.inspection_id
+          WHERE i.inspected_on >= $1
+         UNION ALL
+         SELECT m.user_id FROM interference_inspection_member m
+           JOIN interference_inspection i ON i.id = m.inspection_id
+          WHERE i.inspected_on >= $1
+       ) x GROUP BY user_id`,
+      yearStart,
+    ),
+    prisma.$queryRawUnsafe<Array<{ user_id: number; n: number }>>(
+      `SELECT user_id, COUNT(*)::int AS n FROM (
+         SELECT m.user_id FROM station_inspection_member m
+           JOIN station_inspection i ON i.id = m.inspection_id
+          WHERE i.inspected_on >= $1
+         UNION ALL
+         SELECT m.user_id FROM interference_inspection_member m
+           JOIN interference_inspection i ON i.id = m.inspection_id
+          WHERE i.inspected_on >= $1
+       ) x GROUP BY user_id`,
+      monthStart,
+    ),
     prisma.$queryRawUnsafe<Array<{ month: string; lead_user_id: number; n: number }>>(
       `SELECT to_char(date_trunc('month', inspected_on), 'YYYY-MM') AS month,
               lead_user_id, COUNT(*)::int AS n
-         FROM station_inspection
-        WHERE inspected_on >= $1
+         FROM (
+           SELECT lead_user_id, inspected_on FROM station_inspection
+            WHERE inspected_on >= $1
+           UNION ALL
+           SELECT lead_user_id, inspected_on FROM interference_inspection
+            WHERE inspected_on >= $1
+         ) x
         GROUP BY month, lead_user_id`,
       monthGridStart,
     ),
     prisma.$queryRawUnsafe<Array<{ month: string; user_id: number; n: number }>>(
-      `SELECT to_char(date_trunc('month', i.inspected_on), 'YYYY-MM') AS month,
-              m.user_id, COUNT(*)::int AS n
-         FROM station_inspection_member m
-         JOIN station_inspection i ON i.id = m.inspection_id
-        WHERE i.inspected_on >= $1
-        GROUP BY month, m.user_id`,
+      `SELECT to_char(date_trunc('month', inspected_on), 'YYYY-MM') AS month,
+              user_id, COUNT(*)::int AS n
+         FROM (
+           SELECT m.user_id, i.inspected_on
+             FROM station_inspection_member m
+             JOIN station_inspection i ON i.id = m.inspection_id
+            WHERE i.inspected_on >= $1
+           UNION ALL
+           SELECT m.user_id, i.inspected_on
+             FROM interference_inspection_member m
+             JOIN interference_inspection i ON i.id = m.inspection_id
+            WHERE i.inspected_on >= $1
+         ) x
+        GROUP BY month, user_id`,
       monthGridStart,
     ),
     prisma.$queryRawUnsafe<Array<{ user_id: number; last: Date }>>(
-      `SELECT m.user_id, MAX(i.inspected_on) AS last
-         FROM station_inspection_member m
-         JOIN station_inspection i ON i.id = m.inspection_id
-        GROUP BY m.user_id`,
+      `SELECT user_id, MAX(inspected_on) AS last FROM (
+         SELECT m.user_id, i.inspected_on FROM station_inspection_member m
+           JOIN station_inspection i ON i.id = m.inspection_id
+         UNION ALL
+         SELECT m.user_id, i.inspected_on FROM interference_inspection_member m
+           JOIN interference_inspection i ON i.id = m.inspection_id
+       ) x GROUP BY user_id`,
     ),
-    prisma.$queryRawUnsafe<Array<{ id: number; station_id: number; inspected_on: Date; member_count: number }>>(
-      `SELECT i.id, i.station_id, i.inspected_on,
-              (1 + COUNT(m.user_id))::int AS member_count
-         FROM station_inspection i
-         LEFT JOIN station_inspection_member m ON m.inspection_id = i.id
-        WHERE i.inspected_on >= $1
-        GROUP BY i.id
-        ORDER BY member_count DESC, i.inspected_on DESC
+    prisma.$queryRawUnsafe<Array<{ id: number; target_type: string; target_id: number; inspected_on: Date; member_count: number }>>(
+      `SELECT id, target_type, target_id, inspected_on, member_count FROM (
+         SELECT i.id, 'fm' AS target_type, i.station_id AS target_id,
+                i.inspected_on,
+                (1 + COUNT(m.user_id))::int AS member_count
+           FROM station_inspection i
+           LEFT JOIN station_inspection_member m ON m.inspection_id = i.id
+          WHERE i.inspected_on >= $1
+          GROUP BY i.id
+         UNION ALL
+         SELECT i.id, 'int' AS target_type, i.interference_id AS target_id,
+                i.inspected_on,
+                (1 + COUNT(m.user_id))::int AS member_count
+           FROM interference_inspection i
+           LEFT JOIN interference_inspection_member m ON m.inspection_id = i.id
+          WHERE i.inspected_on >= $1
+          GROUP BY i.id
+       ) x
+        ORDER BY member_count DESC, inspected_on DESC
         LIMIT 1`,
       yearStart,
     ),
   ]);
 
   const userById = new Map(users.map((u) => [u.id, u]));
-  const leadYtdMap = new Map(leadYtd.map((r) => [r.lead_user_id, r._count._all]));
-  const leadMonthMap = new Map(leadMonth.map((r) => [r.lead_user_id, r._count._all]));
-  const leadMaxMap = new Map(leadMax.map((r) => [r.lead_user_id, r._max.inspected_on]));
-  const memberYtdMap = new Map(memberYtd.map((r) => [r.user_id, r._count._all]));
-  const memberMonthMap = new Map(memberMonth.map((r) => [r.user_id, r._count._all]));
+  const leadYtdMap = new Map(leadYtd.map((r) => [r.lead_user_id, Number(r.n)]));
+  const leadMonthMap = new Map(leadMonth.map((r) => [r.lead_user_id, Number(r.n)]));
+  const leadMaxMap = new Map(leadMax.map((r) => [r.lead_user_id, r.last]));
+  const memberYtdMap = new Map(memberYtd.map((r) => [r.user_id, Number(r.n)]));
+  const memberMonthMap = new Map(memberMonth.map((r) => [r.user_id, Number(r.n)]));
   const helperMaxMap = new Map(helperMax.map((r) => [r.user_id, r.last]));
 
   const monthlySeries = monthGrid.map((month) => {
@@ -193,28 +243,38 @@ async function buildPayload(): Promise<InspectorsAnalytics> {
   let largestTeam: InspectorsAnalytics['kpis']['largestTeam'] = null;
   const top = largestTeamRows[0];
   if (top) {
-    const station = await prisma.fm_station.findUnique({
-      where: { id_fm: top.station_id },
-      select: { name: true },
-    });
+    let stationName = '(unknown)';
+    if (top.target_type === 'fm') {
+      const fm = await prisma.fm_station.findUnique({
+        where: { id_fm: top.target_id },
+        select: { name: true },
+      });
+      stationName = fm?.name ?? '(unknown FM station)';
+    } else if (top.target_type === 'int') {
+      const intSite = await prisma.interference_site.findUnique({
+        where: { id: top.target_id },
+        select: { site_name: true, site_code: true },
+      });
+      stationName = intSite?.site_name ?? intSite?.site_code ?? `(INT site #${top.target_id})`;
+    }
     largestTeam = {
       inspectionId: top.id,
-      stationId: top.station_id,
-      stationName: station?.name ?? '(unknown station)',
+      stationId: top.target_id,
+      stationName,
       inspectedOn: isoDate(top.inspected_on),
       memberCount: Number(top.member_count),
     };
   }
 
   let mostTaggedHelperThisYear: InspectorsAnalytics['kpis']['mostTaggedHelperThisYear'] = null;
-  const sortedHelpers = memberYtd.slice().sort((a, b) => b._count._all - a._count._all);
+  const sortedHelpers = memberYtd.slice().sort((a, b) => Number(b.n) - Number(a.n));
   for (const helperTop of sortedHelpers) {
     const u = userById.get(helperTop.user_id);
     if (u) {
       mostTaggedHelperThisYear = {
         username: u.username,
         displayName: u.display_name,
-        count: helperTop._count._all,
+        count: Number(helperTop.n),
       };
       break;
     }
