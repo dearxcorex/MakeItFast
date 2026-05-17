@@ -269,6 +269,9 @@ function MobileHeader({
         color: textColor,
         borderBottom: `1px solid ${borderColor}`,
         flexShrink: 0,
+        position: "sticky",
+        top: 0,
+        zIndex: 50,
       }}
     >
       <button

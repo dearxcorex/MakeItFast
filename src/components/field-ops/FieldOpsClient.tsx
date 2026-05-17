@@ -459,7 +459,7 @@ export default function FieldOpsClient({
       className="field-ops-root"
       data-theme={theme}
       style={{
-        minHeight: "100vh",
+        minHeight: "100dvh",
         display: "flex",
         flexDirection: "column",
       }}
