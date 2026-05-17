@@ -471,6 +471,9 @@ export default function FieldOpsClient({
         locationStatus={locationStatus}
         userLocation={userLocation}
         onRetryLocation={retryLocation}
+        defaultCrew={defaultCrew}
+        inspectors={inspectors}
+        onOpenCrew={() => setCrewModalOpen(true)}
       />
 
       <div style={{ flex: 1, display: "flex", minHeight: 0 }}>

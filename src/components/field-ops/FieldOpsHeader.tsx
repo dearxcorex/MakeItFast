@@ -7,6 +7,7 @@ import type { TypeFilter } from "./FieldOpsFilters";
 import type { GeolocationStatus } from "@/hooks/useGeolocation";
 import { computeKpis } from "@/utils/fieldOpsKpi";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
+import CrewIndicator from "./CrewIndicator";
 
 export function FieldOpsHeader({
   stations,
@@ -19,6 +20,9 @@ export function FieldOpsHeader({
   locationStatus,
   userLocation,
   onRetryLocation,
+  defaultCrew,
+  inspectors,
+  onOpenCrew,
 }: {
   stations: FMStation[];
   interference: InterferenceSite[];
@@ -30,6 +34,9 @@ export function FieldOpsHeader({
   locationStatus?: GeolocationStatus;
   userLocation?: UserLocation;
   onRetryLocation?: () => void;
+  defaultCrew?: number[] | null;
+  inspectors?: { id: number; username: string; displayName: string }[];
+  onOpenCrew?: () => void;
 }) {
   const kpis = computeKpis(stations, interference, type);
 
@@ -110,6 +117,15 @@ export function FieldOpsHeader({
         accentText={accentText}
         labelColor={labelColor}
       />
+
+      {onOpenCrew && (
+        <CrewIndicator
+          defaultCrew={defaultCrew ?? null}
+          inspectors={inspectors ?? []}
+          onOpen={onOpenCrew}
+          compact={false}
+        />
+      )}
 
       <button
         type="button"
