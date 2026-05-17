@@ -1,8 +1,9 @@
 import { describe, it, expect, vi, afterEach } from 'vitest';
 import { render, cleanup } from '@testing-library/react';
-import { FieldOpsCurrentFM } from '@/components/field-ops/FieldOpsCurrent';
+import { FieldOpsCurrentFM, FieldOpsCurrentINT } from '@/components/field-ops/FieldOpsCurrent';
 import TeammatePicker from '@/components/field-ops/TeammatePicker'; // eslint-disable-line @typescript-eslint/no-unused-vars
 import type { FMStation } from '@/types/station';
+import type { InterferenceSite } from '@/types/interference';
 
 afterEach(() => cleanup());
 
@@ -123,6 +124,83 @@ describe('FieldOpsCurrentFM — teammate picker', () => {
       <FieldOpsCurrentFM
         station={station}
         onToggleInspection={vi.fn()}
+        pending={false}
+        inspectors={[
+          { id: 3, username: 'iff', displayName: 'iff' },
+          { id: 6, username: 'daf', displayName: 'daf' },
+        ]}
+        currentUser={{ id: 3, displayName: 'iff' }}
+        helperUserIds={[]}
+        onHelperUserIdsChange={vi.fn()}
+      />,
+    );
+    expect(queryByRole('button', { name: /\+ tag teammates/i })).toBeNull();
+  });
+});
+
+const baseSite: InterferenceSite = {
+  id: 42,
+  siteCode: 'X-42',
+  siteName: 'Test site',
+  lat: 14.0,
+  long: 100.0,
+  mcZone: null,
+  changwat: 'นครราชสีมา',
+  cellName: null,
+  sectorName: null,
+  direction: null,
+  avgNiCarrier: null,
+  dayTime: null,
+  nightTime: null,
+  sourceLat: null,
+  sourceLong: null,
+  estimateDistance: null,
+  ranking: 'Minor',
+  status: 'ยังไม่ตรวจ',
+  nbtcArea: null,
+  awnContact: null,
+  lot: null,
+  onSiteScanBy: null,
+  onSiteScanDate: null,
+  checkRealtime: null,
+  sourceLocation1: null,
+  sourceLocation2: null,
+  cameraModel1: null,
+  cameraModel2: null,
+  notes: null,
+  lawPaperSent: false,
+  createdAt: new Date(),
+  updatedAt: new Date(),
+};
+
+describe('FieldOpsCurrentINT — teammate picker', () => {
+  it('renders the teammate picker when site is PENDING and all picker props are provided', () => {
+    const site: InterferenceSite = { ...baseSite, status: 'ยังไม่ตรวจ' };
+    const { getByRole } = render(
+      <FieldOpsCurrentINT
+        site={site}
+        onToggleInspection={vi.fn()}
+        onToggleLawPaper={vi.fn()}
+        pending={false}
+        inspectors={[
+          { id: 3, username: 'iff', displayName: 'iff' },
+          { id: 6, username: 'daf', displayName: 'daf' },
+        ]}
+        currentUser={{ id: 3, displayName: 'iff' }}
+        helperUserIds={[]}
+        onHelperUserIdsChange={vi.fn()}
+      />,
+    );
+    expect(getByRole('button', { name: /\+ tag teammates/i })).toBeTruthy();
+  });
+
+  it('does NOT render the teammate picker when site is INSPECTED', () => {
+    const site: InterferenceSite = { ...baseSite, status: 'ตรวจแล้ว' };
+    const { queryByRole } = render(
+      <FieldOpsCurrentINT
+        site={site}
+        onToggleInspection={vi.fn()}
+        onToggleLawPaper={vi.fn()}
         pending={false}
         inspectors={[
           { id: 3, username: 'iff', displayName: 'iff' },

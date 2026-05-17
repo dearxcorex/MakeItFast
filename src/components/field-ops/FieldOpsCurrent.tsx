@@ -368,6 +368,18 @@ export function FieldOpsCurrentINT({
         loading={pending}
       />
 
+      {site.status !== 'ตรวจแล้ว'
+        && onHelperUserIdsChange
+        && inspectors
+        && currentUser && (
+        <TeammatePicker
+          inspectors={inspectors}
+          currentUserId={currentUser.id}
+          value={helperUserIds ?? []}
+          onChange={onHelperUserIdsChange}
+          disabled={pending}
+        />
+      )}
 
       <button
         type="button"
