@@ -3,9 +3,9 @@
 
 import { useEffect, useState } from 'react';
 import type { InspectorsAnalytics } from '@/types/analytics';
-import FoKPI from './FoKPI';
 import FoBarChart from './charts/FoBarChart';
 import FoDonut from './charts/FoDonut';
+import TopPerformer from './TopPerformer';
 
 // Stable palette for usernames. Falls back to ink for unknown names.
 const USER_COLORS: Record<string, string> = {
@@ -30,36 +30,19 @@ function daysAgo(iso: string | null): string {
   return `${days} days ago`;
 }
 
-function SectionHeader() {
+function SectionHeader({ thisYear }: { thisYear: number }) {
   return (
     <div style={{ marginTop: 32, marginBottom: 12 }}>
       <div className="fo-mono" style={{ color: 'var(--fo-accent)', letterSpacing: 0.6 }}>
         INSPECTORS
       </div>
       <div className="fo-serif" style={{ fontSize: 22, color: 'var(--fo-ink)' }}>
-        Year-to-date team performance
+        Year-to-date team performance · {thisYear}
       </div>
     </div>
   );
 }
 
-function KpiStrip({ kpis }: { kpis: InspectorsAnalytics['kpis'] }) {
-  return (
-    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: 12, marginBottom: 16 }}>
-      <FoKPI label="Active inspectors this month" value={kpis.activeThisMonth} />
-      <FoKPI
-        label="Largest team"
-        value={kpis.largestTeam ? `${kpis.largestTeam.memberCount}` : '—'}
-        sub={kpis.largestTeam ? `${kpis.largestTeam.stationName} · ${kpis.largestTeam.inspectedOn}` : 'no data'}
-      />
-      <FoKPI
-        label="Most-tagged helper"
-        value={kpis.mostTaggedHelperThisYear ? kpis.mostTaggedHelperThisYear.displayName : '—'}
-        sub={kpis.mostTaggedHelperThisYear ? `${kpis.mostTaggedHelperThisYear.count} helper assists this year` : 'no data'}
-      />
-    </div>
-  );
-}
 
 function LeaderboardTable({ inspectors }: { inspectors: InspectorsAnalytics['inspectors'] }) {
   const top = inspectors[0];
@@ -154,7 +137,7 @@ export default function InspectorsSection() {
   if (error) {
     return (
       <section>
-        <SectionHeader />
+        <SectionHeader thisYear={new Date().getUTCFullYear()} />
         <div className="fo-mono" style={{ padding: 12, border: '1px solid var(--fo-crit)', color: 'var(--fo-crit)', borderRadius: 8 }}>
           Failed to load inspector analytics ({error}).
         </div>
@@ -165,7 +148,7 @@ export default function InspectorsSection() {
   if (!data) {
     return (
       <section>
-        <SectionHeader />
+        <SectionHeader thisYear={new Date().getUTCFullYear()} />
         <div className="fo-mono" style={{ padding: 12, color: 'var(--fo-rail-mute)' }}>
           Loading...
         </div>
@@ -179,7 +162,7 @@ export default function InspectorsSection() {
   if (!hasAnyActivity) {
     return (
       <section>
-        <SectionHeader />
+        <SectionHeader thisYear={data.thisYear} />
         <div className="fo-mono" style={{ padding: 12, color: 'var(--fo-rail-mute)' }}>
           No inspection activity yet.
         </div>
@@ -189,8 +172,8 @@ export default function InspectorsSection() {
 
   return (
     <section>
-      <SectionHeader />
-      <KpiStrip kpis={data.kpis} />
+      <SectionHeader thisYear={data.thisYear} />
+      <TopPerformer inspectors={data.inspectors} thisYear={data.thisYear} />
       <LeaderboardTable inspectors={data.inspectors} />
       <MonthlyParticipationChart series={data.monthlySeries} />
       <PerUserRoleDonuts inspectors={data.inspectors} />
