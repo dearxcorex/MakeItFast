@@ -1,30 +1,11 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import type { AnalyticsSummary } from "@/types/analytics";
-import FoKPI from "./FoKPI";
-import FoLineChart from "./charts/FoLineChart";
-import FoBarChart from "./charts/FoBarChart";
-import FoDonut from "./charts/FoDonut";
 import InspectorsSection from "./InspectorsSection";
 
 const RANGES = ["7D", "30D", "90D", "YTD"] as const;
 type Range = (typeof RANGES)[number];
-
-const RANK_COLOR: Record<string, string> = {
-  Critical: "#e34b4b",
-  Major: "#f5a623",
-  Minor: "#d4a017",
-  Unknown: "#b8c4c2",
-};
-
-
-function provinceShort(name: string): string {
-  if (!name) return "—";
-  const ascii = name.replace(/[^A-Za-z0-9 ]/g, "").trim();
-  if (ascii.length >= 3) return ascii.slice(0, 3).toUpperCase();
-  return name.slice(0, 3);
-}
 
 export default function AnalyticsDashboard() {
   const [data, setData] = useState<AnalyticsSummary | null>(null);
@@ -120,47 +101,6 @@ export default function AnalyticsDashboard() {
     win.print();
   };
 
-  const lineSeries = useMemo(() => {
-    if (!data) return [];
-    const rows = data.byProvince.slice(0, 7);
-    return [
-      {
-        name: "TOTAL",
-        color: "var(--fo-line-2)",
-        points: rows.map((r) => r.total),
-      },
-      {
-        name: "INSPECTED",
-        color: "#00ed64",
-        points: rows.map((r) => r.inspected),
-      },
-    ];
-  }, [data]);
-
-  const lineLabels = useMemo(() => {
-    if (!data) return [];
-    return data.byProvince.slice(0, 7).map((r) => provinceShort(r.name));
-  }, [data]);
-
-  const donutSegments = useMemo(() => {
-    if (!data) return [];
-    return data.rankingDistribution.map((r) => ({
-      label: r.ranking,
-      v: r.count,
-      c: RANK_COLOR[r.ranking] ?? RANK_COLOR.Unknown,
-    }));
-  }, [data]);
-
-  const barData = useMemo(() => {
-    if (!data) return [];
-    const rows = data.fmStationsByProvince.slice(0, 9);
-    return rows.map((r) => ({
-      label: provinceShort(r.name),
-      v: r.total,
-      color: r.total === Math.max(...rows.map((x) => x.total)) ? "#00684a" : undefined,
-    }));
-  }, [data]);
-
   if (loading && !data) {
     return (
       <div
@@ -221,23 +161,6 @@ export default function AnalyticsDashboard() {
       </div>
     );
   }
-
-  const inspectionRate = data.heroStats.totalStations
-    ? Math.round((data.heroStats.inspectedStations / data.heroStats.totalStations) * 100)
-    : 0;
-
-  const totalInspected =
-    data.fmStationInspection.inspection69 + data.fmStationInspection.bothYears;
-  const totalStations = data.heroStats.totalStations;
-  const ringPct = totalStations ? Math.round((totalInspected / totalStations) * 100) : 0;
-  const onAir = data.fmStationAirStatus.onAir;
-  const offAir = data.fmStationAirStatus.offAir;
-  const airTotal = onAir + offAir;
-  const submitted = data.fmStationRequests.submitted;
-  const notSubmitted = data.fmStationRequests.notSubmitted;
-  const submitTotal = submitted + notSubmitted;
-
-  const totalInterference = data.heroStats.totalInterferenceSites;
 
   return (
     <div className="fo-light" style={{ minHeight: "100%", display: "flex" }}>
@@ -348,107 +271,3 @@ export default function AnalyticsDashboard() {
   );
 }
 
-function CoverageRing({ pct }: { pct: number }) {
-  const size = 132;
-  const stroke = 12;
-  const r = (size - stroke) / 2;
-  const c = 2 * Math.PI * r;
-  const dash = (pct / 100) * c;
-  return (
-    <div style={{ position: "relative", width: size, height: size }}>
-      <svg width={size} height={size}>
-        <circle
-          cx={size / 2}
-          cy={size / 2}
-          r={r}
-          fill="none"
-          stroke="var(--fo-line)"
-          strokeWidth={stroke}
-        />
-        <circle
-          cx={size / 2}
-          cy={size / 2}
-          r={r}
-          fill="none"
-          stroke="var(--fo-accent-2)"
-          strokeWidth={stroke}
-          strokeDasharray={`${dash} ${c - dash}`}
-          strokeDashoffset={c / 4}
-          strokeLinecap="round"
-          transform={`rotate(-90 ${size / 2} ${size / 2})`}
-        />
-      </svg>
-      <div
-        style={{
-          position: "absolute",
-          inset: 0,
-          display: "flex",
-          flexDirection: "column",
-          alignItems: "center",
-          justifyContent: "center",
-        }}
-      >
-        <span className="fo-serif" style={{ fontSize: 32, lineHeight: 1 }}>
-          {pct}%
-        </span>
-        <span className="fo-mono" style={{ marginTop: 4 }}>
-          INSPECTED
-        </span>
-      </div>
-    </div>
-  );
-}
-
-function MiniBar({
-  label,
-  filled,
-  total,
-  tone,
-}: {
-  label: string;
-  filled: number;
-  total: number;
-  tone: "ok" | "warn" | "crit";
-}) {
-  const pct = total ? Math.round((filled / total) * 100) : 0;
-  const color =
-    tone === "ok"
-      ? "var(--fo-accent)"
-      : tone === "warn"
-        ? "var(--fo-warn-2)"
-        : "var(--fo-crit)";
-  return (
-    <div>
-      <div
-        style={{
-          display: "flex",
-          justifyContent: "space-between",
-          alignItems: "baseline",
-          marginBottom: 4,
-        }}
-      >
-        <span className="fo-mono">{label}</span>
-        <span className="fo-mono" style={{ color: "var(--fo-ink)" }}>
-          {filled}/{total}
-        </span>
-      </div>
-      <div
-        style={{
-          height: 8,
-          background: "var(--fo-line)",
-          borderRadius: 999,
-          overflow: "hidden",
-        }}
-      >
-        <div
-          style={{
-            width: `${pct}%`,
-            height: "100%",
-            background: color,
-            transition: "width 320ms ease",
-          }}
-        />
-      </div>
-    </div>
-  );
-}

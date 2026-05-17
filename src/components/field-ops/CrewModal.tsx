@@ -114,7 +114,6 @@ export default function CrewModal({
   initialSelected,
   onSave,
   onSolo,
-  onClose: _onClose,
   error,
   pending = false,
 }: Props) {

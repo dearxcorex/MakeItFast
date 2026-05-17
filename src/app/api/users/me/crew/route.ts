@@ -7,7 +7,7 @@ import {
   CrewValidationError,
 } from '@/services/userPreferencesService';
 
-export async function GET(_req: NextRequest): Promise<NextResponse> {
+export async function GET(): Promise<NextResponse> {
   const session = await getSession();
   if (!session.userId) {
     return NextResponse.json({ error: 'not_authenticated' }, { status: 401 });
