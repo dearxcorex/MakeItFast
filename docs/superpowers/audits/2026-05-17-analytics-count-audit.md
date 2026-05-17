@@ -48,8 +48,8 @@
 
 | File | Cases |
 |---|---|
-| `src/__tests__/analytics-invariants.test.ts` | TBD |
-| `src/__tests__/api-routes.test.ts` (toggle-OFF cases) | TBD |
+| `src/__tests__/analytics-invariants.test.ts` | 5 |
+| `src/__tests__/api-routes.test.ts` (toggle-OFF cases) | 3 |
 
 ## Reconciliation
 
