@@ -131,9 +131,7 @@ describe('GET /api/analytics/inspectors', () => {
         { user_id: 3, _count: { _all: 3 } },
         { user_id: 6, _count: { _all: 5 } },
       ] as never)
-      .mockResolvedValueOnce([
-        { user_id: 6, _count: { _all: 1 } },
-      ] as never);
+      .mockResolvedValueOnce([] as never);
 
     // $queryRawUnsafe is used for: monthlySeries lead bucket, monthlySeries helper bucket, helper max date, largestTeam.
     vi.mocked(prisma.$queryRawUnsafe)
@@ -170,6 +168,9 @@ describe('GET /api/analytics/inspectors', () => {
       ytdAsLead: 11, ytdAsHelper: 3, ytdTotal: 14, monthTotal: 3, lastActive: '2026-05-12',
     });
     expect(daf).toMatchObject({
+      // monthTotal=0 because the raw May bucket has no daf entry. The chart
+      // is the source of truth post-Fix 2; daf's YTD helper count of 5 all
+      // landed in April.
       ytdAsLead: 4, ytdAsHelper: 5, ytdTotal: 9, monthTotal: 0, lastActive: '2026-04-25',
     });
 
