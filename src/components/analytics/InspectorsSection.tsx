@@ -81,15 +81,24 @@ function LeaderboardTable({ inspectors }: { inspectors: InspectorsAnalytics['ins
   );
 }
 
-function MonthlyParticipationChart({ series }: { series: InspectorsAnalytics['monthlySeries'] }) {
-  const data = series.map((m) => ({
-    label: m.month.slice(2), // "25-06" style — compact
-    v: Object.values(m.perUser).reduce((s, n) => s + n, 0),
-    color: 'var(--fo-accent)',
-  }));
+function MonthlyParticipationChart({
+  series,
+  thisYear,
+}: {
+  series: InspectorsAnalytics['monthlySeries'];
+  thisYear: number;
+}) {
+  const yearPrefix = `${thisYear}-`;
+  const data = series
+    .filter((m) => m.month.startsWith(yearPrefix))
+    .map((m) => ({
+      label: m.month.slice(5), // "01".."12" — month only, year is in the title
+      v: Object.values(m.perUser).reduce((s, n) => s + n, 0),
+      color: 'var(--fo-accent)',
+    }));
   return (
     <div style={{ marginBottom: 24 }}>
-      <FoBarChart data={data} title="Participations per month (last 12)" />
+      <FoBarChart data={data} title={`Participations per month · ${thisYear}`} />
     </div>
   );
 }
@@ -175,7 +184,7 @@ export default function InspectorsSection() {
       <SectionHeader thisYear={data.thisYear} />
       <TopPerformer inspectors={data.inspectors} thisYear={data.thisYear} />
       <LeaderboardTable inspectors={data.inspectors} />
-      <MonthlyParticipationChart series={data.monthlySeries} />
+      <MonthlyParticipationChart series={data.monthlySeries} thisYear={data.thisYear} />
       <PerUserRoleDonuts inspectors={data.inspectors} />
     </section>
   );

@@ -31,12 +31,12 @@ const cardBase: React.CSSProperties = {
 };
 
 const cardEmpty: React.CSSProperties = {
-  background: 'var(--fo-surface)',
-  border: '1px solid var(--fo-line)',
+  background: '#f4f4f1',
+  border: '1px solid #e2dfd8',
   borderRadius: 12,
   padding: 18,
   marginBottom: 16,
-  color: 'var(--fo-mute)',
+  color: '#5c6c75',
 };
 
 const pillLed: React.CSSProperties = {
@@ -56,7 +56,7 @@ const pillHelped: React.CSSProperties = {
   ...pillLed,
   background: '#ffffff',
   borderColor: '#cbd5e1',
-  color: 'var(--fo-mute)',
+  color: '#5c6c75',
 };
 
 export default function TopPerformer({ inspectors, thisYear }: Props) {
@@ -83,7 +83,7 @@ export default function TopPerformer({ inspectors, thisYear }: Props) {
       </div>
       <div
         className="fo-serif"
-        style={{ fontSize: 42, marginTop: 8, lineHeight: 1, color: 'var(--fo-ink)' }}
+        style={{ fontSize: 42, marginTop: 8, lineHeight: 1, color: '#001e2b' }}
       >
         {top.displayName}
       </div>
@@ -101,7 +101,7 @@ export default function TopPerformer({ inspectors, thisYear }: Props) {
         <span style={pillLed}>{top.ytdAsLead} led</span>
         <span style={pillHelped}>{top.ytdAsHelper} helped</span>
       </div>
-      <div style={{ color: 'var(--fo-mute)', fontSize: 11, marginTop: 10 }}>
+      <div style={{ color: '#5c6c75', fontSize: 11, marginTop: 10 }}>
         Last active {daysAgo(top.lastActive)} · {top.monthTotal} this month
       </div>
     </div>
