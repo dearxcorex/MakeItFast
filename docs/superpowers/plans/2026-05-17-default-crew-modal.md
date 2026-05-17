@@ -37,15 +37,17 @@
 
 ---
 
-## Task 1: Schema column + migration
+## Task 1: Schema columns + migration
 
 **Files:**
 - Modify: `prisma/schema.prisma`
 - Create: `prisma/migrations/2026-05-17-add-default-helper-user-ids/migration.sql`
 
-- [ ] **Step 1: Add the column to schema.prisma**
+> **Schema note:** Prisma 5 does not support nullable scalar arrays (`Int[]?` is a P1012 error). The 3-state machine is therefore encoded across two columns: a non-nullable `Int[]` for the helper ids (defaults to `[]`) and an explicit `crew_decided` boolean for the undecided/decided distinction.
 
-Find the `user` model (line 87). Add the new field right after `created_by`:
+- [ ] **Step 1: Add the columns to schema.prisma**
+
+Find the `user` model (line 87). Add two new fields right after `created_by`:
 
 ```prisma
 model user {
@@ -58,7 +60,8 @@ model user {
   created_at    DateTime @default(now())
   updated_at    DateTime @updatedAt
   created_by    Int?
-  default_helper_user_ids Int[]?
+  default_helper_user_ids Int[]     @default([])
+  crew_decided            Boolean   @default(false)
 
   inspections_led    station_inspection[]        @relation("inspection_lead")
   inspection_members station_inspection_member[]
@@ -72,7 +75,9 @@ model user {
 Create `prisma/migrations/2026-05-17-add-default-helper-user-ids/migration.sql`:
 
 ```sql
-ALTER TABLE "user" ADD COLUMN "default_helper_user_ids" INTEGER[];
+ALTER TABLE "user"
+  ADD COLUMN "default_helper_user_ids" INTEGER[] NOT NULL DEFAULT '{}',
+  ADD COLUMN "crew_decided" BOOLEAN NOT NULL DEFAULT false;
 ```
 
 - [ ] **Step 3: Apply schema + regenerate Prisma client**
@@ -148,10 +153,23 @@ beforeEach(() => {
 });
 
 describe('getDefaultCrew', () => {
-  it('returns null when the user has never decided', async () => {
+  it('returns null when the user has never decided (crew_decided=false)', async () => {
     vi.mocked(prisma.user.findUnique).mockResolvedValueOnce({
       id: 3,
-      default_helper_user_ids: null,
+      default_helper_user_ids: [],
+      crew_decided: false,
+    } as never);
+    const result = await getDefaultCrew(3);
+    expect(result).toBeNull();
+  });
+
+  it('returns null even if the array is non-empty when crew_decided=false', async () => {
+    // Defensive: a row where the flag is false should be treated as undecided
+    // regardless of the array column.
+    vi.mocked(prisma.user.findUnique).mockResolvedValueOnce({
+      id: 3,
+      default_helper_user_ids: [9],
+      crew_decided: false,
     } as never);
     const result = await getDefaultCrew(3);
     expect(result).toBeNull();
@@ -161,6 +179,7 @@ describe('getDefaultCrew', () => {
     vi.mocked(prisma.user.findUnique).mockResolvedValueOnce({
       id: 3,
       default_helper_user_ids: [],
+      crew_decided: true,
     } as never);
     const result = await getDefaultCrew(3);
     expect(result).toEqual([]);
@@ -170,6 +189,7 @@ describe('getDefaultCrew', () => {
     vi.mocked(prisma.user.findUnique).mockResolvedValueOnce({
       id: 3,
       default_helper_user_ids: [6, 7],
+      crew_decided: true,
     } as never);
     vi.mocked(prisma.user.findMany).mockResolvedValueOnce([
       { id: 6 }, { id: 7 },
@@ -215,11 +235,11 @@ async function loadValidIds(ids: number[]): Promise<number[]> {
 export async function getDefaultCrew(userId: number): Promise<number[] | null> {
   const row = await prisma.user.findUnique({
     where: { id: userId },
-    select: { default_helper_user_ids: true },
+    select: { default_helper_user_ids: true, crew_decided: true },
   });
   if (!row) return null;
+  if (!row.crew_decided) return null;
   const raw = row.default_helper_user_ids;
-  if (raw === null || raw === undefined) return null;
   if (raw.length === 0) return [];
   const valid = await loadValidIds(raw);
   if (valid.length !== raw.length) {
@@ -250,6 +270,7 @@ Append to the same describe block in `src/__tests__/services-user-preferences.te
     vi.mocked(prisma.user.findUnique).mockResolvedValueOnce({
       id: 3,
       default_helper_user_ids: [6, 9],   // 9 has been deactivated
+      crew_decided: true,
     } as never);
     vi.mocked(prisma.user.findMany).mockResolvedValueOnce([
       { id: 6 },
@@ -273,7 +294,7 @@ Append to the same describe block in `src/__tests__/services-user-preferences.te
 npx vitest run src/__tests__/services-user-preferences.test.ts
 ```
 
-Expected: 4 tests pass.
+Expected: 5 tests pass.
 
 - [ ] **Step 7: Commit**
 
@@ -308,30 +329,30 @@ Append to the test file:
 import { setDefaultCrew, MAX_DEFAULT_HELPERS } from '@/services/userPreferencesService';
 
 describe('setDefaultCrew', () => {
-  it('saves [] for the solo state', async () => {
+  it('saves [] for the solo state (with crew_decided=true)', async () => {
     vi.mocked(prisma.user.update).mockResolvedValueOnce({
-      id: 3, default_helper_user_ids: [],
+      id: 3, default_helper_user_ids: [], crew_decided: true,
     } as never);
     const result = await setDefaultCrew(3, []);
     expect(result).toEqual([]);
     expect(prisma.user.update).toHaveBeenCalledWith({
       where: { id: 3 },
-      data: { default_helper_user_ids: [] },
+      data: { default_helper_user_ids: [], crew_decided: true },
     });
   });
 
-  it('dedupes and saves a valid crew', async () => {
+  it('dedupes and saves a valid crew (with crew_decided=true)', async () => {
     vi.mocked(prisma.user.findMany).mockResolvedValueOnce([
       { id: 6 }, { id: 7 },
     ] as never);
     vi.mocked(prisma.user.update).mockResolvedValueOnce({
-      id: 3, default_helper_user_ids: [6, 7],
+      id: 3, default_helper_user_ids: [6, 7], crew_decided: true,
     } as never);
     const result = await setDefaultCrew(3, [6, 7, 6]);
     expect(result).toEqual([6, 7]);
     expect(prisma.user.update).toHaveBeenCalledWith({
       where: { id: 3 },
-      data: { default_helper_user_ids: [6, 7] },
+      data: { default_helper_user_ids: [6, 7], crew_decided: true },
     });
   });
 
@@ -416,7 +437,7 @@ export async function setDefaultCrew(
   }
   await prisma.user.update({
     where: { id: userId },
-    data: { default_helper_user_ids: ids },
+    data: { default_helper_user_ids: ids, crew_decided: true },
   });
   return ids;
 }

@@ -25,24 +25,29 @@ When a station is selected, the per-station `TeammatePicker` chips start filled 
 
 ## Data model
 
-One nullable column on `user`:
+Two columns on `user` (Prisma 5 forbids nullable scalar arrays, so the state machine uses an explicit decision flag alongside the helper array):
 
 ```prisma
 model user {
   // ...existing fields...
-  default_helper_user_ids  Int[]?   // NULL=undecided, []=solo, [3,6]=crew
+  default_helper_user_ids  Int[]    @default([])
+  crew_decided             Boolean  @default(false)
 }
 ```
 
-Semantic states encoded in a single column:
-- `NULL` → undecided (modal auto-opens)
-- `[]` → decided solo (modal silent)
-- `[1,2,…]` → decided crew (modal silent + pre-fill)
+Semantic states:
+- `crew_decided = false` → undecided (modal auto-opens). Helper array is ignored.
+- `crew_decided = true, default_helper_user_ids = []` → decided solo (modal silent).
+- `crew_decided = true, default_helper_user_ids = [1,2,…]` → decided crew (modal silent + pre-fill).
+
+Service-layer return type stays `number[] | null` — `null` represents undecided and is derived from `crew_decided = false` regardless of array contents.
 
 **Migration:** `prisma/migrations/2026-05-17-add-default-helper-user-ids/migration.sql`, hand-written, applied via `npx prisma db push`. Force-add because `*.sql` is in `.gitignore` (consistent with prior migrations).
 
 ```sql
-ALTER TABLE "user" ADD COLUMN "default_helper_user_ids" INTEGER[];
+ALTER TABLE "user"
+  ADD COLUMN "default_helper_user_ids" INTEGER[] NOT NULL DEFAULT '{}',
+  ADD COLUMN "crew_decided" BOOLEAN NOT NULL DEFAULT false;
 ```
 
 **Validation on write** (server-side, in `setDefaultCrew`):
