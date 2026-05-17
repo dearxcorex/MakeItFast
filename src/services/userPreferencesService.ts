@@ -47,3 +47,53 @@ export async function getDefaultCrew(userId: number): Promise<number[] | null> {
   }
   return valid;
 }
+
+export class CrewValidationError extends Error {
+  constructor(public code: 'invalid_helper' | 'self_in_list' | 'too_many') {
+    super(code);
+    this.name = 'CrewValidationError';
+  }
+}
+
+function dedupe(ids: number[]): number[] {
+  const seen = new Set<number>();
+  const out: number[] = [];
+  for (const id of ids) {
+    if (!Number.isInteger(id)) throw new CrewValidationError('invalid_helper');
+    if (seen.has(id)) continue;
+    seen.add(id);
+    out.push(id);
+  }
+  return out;
+}
+
+export async function setDefaultCrew(
+  userId: number,
+  rawIds: number[],
+): Promise<number[]> {
+  const ids = dedupe(rawIds);
+  if (ids.some((id) => id === userId)) {
+    throw new CrewValidationError('self_in_list');
+  }
+  if (ids.length > MAX_DEFAULT_HELPERS) {
+    throw new CrewValidationError('too_many');
+  }
+  if (ids.length > 0) {
+    const rows = await prisma.user.findMany({
+      where: {
+        id: { in: ids },
+        active: true,
+        role: { in: ['admin', 'inspector'] },
+      },
+      select: { id: true },
+    });
+    if (rows.length !== ids.length) {
+      throw new CrewValidationError('invalid_helper');
+    }
+  }
+  await prisma.user.update({
+    where: { id: userId },
+    data: { default_helper_user_ids: ids, crew_decided: true },
+  });
+  return ids;
+}

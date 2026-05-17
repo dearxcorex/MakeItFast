@@ -12,7 +12,7 @@ vi.mock('@/lib/prisma', () => ({
 }));
 
 import prisma from '@/lib/prisma';
-import { getDefaultCrew } from '@/services/userPreferencesService';
+import { getDefaultCrew, setDefaultCrew, MAX_DEFAULT_HELPERS } from '@/services/userPreferencesService';
 
 beforeEach(() => {
   vi.clearAllMocks();
@@ -103,5 +103,55 @@ describe('getDefaultCrew', () => {
       where: { id: 3 },
       data: { default_helper_user_ids: [], crew_decided: false },
     });
+  });
+});
+
+describe('setDefaultCrew', () => {
+  it('saves [] for the solo state (with crew_decided=true)', async () => {
+    vi.mocked(prisma.user.update).mockResolvedValueOnce({
+      id: 3, default_helper_user_ids: [], crew_decided: true,
+    } as never);
+    const result = await setDefaultCrew(3, []);
+    expect(result).toEqual([]);
+    expect(prisma.user.update).toHaveBeenCalledWith({
+      where: { id: 3 },
+      data: { default_helper_user_ids: [], crew_decided: true },
+    });
+  });
+
+  it('dedupes and saves a valid crew (with crew_decided=true)', async () => {
+    vi.mocked(prisma.user.findMany).mockResolvedValueOnce([
+      { id: 6 }, { id: 7 },
+    ] as never);
+    vi.mocked(prisma.user.update).mockResolvedValueOnce({
+      id: 3, default_helper_user_ids: [6, 7], crew_decided: true,
+    } as never);
+    const result = await setDefaultCrew(3, [6, 7, 6]);
+    expect(result).toEqual([6, 7]);
+    expect(prisma.user.update).toHaveBeenCalledWith({
+      where: { id: 3 },
+      data: { default_helper_user_ids: [6, 7], crew_decided: true },
+    });
+  });
+
+  it('rejects self in the crew', async () => {
+    await expect(setDefaultCrew(3, [3])).rejects.toThrow('self_in_list');
+  });
+
+  it('rejects more than MAX_DEFAULT_HELPERS helpers', async () => {
+    const tooMany = [4, 5, 6, 7, 8, 9];
+    expect(tooMany.length).toBeGreaterThan(MAX_DEFAULT_HELPERS);
+    await expect(setDefaultCrew(3, tooMany)).rejects.toThrow('too_many');
+  });
+
+  it('rejects unknown / inactive ids', async () => {
+    vi.mocked(prisma.user.findMany).mockResolvedValueOnce([
+      { id: 6 },   // 9 missing
+    ] as never);
+    await expect(setDefaultCrew(3, [6, 9])).rejects.toThrow('invalid_helper');
+  });
+
+  it('rejects non-integer ids', async () => {
+    await expect(setDefaultCrew(3, [6, 7.5 as unknown as number])).rejects.toThrow('invalid_helper');
   });
 });
