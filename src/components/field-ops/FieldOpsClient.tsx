@@ -500,6 +500,7 @@ export default function FieldOpsClient({
                   filters={filters}
                   onChange={setFilters}
                   provinces={initialProvinces}
+                  resultCount={visibleCount}
                 />
               )}
 

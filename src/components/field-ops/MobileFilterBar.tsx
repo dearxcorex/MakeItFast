@@ -2,66 +2,73 @@
 
 import { useEffect, useState } from "react";
 import {
+  DEFAULT_FILTERS,
   type FieldFilters,
-  type TypeFilter,
   type StatusFilter,
+  type TypeFilter,
 } from "./FieldOpsFilters";
+import { MobileFilterSheet } from "./MobileFilterSheet";
 
-const SS_KEY = "fo:mobileFiltersOpen";
+const SS_KEY = "fo:filterSheetOpen";
 const TYPES: TypeFilter[] = ["ALL", "FM", "INT"];
-const STATUSES_FM: Array<StatusFilter | "OFF AIR" | "REVOKED"> = [
-  "ALL",
-  "PENDING",
-  "INSPECTED",
-  "OFF AIR",
-  "REVOKED",
-];
-const STATUSES_INT: StatusFilter[] = ["ALL", "PENDING", "INSPECTED"];
+const STATUSES: StatusFilter[] = ["ALL", "PENDING", "INSPECTED"];
+
+const TYPE_LABEL: Record<TypeFilter, string> = {
+  ALL: "All",
+  FM: "FM",
+  INT: "INT",
+};
+
+const STATUS_LABEL: Record<StatusFilter, string> = {
+  ALL: "All",
+  PENDING: "Pending",
+  INSPECTED: "Inspected",
+};
 
 export function MobileFilterBar({
   filters,
   onChange,
   provinces,
+  resultCount,
 }: {
   filters: FieldFilters;
   onChange: (next: FieldFilters) => void;
   provinces: string[];
+  resultCount: number;
 }) {
-  const [expanded, setExpanded] = useState<boolean>(true);
+  const [sheetOpen, setSheetOpen] = useState(false);
 
   useEffect(() => {
     try {
       const stored = window.sessionStorage.getItem(SS_KEY);
-      if (stored === "false") setExpanded(false);
-      if (stored === "true") setExpanded(true);
+      if (stored === "true") setSheetOpen(true);
     } catch {
       // Safari private mode — keep default
     }
   }, []);
 
-  const persist = (v: boolean) => {
-    setExpanded(v);
+  const persist = (open: boolean) => {
+    setSheetOpen(open);
     try {
-      window.sessionStorage.setItem(SS_KEY, String(v));
+      window.sessionStorage.setItem(SS_KEY, String(open));
     } catch {
       // ignore
     }
   };
 
-  const activeCount =
-    (filters.type !== "ALL" ? 1 : 0) +
-    (filters.status !== "ALL" ? 1 : 0) +
+  const advancedCount =
+    (filters.search.trim().length > 0 ? 1 : 0) +
     (filters.province !== "All" ? 1 : 0) +
     (filters.offAir ? 1 : 0) +
     (filters.revoked ? 1 : 0) +
-    (filters.lawSent ? 1 : 0) +
-    (filters.search.trim().length > 0 ? 1 : 0);
+    (filters.lawSent ? 1 : 0);
+
+  const anyFilterActive =
+    filters.type !== "ALL" || filters.status !== "ALL" || advancedCount > 0;
 
   const handleType = (v: TypeFilter) => {
     const next: FieldFilters = { ...filters, type: v };
-    if (v === "FM") {
-      next.lawSent = false;
-    }
+    if (v === "FM") next.lawSent = false;
     if (v === "INT") {
       next.offAir = false;
       next.revoked = false;
@@ -69,208 +76,160 @@ export function MobileFilterBar({
     onChange(next);
   };
 
-  const handleStatus = (v: StatusFilter | "OFF AIR" | "REVOKED") => {
-    if (v === "OFF AIR") {
-      onChange({ ...filters, status: "ALL", offAir: !filters.offAir, revoked: false });
-    } else if (v === "REVOKED") {
-      onChange({ ...filters, status: "ALL", offAir: false, revoked: !filters.revoked });
-    } else {
-      onChange({ ...filters, status: v as StatusFilter, offAir: false, revoked: false });
-    }
+  const handleStatus = (v: StatusFilter) => {
+    onChange({ ...filters, status: v });
   };
 
-  const isStatusActive = (v: StatusFilter | "OFF AIR" | "REVOKED"): boolean => {
-    if (v === "OFF AIR") return filters.offAir;
-    if (v === "REVOKED") return filters.revoked;
-    return filters.status === v && !filters.offAir && !filters.revoked;
+  const handleReset = () => {
+    onChange(DEFAULT_FILTERS);
   };
-
-  const provinceOptions = ["All", ...provinces];
-  const showLawSent = filters.type !== "FM";
-  const showOffAirInStatus = filters.type !== "INT";
-
-  if (!expanded) {
-    return (
-      <div
-        style={{
-          display: "flex",
-          alignItems: "center",
-          gap: 8,
-          padding: "8px 12px",
-          background: "var(--fo-rail-bg)",
-          borderBottom: "1px solid var(--fo-rail-border)",
-        }}
-      >
-        <button
-          type="button"
-          aria-label="Expand filters"
-          className="fo-mono"
-          onClick={() => persist(true)}
-          style={{
-            border: "1px solid var(--fo-accent)",
-            color: "var(--fo-accent)",
-            background: "transparent",
-            padding: "5px 12px",
-            borderRadius: 999,
-            fontWeight: 700,
-            fontSize: 10,
-            letterSpacing: "0.16em",
-            cursor: "pointer",
-          }}
-        >
-          ≡ FILTERS · {activeCount}
-        </button>
-      </div>
-    );
-  }
 
   return (
-    <div
-      style={{
-        background: "var(--fo-rail-bg)",
-        borderBottom: "1px solid var(--fo-rail-border)",
-        padding: "8px 12px",
-      }}
-    >
-      <SegmentRow
-        label="TYPE"
-        options={TYPES}
-        isActive={(v) => filters.type === v}
-        onPick={handleType}
-        rightAdornment={
+    <>
+      <div
+        style={{
+          background: "var(--fo-rail-bg)",
+          borderBottom: "1px solid var(--fo-rail-border)",
+          padding: "8px 12px",
+          display: "flex",
+          flexDirection: "column",
+          gap: 8,
+        }}
+      >
+        <div style={{ display: "flex", gap: 8 }}>
+          <ChipGroup
+            options={TYPES}
+            label={(v) => TYPE_LABEL[v]}
+            isActive={(v) => filters.type === v}
+            onPick={handleType}
+          />
+          <ChipGroup
+            options={STATUSES}
+            label={(v) => STATUS_LABEL[v]}
+            isActive={(v) => filters.status === v}
+            onPick={handleStatus}
+          />
+        </div>
+        <div
+          style={{
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "space-between",
+          }}
+        >
           <button
             type="button"
-            aria-label="Collapse filters"
-            onClick={() => persist(false)}
+            onClick={() => persist(true)}
             className="fo-mono"
+            aria-label={
+              advancedCount > 0
+                ? `More filters (${advancedCount} active)`
+                : "More filters"
+            }
             style={{
-              border: "1px solid var(--fo-rail-border)",
-              color: "var(--fo-rail-mute)",
+              display: "inline-flex",
+              alignItems: "center",
+              gap: 6,
+              minHeight: 44,
+              padding: "0 14px",
+              border: "1px solid var(--fo-accent)",
+              borderRadius: 999,
               background: "transparent",
-              padding: 0,
-              width: 28,
-              height: 28,
-              borderRadius: 6,
-              fontSize: 12,
+              color: "var(--fo-accent)",
+              fontSize: 11,
               cursor: "pointer",
-              flexShrink: 0,
-              lineHeight: 1,
+              letterSpacing: "0.04em",
             }}
           >
-            ▴
+            <span aria-hidden>⇅</span>
+            <span>More{advancedCount > 0 ? ` · ${advancedCount}` : ""}</span>
           </button>
-        }
+          {anyFilterActive && (
+            <button
+              type="button"
+              onClick={handleReset}
+              className="fo-mono"
+              style={{
+                minHeight: 44,
+                padding: "0 14px",
+                border: "1px solid var(--fo-rail-border)",
+                borderRadius: 999,
+                background: "transparent",
+                color: "var(--fo-rail-mute)",
+                fontSize: 11,
+                cursor: "pointer",
+                letterSpacing: "0.04em",
+              }}
+            >
+              Reset
+            </button>
+          )}
+        </div>
+      </div>
+
+      <MobileFilterSheet
+        open={sheetOpen}
+        onClose={() => persist(false)}
+        filters={filters}
+        onChange={onChange}
+        provinces={provinces}
+        resultCount={resultCount}
       />
-      <div style={{ height: 6 }} />
-      <SegmentRow
-        label="PROVINCE"
-        options={provinceOptions}
-        isActive={(v) => (v === "All" ? filters.province === "All" : filters.province === v)}
-        onPick={(v) => onChange({ ...filters, province: v })}
-        renderLabel={(v) => (v === "All" ? "ALL" : v)}
-      />
-      <div style={{ height: 6 }} />
-      <SegmentRow
-        label="STATUS"
-        options={showOffAirInStatus ? STATUSES_FM : STATUSES_INT}
-        isActive={isStatusActive}
-        onPick={handleStatus}
-      />
-      {showLawSent && (
-        <>
-          <div style={{ height: 6 }} />
-          <SegmentRow
-            label="LAW"
-            options={["ALL", "SENT"] as const}
-            isActive={(v) => (v === "ALL" ? !filters.lawSent : filters.lawSent)}
-            onPick={(v) => onChange({ ...filters, lawSent: v === "SENT" })}
-          />
-        </>
-      )}
-    </div>
+    </>
   );
 }
 
-function SegmentRow<T extends string>({
-  label,
+function ChipGroup<T extends string>({
   options,
+  label,
   isActive,
   onPick,
-  rightAdornment,
-  renderLabel,
 }: {
-  label: string;
   options: readonly T[];
+  label: (v: T) => string;
   isActive: (v: T) => boolean;
   onPick: (v: T) => void;
-  rightAdornment?: React.ReactNode;
-  renderLabel?: (v: T) => string;
 }) {
   return (
     <div
+      role="group"
       style={{
+        flex: 1,
         display: "flex",
-        alignItems: "center",
-        gap: 8,
+        gap: 2,
+        minWidth: 0,
       }}
     >
-      <span
-        className="fo-mono"
-        style={{
-          color: "var(--fo-rail-mute)",
-          fontSize: 9,
-          flexShrink: 0,
-          width: 56,
-          letterSpacing: "0.18em",
-        }}
-      >
-        {label}
-      </span>
-      <div
-        style={{
-          flex: 1,
-          display: "flex",
-          overflowX: "auto",
-          scrollbarWidth: "none",
-          background: "transparent",
-          border: "1px solid var(--fo-rail-border)",
-          borderRadius: 8,
-          padding: 2,
-          gap: 0,
-          minWidth: 0,
-        }}
-      >
-        {options.map((opt, i) => {
-          const active = isActive(opt);
-          return (
-            <button
-              key={opt}
-              type="button"
-              className="fo-mono"
-              onClick={() => onPick(opt)}
-              style={{
-                position: "relative",
-                padding: "6px 12px",
-                border: "none",
-                background: active ? "var(--fo-accent)" : "transparent",
-                color: active ? "#001e2b" : "var(--fo-rail-text)",
-                fontSize: 10,
-                fontWeight: active ? 700 : 400,
-                flexShrink: 0,
-                cursor: "pointer",
-                letterSpacing: "0.12em",
-                borderRadius: 6,
-                marginLeft: i === 0 ? 0 : 1,
-                lineHeight: 1.2,
-                whiteSpace: "nowrap",
-              }}
-            >
-              {renderLabel ? renderLabel(opt) : opt}
-            </button>
-          );
-        })}
-      </div>
-      {rightAdornment}
+      {options.map((opt) => {
+        const active = isActive(opt);
+        return (
+          <button
+            key={opt}
+            type="button"
+            onClick={() => onPick(opt)}
+            aria-pressed={active}
+            className="fo-mono"
+            style={{
+              flex: 1,
+              minHeight: 44,
+              padding: "0 8px",
+              border: "none",
+              background: active ? "var(--fo-accent)" : "transparent",
+              color: active ? "#001e2b" : "var(--fo-rail-text)",
+              fontSize: 12,
+              fontWeight: active ? 700 : 400,
+              cursor: "pointer",
+              letterSpacing: "0.04em",
+              borderRadius: 8,
+              transition:
+                "background-color 120ms ease, color 120ms ease",
+              whiteSpace: "nowrap",
+            }}
+          >
+            {label(opt)}
+          </button>
+        );
+      })}
     </div>
   );
 }
