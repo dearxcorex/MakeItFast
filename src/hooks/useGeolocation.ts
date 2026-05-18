@@ -24,11 +24,14 @@ export function useGeolocation(): UseGeolocationResult {
   );
   const [attempt, setAttempt] = useState(0);
   const watchIdRef = useRef<number | null>(null);
+  const hasFixRef = useRef(false);
 
   useEffect(() => {
     if (status === 'unsupported') return;
+    hasFixRef.current = false;
 
     const applyFix = (coords: GeolocationCoordinates) => {
+      hasFixRef.current = true;
       setUserLocation({
         latitude: coords.latitude,
         longitude: coords.longitude,
@@ -37,24 +40,36 @@ export function useGeolocation(): UseGeolocationResult {
       setStatus('granted');
     };
 
-    const handleError = (err: GeolocationPositionError) => {
-      switch (err.code) {
-        case err.PERMISSION_DENIED: setStatus('denied'); break;
-        case err.POSITION_UNAVAILABLE: setStatus('unavailable'); break;
-        case err.TIMEOUT: setStatus('timeout'); break;
-      }
+    const setStatusFromError = (code: number, denied: number, unavailable: number) => {
+      if (code === denied) setStatus('denied');
+      else if (code === unavailable) setStatus('unavailable');
+      else setStatus('timeout');
     };
 
+    // Phase 1: quick low-accuracy fix using Wi-Fi/cell — fast on iOS, often
+    // returns a cached position immediately. Only propagate PERMISSION_DENIED
+    // (which is terminal); TIMEOUT/UNAVAILABLE here are silently retried by
+    // the high-accuracy watch in phase 2.
     navigator.geolocation.getCurrentPosition(
       (pos) => applyFix(pos.coords),
-      handleError,
-      { enableHighAccuracy: true, timeout: 10000, maximumAge: 60000 }
+      (err) => {
+        if (err.code === err.PERMISSION_DENIED) {
+          setStatusFromError(err.code, err.PERMISSION_DENIED, err.POSITION_UNAVAILABLE);
+        }
+      },
+      { enableHighAccuracy: false, timeout: 8000, maximumAge: 300000 }
     );
 
+    // Phase 2: continuous high-accuracy watch. Long timeout because iOS GPS
+    // can take 20+ seconds for a cold lock. Errors are ignored once we
+    // already have a fix so a single drop doesn't flip the UI to "RETRY".
     const id = navigator.geolocation.watchPosition(
       (pos) => applyFix(pos.coords),
-      handleError,
-      { enableHighAccuracy: true, timeout: 15000, maximumAge: 30000 }
+      (err) => {
+        if (hasFixRef.current) return;
+        setStatusFromError(err.code, err.PERMISSION_DENIED, err.POSITION_UNAVAILABLE);
+      },
+      { enableHighAccuracy: true, timeout: 30000, maximumAge: 30000 }
     );
     watchIdRef.current = id;
 
