@@ -473,7 +473,6 @@ export default function FieldOpsClient({
         isMobile={isMobile}
         onOpenDrawer={() => setDrawerOpen(true)}
         locationStatus={locationStatus}
-        userLocation={userLocation}
         onRetryLocation={retryLocation}
         defaultCrew={defaultCrew}
         inspectors={inspectors}

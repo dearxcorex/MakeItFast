@@ -1,7 +1,9 @@
 "use client";
 
+import Link from "next/link";
 import type { FieldOpsTab } from "./FieldOpsNav";
 import type { FieldOpsKpis } from "@/utils/fieldOpsKpi";
+import { useCurrentUser } from "@/hooks/useCurrentUser";
 import CrewIndicator from "./CrewIndicator";
 
 interface NavItem {
@@ -78,6 +80,10 @@ export function FieldOpsDrawer({
           overflowY: "auto",
         }}
       >
+        <AccountSection onAfterAction={onClose} />
+
+        <div style={{ height: 1, background: "var(--fo-rail-border)", margin: "4px 0" }} />
+
         <div className="fo-mono" style={{ color: "var(--fo-rail-mute)", fontSize: 9, letterSpacing: "0.2em" }}>
           NAV
         </div>
@@ -204,6 +210,88 @@ export function FieldOpsDrawer({
         />
       </aside>
     </>
+  );
+}
+
+function AccountSection({ onAfterAction }: { onAfterAction: () => void }) {
+  const { user, loading, logout } = useCurrentUser();
+  if (loading || !user) return null;
+  const isAdmin = user.role === "admin";
+  return (
+    <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+      <div className="fo-mono" style={{ color: "var(--fo-rail-mute)", fontSize: 9, letterSpacing: "0.2em" }}>
+        ACCOUNT
+      </div>
+      <div
+        style={{
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "space-between",
+          gap: 8,
+        }}
+      >
+        <span style={{ color: "var(--fo-rail-text)", fontSize: 14, lineHeight: 1.2, minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+          {user.displayName}
+        </span>
+        {isAdmin && (
+          <span
+            className="fo-mono"
+            style={{
+              fontSize: 9,
+              padding: "2px 6px",
+              border: "1px solid var(--fo-accent)",
+              color: "var(--fo-accent)",
+              borderRadius: 999,
+              letterSpacing: "0.16em",
+              lineHeight: 1,
+              flexShrink: 0,
+            }}
+          >
+            ADMIN
+          </span>
+        )}
+      </div>
+      {isAdmin && (
+        <Link
+          href="/admin/users"
+          onClick={onAfterAction}
+          className="fo-mono"
+          style={{
+            display: "block",
+            padding: "8px 12px",
+            border: "1px solid var(--fo-rail-border)",
+            color: "var(--fo-rail-text)",
+            borderRadius: 8,
+            fontSize: 10,
+            letterSpacing: "0.16em",
+            textAlign: "center",
+            textDecoration: "none",
+          }}
+        >
+          MANAGE USERS
+        </Link>
+      )}
+      <button
+        type="button"
+        onClick={() => {
+          onAfterAction();
+          void logout();
+        }}
+        className="fo-mono"
+        style={{
+          padding: "8px 12px",
+          border: "1px solid var(--fo-crit)",
+          color: "var(--fo-crit)",
+          background: "transparent",
+          borderRadius: 8,
+          fontSize: 10,
+          letterSpacing: "0.16em",
+          cursor: "pointer",
+        }}
+      >
+        ⏻ LOG OUT
+      </button>
+    </div>
   );
 }
 

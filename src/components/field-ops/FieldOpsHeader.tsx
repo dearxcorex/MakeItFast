@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import type { FMStation, UserLocation } from "@/types/station";
+import type { FMStation } from "@/types/station";
 import type { InterferenceSite } from "@/types/interference";
 import type { TypeFilter } from "./FieldOpsFilters";
 import type { GeolocationStatus } from "@/hooks/useGeolocation";
@@ -18,7 +18,6 @@ export function FieldOpsHeader({
   isMobile = false,
   onOpenDrawer,
   locationStatus,
-  userLocation,
   onRetryLocation,
   defaultCrew,
   inspectors,
@@ -32,7 +31,6 @@ export function FieldOpsHeader({
   isMobile?: boolean;
   onOpenDrawer?: () => void;
   locationStatus?: GeolocationStatus;
-  userLocation?: UserLocation;
   onRetryLocation?: () => void;
   defaultCrew?: number[] | null;
   inspectors?: { id: number; username: string; displayName: string }[];
@@ -59,7 +57,6 @@ export function FieldOpsHeader({
       accentText={accentText}
       onOpenDrawer={onOpenDrawer}
       locationStatus={locationStatus}
-      userLocation={userLocation}
       onRetryLocation={onRetryLocation}
       labelColor={labelColor}
       defaultCrew={defaultCrew}
@@ -115,9 +112,7 @@ export function FieldOpsHeader({
 
       <LocationBadge
         status={locationStatus}
-        userLocation={userLocation}
         onRetry={onRetryLocation}
-        accentText={accentText}
         labelColor={labelColor}
       />
 
@@ -237,7 +232,6 @@ function MobileHeader({
   accentText,
   onOpenDrawer,
   locationStatus,
-  userLocation,
   onRetryLocation,
   labelColor,
   defaultCrew,
@@ -251,7 +245,6 @@ function MobileHeader({
   accentText: string;
   onOpenDrawer?: () => void;
   locationStatus?: GeolocationStatus;
-  userLocation?: UserLocation;
   onRetryLocation?: () => void;
   labelColor: string;
   defaultCrew?: number[] | null;
@@ -301,9 +294,7 @@ function MobileHeader({
       </div>
       <LocationBadge
         status={locationStatus}
-        userLocation={userLocation}
         onRetry={onRetryLocation}
-        accentText={accentText}
         labelColor={labelColor}
       />
       {onOpenCrew && (
@@ -314,47 +305,24 @@ function MobileHeader({
           compact={true}
         />
       )}
-      <UserChip accentText={accentText} textColor={textColor} borderColor={borderColor} compact />
     </header>
   );
 }
 
 function LocationBadge({
   status,
-  userLocation,
   onRetry,
-  accentText,
   labelColor,
 }: {
   status: GeolocationStatus | undefined;
-  userLocation: UserLocation | undefined;
   onRetry: (() => void) | undefined;
-  accentText: string;
   labelColor: string;
 }) {
-  if (!status || status === 'unsupported') return null;
-
-  const pillStyle: React.CSSProperties = {
-    padding: '6px 12px',
-    border: `1px solid ${accentText}`,
-    color: accentText,
-    borderRadius: 999,
-    fontSize: 10,
-    letterSpacing: '0.16em',
-    background: 'transparent',
-    cursor:
-      status === 'denied' || status === 'timeout' || status === 'unavailable'
-        ? 'pointer'
-        : 'default',
-  };
-
-  if (status === 'locating') {
-    return <div className="fo-mono" style={pillStyle}>○ LOCATING…</div>;
-  }
-  if (status === 'granted') {
-    const acc = userLocation?.accuracy;
-    const label = acc != null ? `● ±${Math.round(acc)}m` : '● LOCATED';
-    return <div className="fo-mono" style={pillStyle}>{label}</div>;
+  // Suppress the chip in healthy states — the ±Xm accuracy number is visual
+  // noise for non-engineers. Only surface the badge when the user needs to
+  // act (denied/timeout/unavailable) so they can retry GPS from the header.
+  if (!status || status === 'unsupported' || status === 'locating' || status === 'granted') {
+    return null;
   }
   const buttonLabel = status === 'denied' ? '⚠ ENABLE LOCATION' : '↻ RETRY LOCATION';
   return (
@@ -362,7 +330,16 @@ function LocationBadge({
       type="button"
       className="fo-mono"
       onClick={onRetry}
-      style={{ ...pillStyle, color: labelColor, borderColor: labelColor }}
+      style={{
+        padding: '6px 12px',
+        border: `1px solid ${labelColor}`,
+        color: labelColor,
+        borderRadius: 999,
+        fontSize: 10,
+        letterSpacing: '0.16em',
+        background: 'transparent',
+        cursor: 'pointer',
+      }}
     >
       {buttonLabel}
     </button>

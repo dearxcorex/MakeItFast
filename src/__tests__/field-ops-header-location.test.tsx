@@ -11,23 +11,25 @@ describe('FieldOpsHeader — location badge', () => {
     onToggleTheme: vi.fn(),
   };
 
-  it('renders "Locating…" while status is locating', () => {
+  // The header used to show "LOCATING…" / "±Xm" pills, but those were noisy
+  // for the operator (the accuracy number is meaningless to non-engineers
+  // and the "locating" state flickers every few seconds). The header now
+  // suppresses the badge in healthy states and only surfaces a retry chip
+  // when the user has to act (denied / timeout / unavailable).
+  it('renders nothing while status is locating', () => {
     const { container } = render(
       <FieldOpsHeader {...baseProps} locationStatus="locating" onRetryLocation={vi.fn()} />
     );
-    expect(container.textContent).toContain('LOCATING');
+    expect(container.textContent ?? '').not.toContain('LOCATING');
+    expect(container.textContent ?? '').not.toMatch(/±\d+m/);
   });
 
-  it('renders accuracy when status is granted and userLocation has accuracy', () => {
+  it('renders nothing when status is granted', () => {
     const { container } = render(
-      <FieldOpsHeader
-        {...baseProps}
-        locationStatus="granted"
-        userLocation={{ latitude: 13.75, longitude: 100.5, accuracy: 42 }}
-        onRetryLocation={vi.fn()}
-      />
+      <FieldOpsHeader {...baseProps} locationStatus="granted" onRetryLocation={vi.fn()} />
     );
-    expect(container.textContent).toContain('±42m');
+    expect(container.textContent ?? '').not.toMatch(/±\d+m/);
+    expect(container.textContent ?? '').not.toContain('LOCATED');
   });
 
   it('renders "Enable location" button when denied; clicking calls onRetryLocation', () => {
