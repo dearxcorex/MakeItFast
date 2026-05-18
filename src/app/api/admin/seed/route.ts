@@ -57,9 +57,6 @@ export async function POST() {
 
   } catch (err) {
     console.error('Seeding error:', err);
-    return NextResponse.json(
-      { error: `Seeding failed: ${err instanceof Error ? err.message : 'Unknown error'}` },
-      { status: 500 }
-    );
+    return NextResponse.json({ error: 'Seeding failed' }, { status: 500 });
   }
 }
