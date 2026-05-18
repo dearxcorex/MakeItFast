@@ -10,6 +10,16 @@ import {
 
 const USERNAME_RE = /^[a-z0-9_.-]{3,32}$/;
 
+function clientIp(req: NextRequest): string {
+  // Vercel + most proxies set X-Forwarded-For; take the left-most entry.
+  const xff = req.headers.get("x-forwarded-for");
+  if (xff) {
+    const first = xff.split(",")[0]?.trim();
+    if (first) return first;
+  }
+  return req.headers.get("x-real-ip") ?? "unknown";
+}
+
 export async function POST(req: NextRequest) {
   let body: unknown;
   try {
@@ -35,7 +45,9 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "validation_error" }, { status: 400 });
   }
 
-  if (isThrottled(username)) {
+  const ip = clientIp(req);
+
+  if (await isThrottled(ip, username)) {
     return NextResponse.json(
       { error: "too_many_attempts" },
       { status: 429 }
@@ -47,14 +59,14 @@ export async function POST(req: NextRequest) {
     row && row.active ? await verifyPassword(password, row.password_hash) : false;
 
   if (!row || !row.active || !okPassword) {
-    recordFailedAttempt(username);
+    await recordFailedAttempt(ip, username);
     return NextResponse.json(
       { error: "invalid_credentials" },
       { status: 401 }
     );
   }
 
-  clearAttempts(username);
+  await clearAttempts(ip, username);
 
   const mode: SessionCookieMode = rememberMe === true ? "persistent" : "session";
   const session = await getSession(mode);
