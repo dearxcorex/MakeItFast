@@ -51,6 +51,14 @@ export function FieldOpsBottomSheet({
   const touchStartY = useRef<number | null>(null);
 
   const handleSwipeStart = (e: React.TouchEvent) => {
+    const target = e.target as HTMLElement;
+    const interactive = target.closest(
+      'a, input, button:not([aria-label="Expand"]):not([aria-label="Collapse"])'
+    );
+    if (interactive) {
+      touchStartY.current = null;
+      return;
+    }
     touchStartY.current = e.touches[0]?.clientY ?? null;
   };
   const handleSwipeEnd = (e: React.TouchEvent) => {
@@ -248,19 +256,29 @@ export function FieldOpsBottomSheet({
           <button
             type="button"
             aria-label="Close"
-            onClick={onClose}
+            onClick={(e) => {
+              e.stopPropagation();
+              onClose();
+            }}
+            onTouchStart={(e) => e.stopPropagation()}
+            onTouchEnd={(e) => {
+              e.stopPropagation();
+              e.preventDefault();
+              onClose();
+            }}
             style={{
               marginLeft: 4,
               border: "1px solid var(--fo-rail-border)",
               background: "transparent",
               color: "var(--fo-rail-mute)",
-              width: 28,
-              height: 28,
-              borderRadius: 6,
-              fontSize: 14,
+              width: 44,
+              height: 44,
+              borderRadius: 8,
+              fontSize: 18,
               cursor: "pointer",
               lineHeight: 1,
               padding: 0,
+              touchAction: "manipulation",
             }}
           >
             ✕
