@@ -51,11 +51,11 @@ export function FieldOpsBottomSheet({
   const touchStartY = useRef<number | null>(null);
 
   const handleSwipeStart = (e: React.TouchEvent) => {
-    const target = e.target as HTMLElement;
-    const interactive = target.closest(
-      'a, input, button:not([aria-label="Expand"]):not([aria-label="Collapse"])'
-    );
-    if (interactive) {
+    // Inputs swallow touch handling entirely (keyboard, selection, etc).
+    // For buttons/links we still TRACK the swipe so users can drag-to-expand
+    // from anywhere in the sheet — the 30px threshold below keeps taps
+    // from accidentally triggering expand/collapse.
+    if ((e.target as HTMLElement).closest('input, textarea')) {
       touchStartY.current = null;
       return;
     }
