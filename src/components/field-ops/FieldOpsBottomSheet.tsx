@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import type { FMStation } from "@/types/station";
 import type { InterferenceSite } from "@/types/interference";
 import type { FieldSelection } from "./FieldOpsMap";
@@ -48,6 +48,19 @@ export function FieldOpsBottomSheet({
 }) {
   const [expanded, setExpanded] = useState(false);
   const [coordsOpen, setCoordsOpen] = useState(false);
+  const touchStartY = useRef<number | null>(null);
+
+  const handleSwipeStart = (e: React.TouchEvent) => {
+    touchStartY.current = e.touches[0]?.clientY ?? null;
+  };
+  const handleSwipeEnd = (e: React.TouchEvent) => {
+    if (touchStartY.current === null) return;
+    const endY = e.changedTouches[0]?.clientY ?? touchStartY.current;
+    const dy = touchStartY.current - endY;
+    touchStartY.current = null;
+    if (dy > 30) setExpanded(true);
+    else if (dy < -30) setExpanded(false);
+  };
   const [latInput, setLatInput] = useState("");
   const [lngInput, setLngInput] = useState("");
   const [coordError, setCoordError] = useState<string | null>(null);
@@ -171,17 +184,20 @@ export function FieldOpsBottomSheet({
 
   return (
     <div
+      onTouchStart={handleSwipeStart}
+      onTouchEnd={handleSwipeEnd}
       style={{
         background: "var(--fo-sheet-bg)",
         borderTop: "1px solid var(--fo-rail-border)",
         borderTopLeftRadius: 20,
         borderTopRightRadius: 20,
         boxShadow: "0 -8px 24px rgba(0,30,43,0.1)",
-        maxHeight: expanded ? "70vh" : 320,
-        transition: "max-height 200ms ease",
+        maxHeight: expanded ? "85dvh" : 320,
+        transition: "max-height 220ms ease",
         overflow: "hidden",
         display: "flex",
         flexDirection: "column",
+        paddingBottom: "env(safe-area-inset-bottom, 0px)",
       }}
     >
       <button
@@ -191,13 +207,14 @@ export function FieldOpsBottomSheet({
         style={{
           display: "flex",
           justifyContent: "center",
-          padding: "8px 0 4px",
+          padding: "12px 0 8px",
           background: "transparent",
           border: "none",
           cursor: "pointer",
+          touchAction: "none",
         }}
       >
-        <span style={{ width: 48, height: 4, borderRadius: 999, background: "var(--fo-line)" }} />
+        <span style={{ width: 56, height: 5, borderRadius: 999, background: "var(--fo-line)" }} />
       </button>
 
       <div style={{ padding: "0 16px", display: "flex", alignItems: "center", gap: 8 }}>
@@ -433,7 +450,15 @@ export function FieldOpsBottomSheet({
       <div style={{ height: 12 }} />
 
       {expanded && (
-        <div style={{ padding: "0 16px 24px", overflowY: "auto" }}>
+        <div
+          style={{
+            padding: "0 16px 24px",
+            overflowY: "auto",
+            WebkitOverflowScrolling: "touch",
+            flex: 1,
+            minHeight: 0,
+          }}
+        >
           {!isFM && (
             <button
               type="button"

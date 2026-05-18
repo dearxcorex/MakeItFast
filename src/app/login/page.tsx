@@ -115,12 +115,7 @@ export default function LoginPage() {
           disabled={submitting}
           className="w-full rounded-md bg-[var(--fo-accent)] text-black font-medium py-2 disabled:opacity-60 flex items-center justify-center gap-2"
         >
-          {submitting && (
-            <span
-              aria-hidden
-              className="inline-block w-4 h-4 rounded-full border-2 border-black border-t-transparent animate-spin"
-            />
-          )}
+          {submitting && <span aria-hidden className="fo-spinner" />}
           {submitting ? "Signing in…" : "Sign in"}
         </button>
 
