@@ -234,6 +234,24 @@ function FlyTo({ target }: { target: [number, number] | null }) {
   return null;
 }
 
+// Leaflet caches the container's pixel size at mount; when the bottom sheet
+// opens and closes the parent flex item resizes, but the map still renders
+// tiles for the stale (smaller) size — leaving a blank band where new map
+// real-estate appeared. ResizeObserver → invalidateSize() keeps Leaflet in
+// sync with whatever size the parent layout gives us. Optional-chains guard
+// against incomplete useMap mocks in unit tests.
+function InvalidateOnResize() {
+  const map = useMap();
+  useEffect(() => {
+    const container = map.getContainer?.();
+    if (!container || typeof ResizeObserver === "undefined") return;
+    const observer = new ResizeObserver(() => map.invalidateSize?.());
+    observer.observe(container);
+    return () => observer.disconnect();
+  }, [map]);
+  return null;
+}
+
 function makeSourceIcon(): L.DivIcon {
   const html = `
     <div style="
@@ -600,6 +618,7 @@ export function FieldOpsMap({
       )}
 
       <FlyTo target={flyTarget} />
+      <InvalidateOnResize />
       {userLocation && <RecenterButton location={userLocation} />}
     </MapContainer>
   );

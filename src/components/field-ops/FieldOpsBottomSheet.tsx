@@ -674,10 +674,13 @@ function Inline({ label, value }: { label: string; value: string }) {
 }
 
 function Cell({ label, value }: { label: string; value: string }) {
+  // Cell sits inside a `--fo-paper-2` (cream) container, so text must be DARK
+  // regardless of the sheet's surrounding dark surface. Using the sheet-text /
+  // rail-mute tokens here would render light-on-light and be invisible.
   return (
     <div>
-      <div className="fo-mono" style={{ color: "var(--fo-rail-mute)", marginBottom: 2 }}>{label}</div>
-      <div style={{ fontSize: 13, color: "var(--fo-sheet-text)" }}>{value}</div>
+      <div className="fo-mono" style={{ color: "#5c6c75", marginBottom: 2 }}>{label}</div>
+      <div style={{ fontSize: 13, color: "#001e2b" }}>{value}</div>
     </div>
   );
 }
