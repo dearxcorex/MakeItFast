@@ -19,6 +19,7 @@
     "@prisma/client": "^5.22.0",
     "@types/leaflet": "^1.9.20",
     "@types/leaflet.markercluster": "^1.5.6",
+    "@upstash/redis": "^1.38.0",
     "bcryptjs": "^3.0.3",
     "dotenv": "^17.2.2",
     "iron-session": "^8.0.4",
@@ -36,7 +37,6 @@
   },
   "devDependencies": {
     "@eslint/eslintrc": "^3",
-    "xlsx": "^0.18.5",
     "@tailwindcss/postcss": "^4",
     "@testing-library/jest-dom": "^6.9.1",
     "@testing-library/react": "^16.3.2",
@@ -52,6 +52,7 @@
     "tailwindcss": "^4",
     "tsx": "^4.21.0",
     "typescript": "^5",
-    "vitest": "^4.0.18"
+    "vitest": "^4.0.18",
+    "xlsx": "^0.18.5"
   }
 }
