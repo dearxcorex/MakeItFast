@@ -15,6 +15,10 @@ export function FieldOpsBottomSheet({
   selection,
   station,
   site,
+  coLocatedStations,
+  coLocatedSites,
+  onSelectStation,
+  onSelectSite,
   onToggleInspection,
   onToggleLawPaper,
   onClose,
@@ -32,6 +36,10 @@ export function FieldOpsBottomSheet({
   selection: FieldSelection;
   station: FMStation | null;
   site: InterferenceSite | null;
+  coLocatedStations?: FMStation[];
+  coLocatedSites?: InterferenceSite[];
+  onSelectStation?: (id: string | number) => void;
+  onSelectSite?: (id: number) => void;
   onToggleInspection: () => void;
   onToggleLawPaper: () => void;
   onClose?: () => void;
@@ -294,6 +302,15 @@ export function FieldOpsBottomSheet({
           {province.toUpperCase()} · {district}
         </div>
       </div>
+
+      <CoLocatedStrip
+        isFM={!!isFM}
+        currentId={isFM ? station!.id : site!.id}
+        stations={coLocatedStations}
+        sites={coLocatedSites}
+        onSelectStation={onSelectStation}
+        onSelectSite={onSelectSite}
+      />
 
       <div style={{ padding: "8px 16px 0", display: "flex", gap: 16, fontSize: 12 }}>
         {isFM ? (
@@ -669,6 +686,109 @@ function Inline({ label, value }: { label: string; value: string }) {
           wordBreak: "break-word",
         }}
       >{value}</span>
+    </div>
+  );
+}
+
+function CoLocatedStrip({
+  isFM,
+  currentId,
+  stations,
+  sites,
+  onSelectStation,
+  onSelectSite,
+}: {
+  isFM: boolean;
+  currentId: string | number;
+  stations?: FMStation[];
+  sites?: InterferenceSite[];
+  onSelectStation?: (id: string | number) => void;
+  onSelectSite?: (id: number) => void;
+}) {
+  const others = isFM
+    ? (stations ?? []).filter((s) => s.id !== currentId)
+    : (sites ?? []).filter((s) => s.id !== currentId);
+  if (others.length === 0) return null;
+  return (
+    <div style={{ padding: "8px 16px 0" }}>
+      <div
+        className="fo-mono"
+        style={{
+          color: "var(--fo-rail-mute)",
+          fontSize: 9,
+          letterSpacing: "0.18em",
+          marginBottom: 6,
+        }}
+      >
+        ALSO HERE · {others.length}
+      </div>
+      <div
+        style={{
+          display: "flex",
+          gap: 6,
+          overflowX: "auto",
+          scrollbarWidth: "none",
+          paddingBottom: 2,
+        }}
+      >
+        {others.map((s) => {
+          const isStation = "frequency" in s;
+          const label = isStation
+            ? `${s.name} · ${s.frequency.toFixed(2)}`
+            : (s.siteName || s.siteCode || `Site #${s.id}`);
+          const handleClick = () => {
+            if (isStation) onSelectStation?.(s.id);
+            else onSelectSite?.(s.id);
+          };
+          const inspected = isStation
+            ? s.inspection69 === "ตรวจแล้ว"
+            : s.status === "ตรวจแล้ว";
+          return (
+            <button
+              key={String(s.id)}
+              type="button"
+              onClick={handleClick}
+              className="fo-mono"
+              style={{
+                flexShrink: 0,
+                display: "inline-flex",
+                alignItems: "center",
+                gap: 6,
+                padding: "8px 12px",
+                minHeight: 36,
+                border: "1px solid var(--fo-rail-border)",
+                borderRadius: 999,
+                background: "transparent",
+                color: "var(--fo-sheet-text)",
+                fontSize: 11,
+                cursor: "pointer",
+                letterSpacing: "0.04em",
+                maxWidth: 220,
+              }}
+            >
+              <span
+                aria-hidden
+                style={{
+                  width: 6,
+                  height: 6,
+                  borderRadius: 999,
+                  background: inspected ? "var(--fo-accent-2)" : "var(--fo-accent)",
+                  flexShrink: 0,
+                }}
+              />
+              <span
+                style={{
+                  overflow: "hidden",
+                  textOverflow: "ellipsis",
+                  whiteSpace: "nowrap",
+                }}
+              >
+                {label}
+              </span>
+            </button>
+          );
+        })}
+      </div>
     </div>
   );
 }

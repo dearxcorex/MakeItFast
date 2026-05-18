@@ -598,6 +598,10 @@ export default function FieldOpsClient({
                   selection={selection}
                   station={selectedStation}
                   site={selectedSite}
+                  coLocatedStations={coLocatedStations}
+                  coLocatedSites={coLocatedSites}
+                  onSelectStation={(id) => handleSelect({ kind: "fm", id })}
+                  onSelectSite={(id) => handleSelect({ kind: "int", id })}
                   onToggleInspection={handleToggleInspection}
                   onToggleLawPaper={handleToggleLawPaper}
                   onClose={() => setSelection(null)}
