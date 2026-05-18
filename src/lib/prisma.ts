@@ -29,7 +29,11 @@ function addConnectionTimeout(url: string | undefined): string | undefined {
     params.push('pgbouncer=true');
   }
   if (/-pooler\./.test(url) && !/[?&]connection_limit=/.test(url)) {
-    params.push('connection_limit=1');
+    // Lets parallel Promise.all queries (the analytics dashboard fires 18+
+    // concurrently) actually run in parallel rather than serialise behind one
+    // connection and trip pool_timeout under cold-start latency. PgBouncer in
+    // transaction mode handles 5 client connections per Prisma instance fine.
+    params.push('connection_limit=5');
   }
   if (params.length === 0) return url;
   const separator = url.includes('?') ? '&' : '?';
