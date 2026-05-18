@@ -468,8 +468,12 @@ export function FieldOpsMap({
     >
       <TileLayer key={theme} url={tileUrl} attribution={tileAttribution} maxZoom={19} />
 
+      {/*
+        NOTE: do NOT re-enable `chunkedLoading`. It races with React updates
+        when the user toggles filters quickly — pins can disappear entirely.
+        Synchronous addLayers handles the current dataset comfortably.
+      */}
       <MarkerClusterGroup
-        chunkedLoading
         maxClusterRadius={45}
         spiderfyOnMaxZoom
         showCoverageOnHover={false}
