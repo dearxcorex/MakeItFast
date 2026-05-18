@@ -10,6 +10,7 @@ import "leaflet.markercluster/dist/MarkerCluster.Default.css";
 import type { FMStation, UserLocation } from "@/types/station";
 import type { InterferenceSite } from "@/types/interference";
 import { makeClusterIcon } from "@/utils/clusterIcon";
+import { bucketForStation, bucketForSite } from "@/utils/pinBucket";
 import { createLocationIcon } from "@/utils/mapHelpers";
 
 export type FieldSelection =
@@ -108,7 +109,7 @@ function fmIcon(
   </div>`;
 
   return L.divIcon({
-    className: `fo-marker fo-marker--fm ${main ? "is-main" : ""} ${selected ? "is-selected" : ""}`,
+    className: `fo-marker fo-marker--fm fo-bucket--${bucketForStation(station)} ${main ? "is-main" : ""} ${selected ? "is-selected" : ""}`,
     html,
     iconSize: [wrapW, wrapH],
     iconAnchor: [wrapW / 2, wrapH - 3],
@@ -215,7 +216,7 @@ function intIcon(
   </div>`;
 
   return L.divIcon({
-    className: `fo-marker fo-marker--int ${selected ? "is-selected" : ""}`,
+    className: `fo-marker fo-marker--int fo-bucket--${bucketForSite(site)} ${selected ? "is-selected" : ""}`,
     html,
     iconSize: [wrapW, wrapH],
     iconAnchor: [wrapW / 2, wrapH - 3],
@@ -475,11 +476,21 @@ export function FieldOpsMap({
       */}
       <MarkerClusterGroup
         maxClusterRadius={45}
+        disableClusteringAtZoom={13}
         spiderfyOnMaxZoom
         showCoverageOnHover={false}
-        iconCreateFunction={(c: { getChildCount: () => number }) =>
-          makeClusterIcon(c.getChildCount())
-        }
+        iconCreateFunction={(c: {
+          getChildCount: () => number;
+          getAllChildMarkers: () => Array<{ options: { icon?: { options?: { className?: string } } } }>;
+        }) => {
+          const buckets = { critical: 0, pending: 0, inspected: 0 };
+          for (const m of c.getAllChildMarkers()) {
+            const cn = m.options.icon?.options?.className ?? "";
+            const match = cn.match(/fo-bucket--(critical|pending|inspected)/);
+            if (match) buckets[match[1] as keyof typeof buckets]++;
+          }
+          return makeClusterIcon(c.getChildCount(), buckets);
+        }}
       >
       {Array.from(fmGroups.entries()).map(([coordKey, group]) => {
         const head = group[0];
