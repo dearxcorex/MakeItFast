@@ -5,7 +5,7 @@ import { getSession, type SessionCookieMode } from "@/lib/session";
 import {
   recordFailedAttempt,
   isThrottled,
-  clearAttempts,
+  clearAttemptsAsync,
 } from "@/lib/loginThrottle";
 
 const USERNAME_RE = /^[a-z0-9_.-]{3,32}$/;
@@ -47,14 +47,21 @@ export async function POST(req: NextRequest) {
 
   const ip = clientIp(req);
 
-  if (await isThrottled(ip, username)) {
+  // Race the throttle check against the user lookup so Upstash REST latency
+  // overlaps with PgBouncer's connection setup on cold starts. We still gate
+  // the response on the throttle result before we touch the password hash.
+  const [throttled, row] = await Promise.all([
+    isThrottled(ip, username),
+    prisma.user.findUnique({ where: { username } }),
+  ]);
+
+  if (throttled) {
     return NextResponse.json(
       { error: "too_many_attempts" },
       { status: 429 }
     );
   }
 
-  const row = await prisma.user.findUnique({ where: { username } });
   const okPassword =
     row && row.active ? await verifyPassword(password, row.password_hash) : false;
 
@@ -66,7 +73,12 @@ export async function POST(req: NextRequest) {
     );
   }
 
-  await clearAttempts(ip, username);
+  // Fire-and-forget: a stale entry will TTL out within WINDOW_SECONDS anyway,
+  // and forcing the user to wait for a REST DEL on every successful login is
+  // a waste of ~100-150ms of perceived login time.
+  void clearAttemptsAsync(ip, username).catch((err) => {
+    console.warn("[login] clearAttempts cleanup failed (non-fatal):", err);
+  });
 
   const mode: SessionCookieMode = rememberMe === true ? "persistent" : "session";
   const session = await getSession(mode);

@@ -3,7 +3,7 @@ import { render, screen, fireEvent, waitFor, cleanup } from "@testing-library/re
 
 const replaceMock = vi.fn();
 vi.mock("next/navigation", () => ({
-  useRouter: () => ({ replace: replaceMock, push: replaceMock }),
+  useRouter: () => ({ replace: replaceMock, push: replaceMock, prefetch: vi.fn() }),
   useSearchParams: () => new URLSearchParams("next=%2F"),
 }));
 

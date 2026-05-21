@@ -5,7 +5,7 @@ import LoginPage from '@/app/login/page';
 
 // next/navigation hooks are required by the login page.
 vi.mock('next/navigation', () => ({
-  useRouter: () => ({ replace: vi.fn() }),
+  useRouter: () => ({ replace: vi.fn(), prefetch: vi.fn() }),
   useSearchParams: () => new URLSearchParams(),
 }));
 
@@ -21,8 +21,8 @@ describe('LoginPage — submit spinner', () => {
     const { getByRole, container } = render(<LoginPage />);
     const btn = getByRole('button', { name: /sign in/i });
     expect(btn.hasAttribute('disabled')).toBe(false);
-    // The spinner span carries the animate-spin class only while submitting.
-    expect(container.querySelector('.animate-spin')).toBeNull();
+    // The spinner span carries the fo-spinner class only while submitting.
+    expect(container.querySelector('.fo-spinner')).toBeNull();
   });
 
   it('after submit, button is disabled, shows spinner + "Signing in…"', async () => {
@@ -35,6 +35,6 @@ describe('LoginPage — submit spinner', () => {
       expect(btn.hasAttribute('disabled')).toBe(true);
     });
     expect(btn.textContent).toContain('Signing in');
-    expect(container.querySelector('.animate-spin')).not.toBeNull();
+    expect(container.querySelector('.fo-spinner')).not.toBeNull();
   });
 });
