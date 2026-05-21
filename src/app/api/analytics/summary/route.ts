@@ -72,10 +72,19 @@ export async function GET() {
         _count: { _all: true },
         where: { province: { not: null }, inspection_69: true },
       }),
-      prisma.fm_station.findMany({
-        where: { freq: { not: null } },
-        select: { freq: true },
-      }),
+      // SQL aggregation: ten buckets, computed inside Postgres. Replaces a
+      // findMany() that used to pull every row's freq value just to bin them
+      // in JS. floor(freq / 2) * 2 produces the band's lower bound; we cast
+      // it to text + concat to match the existing "88-90" key format.
+      prisma.$queryRaw<{ band: string; count: bigint }[]>`
+        SELECT
+          (FLOOR(freq / 2) * 2)::int || '-' || (FLOOR(freq / 2) * 2 + 2)::int AS band,
+          COUNT(*) AS count
+        FROM fm_station
+        WHERE freq IS NOT NULL AND freq >= 88 AND freq < 108
+        GROUP BY FLOOR(freq / 2)
+        ORDER BY FLOOR(freq / 2)
+      `,
     ]);
 
     // Direction match rate
@@ -142,18 +151,20 @@ export async function GET() {
     }
     const fmStationsByProvince = Array.from(fmProvinceMap.values()).sort((a, b) => b.total - a.total);
 
-    // FM frequency distribution (2 MHz bands from 88-108)
-    const bands: Record<string, number> = {
-      '88-90': 0, '90-92': 0, '92-94': 0, '94-96': 0, '96-98': 0,
-      '98-100': 0, '100-102': 0, '102-104': 0, '104-106': 0, '106-108': 0,
-    };
-    for (const s of fmFrequencies) {
-      if (s.freq == null) continue;
-      const band = Math.floor(s.freq / 2) * 2;
-      const key = `${band}-${band + 2}`;
-      if (key in bands) bands[key]++;
-    }
-    const fmFrequencyDistribution = Object.entries(bands).map(([band, count]) => ({ band, count }));
+    // fmFrequencies is now pre-aggregated by Postgres. Merge into the fixed
+    // band ordering so callers always get the same 10 buckets, even if some
+    // bands have zero stations (Postgres won't return rows for empty groups).
+    const BAND_KEYS = [
+      '88-90', '90-92', '92-94', '94-96', '96-98',
+      '98-100', '100-102', '102-104', '104-106', '106-108',
+    ];
+    const bandCounts = new Map<string, number>(
+      fmFrequencies.map((r) => [r.band, Number(r.count)])
+    );
+    const fmFrequencyDistribution = BAND_KEYS.map((band) => ({
+      band,
+      count: bandCounts.get(band) ?? 0,
+    }));
 
     // FM inspection breakdown
     const only68 = fmInspection68 - fmBothYears;
