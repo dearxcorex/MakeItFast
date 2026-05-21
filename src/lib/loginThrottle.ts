@@ -79,6 +79,17 @@ export async function clearAttempts(ip: string, username: string): Promise<void>
   fallback.delete(key);
 }
 
+/**
+ * Same as clearAttempts but returns the unawaited promise so callers can
+ * fire-and-forget on the success path. The Upstash REST DEL adds ~100–150ms
+ * to a happy-path login otherwise, and a stale entry naturally expires.
+ *
+ * In tests, callers can still `await` the returned promise.
+ */
+export function clearAttemptsAsync(ip: string, username: string): Promise<void> {
+  return clearAttempts(ip, username);
+}
+
 /** Test-only: reset in-memory fallback state. Does not touch Upstash. */
 export function __resetThrottleForTests(): void {
   fallback.clear();
