@@ -1,18 +1,22 @@
 "use client";
 
 import { useState, type FormEvent } from "react";
-import { useRouter, useSearchParams } from "next/navigation";
+import { useSearchParams } from "next/navigation";
 
 export default function LoginPage() {
-  const router = useRouter();
   const params = useSearchParams();
   const next = params.get("next") ?? "/";
 
-  // NOTE: do NOT prefetch `next` here. The user is logged out, so middleware
-  // redirects `/` → `/login?next=/`, and the prefetch caches that login-page
-  // payload under `/`. After a successful POST, router.replace(next) reads
-  // from the poisoned cache and the user bounces straight back to /login.
-  // The app/loading.tsx skeleton already gives the perceived-instant feel.
+  // We use a hard browser navigation after login (window.location.assign),
+  // not Next.js router methods. Reasons:
+  //   1. router.prefetch would follow the middleware's logged-out redirect
+  //      to /login and cache the login page under the `/` key, then
+  //      router.replace(next) would resolve from that poisoned cache.
+  //   2. Even without prefetch, router.replace keeps the App Router client
+  //      cache of the pre-login redirect response, so the navigation
+  //      appears frozen until the user refreshes.
+  // A hard navigation sidesteps both: the server re-renders `next` with the
+  // freshly-set session cookie attached.
 
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
@@ -33,7 +37,7 @@ export default function LoginPage() {
         body: JSON.stringify({ username, password, rememberMe }),
       });
       if (res.ok) {
-        router.replace(next);
+        window.location.assign(next);
         return;
       }
       if (res.status === 429) {

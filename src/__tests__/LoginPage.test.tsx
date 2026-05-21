@@ -28,6 +28,17 @@ describe("LoginPage", () => {
   });
 
   it("submits and redirects on success", async () => {
+    // jsdom marks window.location.assign non-configurable, so vi.spyOn
+    // can't reassign it. Swap the whole location object for a stub —
+    // the login flow now uses a hard navigation to bust Next.js's App
+    // Router client cache after the session cookie lands.
+    const assignSpy = vi.fn();
+    const originalLocation = window.location;
+    Object.defineProperty(window, "location", {
+      configurable: true,
+      writable: true,
+      value: { ...originalLocation, assign: assignSpy },
+    });
     vi.spyOn(global, "fetch").mockResolvedValue(
       new Response(JSON.stringify({ user: { id: 1 } }), { status: 200 }) as any
     );
@@ -40,7 +51,7 @@ describe("LoginPage", () => {
     });
     fireEvent.click(screen.getByLabelText(/remember me/i));
     fireEvent.click(screen.getByRole("button", { name: /sign in/i }));
-    await waitFor(() => expect(replaceMock).toHaveBeenCalledWith("/"));
+    await waitFor(() => expect(assignSpy).toHaveBeenCalledWith("/"));
     const call = (global.fetch as any).mock.calls[0];
     const body = JSON.parse(call[1].body);
     expect(body).toMatchObject({
