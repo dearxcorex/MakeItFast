@@ -29,6 +29,10 @@ model fm_station {
   inspections   station_inspection[]
 
   @@index([revoked])
+  @@index([inspection_69])
+  @@index([on_air])
+  @@index([submit_a_request])
+  @@index([province])
 }
 
 model interference_site {
@@ -70,6 +74,7 @@ model interference_site {
   @@index([changwat])
   @@index([ranking])
   @@index([nbtc_area])
+  @@index([status])
 }
 
 model cloudrf_cache {
