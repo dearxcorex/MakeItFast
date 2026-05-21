@@ -224,7 +224,16 @@ export async function GET() {
       },
     };
 
-    return NextResponse.json(summary);
+    return NextResponse.json(summary, {
+      headers: {
+        // Edge cache for 30s + serve stale up to 5 min while revalidating.
+        // Dashboard mounts and tab switches will hit cache; the underlying
+        // counts/groupBys are slow-changing enough that a 30s window is
+        // safe, and operators get fresh data within one revalidation cycle.
+        'Cache-Control':
+          'public, s-maxage=30, stale-while-revalidate=300',
+      },
+    });
   } catch (error) {
     console.error('Analytics summary error:', error);
     return NextResponse.json({ error: 'Failed to load analytics summary' }, { status: 500 });

@@ -90,4 +90,16 @@ describe("/api/analytics/summary perf", () => {
     // 4 = provinceInspected by (changwat) with status filter
     expect(intGroupByCalls.length).toBeGreaterThanOrEqual(4);
   });
+
+  it("sets a short s-maxage Cache-Control for dashboard reloads", async () => {
+    queryRaw.mockResolvedValueOnce([]);
+    const res = await GET();
+    expect(res.headers.get("cache-control")).toMatch(
+      /s-maxage=\d+/i
+    );
+    // SWR window so revalidation can happen in the background.
+    expect(res.headers.get("cache-control")).toMatch(
+      /stale-while-revalidate=\d+/i
+    );
+  });
 });
