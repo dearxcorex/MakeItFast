@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, type FormEvent } from "react";
+import { useState, type FormEvent } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 
 export default function LoginPage() {
@@ -8,12 +8,11 @@ export default function LoginPage() {
   const params = useSearchParams();
   const next = params.get("next") ?? "/";
 
-  useEffect(() => {
-    // Warm the RSC payload for the post-login destination while the user is
-    // still typing. Cuts perceived login latency because router.replace(next)
-    // can then resolve from cache instead of doing a cold server render.
-    router.prefetch(next);
-  }, [router, next]);
+  // NOTE: do NOT prefetch `next` here. The user is logged out, so middleware
+  // redirects `/` → `/login?next=/`, and the prefetch caches that login-page
+  // payload under `/`. After a successful POST, router.replace(next) reads
+  // from the poisoned cache and the user bounces straight back to /login.
+  // The app/loading.tsx skeleton already gives the perceived-instant feel.
 
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
