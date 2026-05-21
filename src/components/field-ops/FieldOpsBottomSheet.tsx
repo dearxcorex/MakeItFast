@@ -6,6 +6,7 @@ import type { InterferenceSite } from "@/types/interference";
 import type { FieldSelection } from "./FieldOpsMap";
 import { parseLatLngInput } from "@/utils/parseLatLng";
 import TeammatePicker, { type InspectorOption } from "./TeammatePicker";
+import NavigationPill from "@/components/interference/NavigationPill";
 
 function googleMapsUrl(lat: number, lng: number) {
   return `https://www.google.com/maps/dir/?api=1&destination=${lat},${lng}&travelmode=driving`;
@@ -320,6 +321,20 @@ export function FieldOpsBottomSheet({
         </div>
       </div>
 
+      {isINT && (site!.direction != null || (site!.sourceLat !== null && site!.sourceLong !== null)) && (
+        <div style={{ padding: '4px 16px 0' }}>
+          <NavigationPill
+            bearing={site!.direction ?? null}
+            distance={
+              site!.sourceLat !== null && site!.sourceLong !== null
+                ? site!.estimateDistance ?? null
+                : null
+            }
+            style={{ fontSize: 13, padding: '8px 14px' }}
+          />
+        </div>
+      )}
+
       <CoLocatedStrip
         isFM={!!isFM}
         currentId={isFM ? station!.id : site!.id}
@@ -337,16 +352,10 @@ export function FieldOpsBottomSheet({
           </>
         ) : (
           <>
-            {site!.direction !== null && site!.direction !== undefined && (
-              <Inline label="BEARING" value={`${site!.direction.toFixed(0)}°`} />
-            )}
             {site!.avgNiCarrier !== null && site!.avgNiCarrier !== undefined && (
               <Inline label="N/I" value={`${site!.avgNiCarrier.toFixed(1)}`} />
             )}
             {site!.ranking && <Inline label="RANK" value={site!.ranking} />}
-            {hasSource && site!.estimateDistance !== null && site!.estimateDistance !== undefined && (
-              <Inline label="DIST" value={`${site!.estimateDistance.toFixed(1)} km`} />
-            )}
           </>
         )}
       </div>

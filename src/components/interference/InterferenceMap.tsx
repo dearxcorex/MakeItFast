@@ -4,10 +4,11 @@ import { Fragment, useEffect, useRef } from 'react';
 import { MapContainer, TileLayer, Marker, Popup, Polyline, ImageOverlay, useMap } from 'react-leaflet';
 import type { InterferenceSite, PropagationOverlay } from '@/types/interference';
 import type { UserLocation } from '@/types/station';
-import { createTowerIcon, createSourceIcon, getRankingColor } from '@/utils/interferenceMapHelpers';
+import { createTowerIcon, createSourceIcon } from '@/utils/interferenceMapHelpers';
 import { createLocationIcon } from '@/utils/mapHelpers';
 import { calculateEndpoint, validateBearing } from '@/utils/bearingUtils';
 import NavigateButton from '@/components/map/NavigateButton';
+import NavigationPill from './NavigationPill';
 import 'leaflet/dist/leaflet.css';
 
 interface InterferenceMapProps {
@@ -100,6 +101,18 @@ export default function InterferenceMap({
 }: InterferenceMapProps) {
   return (
     <div className="relative h-full w-full">
+    {selectedSite && (selectedSite.direction != null || (selectedSite.sourceLat !== null && selectedSite.sourceLong !== null)) && (
+      <div className="absolute top-3 left-3 z-[1000] pointer-events-none">
+        <NavigationPill
+          bearing={selectedSite.direction ?? null}
+          distance={
+            selectedSite.sourceLat !== null && selectedSite.sourceLong !== null
+              ? selectedSite.estimateDistance ?? null
+              : null
+          }
+        />
+      </div>
+    )}
     {propagationOverlays.length > 0 && <SignalLegend />}
     <MapContainer
       center={[15.0, 103.5]}
@@ -196,10 +209,9 @@ export default function InterferenceMap({
                 [site.sourceLat, site.sourceLong],
               ]}
               pathOptions={{
-                color: getRankingColor(site.ranking),
-                weight: 2,
-                dashArray: '6, 4',
-                opacity: 0.7,
+                color: 'var(--fo-accent)',
+                weight: 3,
+                opacity: 0.85,
               }}
             />
           </Fragment>
