@@ -23,6 +23,8 @@ export async function GET() {
       fmProvinceGroups,
       fmProvinceInspected69,
       fmFrequencies,
+      provincePerRanking,
+      provinceInspected,
     ] = await Promise.all([
       prisma.fm_station.count(),
       prisma.fm_station.count({
@@ -85,6 +87,16 @@ export async function GET() {
         GROUP BY FLOOR(freq / 2)
         ORDER BY FLOOR(freq / 2)
       `,
+      prisma.interference_site.groupBy({
+        by: ['changwat', 'ranking'],
+        _count: { _all: true },
+        where: { changwat: { not: null } },
+      }),
+      prisma.interference_site.groupBy({
+        by: ['changwat'],
+        _count: { _all: true },
+        where: { changwat: { not: null }, status: 'ตรวจแล้ว' },
+      }),
     ]);
 
     // Direction match rate
@@ -100,17 +112,6 @@ export async function GET() {
     const directionMatchRate = totalWithDir > 0 ? Math.round((matchCount / totalWithDir) * 100) : 0;
 
     // Interference province aggregation
-    const provincePerRanking = await prisma.interference_site.groupBy({
-      by: ['changwat', 'ranking'],
-      _count: { _all: true },
-      where: { changwat: { not: null } },
-    });
-    const provinceInspected = await prisma.interference_site.groupBy({
-      by: ['changwat'],
-      _count: { _all: true },
-      where: { changwat: { not: null }, status: 'ตรวจแล้ว' },
-    });
-
     const provinceMap = new Map<string, { name: string; total: number; critical: number; major: number; minor: number; inspected: number }>();
     for (const g of provinceGroups) {
       if (!g.changwat) continue;
