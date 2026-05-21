@@ -604,6 +604,7 @@ export default function FieldOpsClient({
                   onSelectSite={(id) => handleSelect({ kind: "int", id })}
                   onToggleInspection={handleToggleInspection}
                   onToggleLawPaper={handleToggleLawPaper}
+                  onToggleOnAir={handleToggleOnAir}
                   onClose={() => setSelection(null)}
                   pending={pending}
                   marking={selectedSite ? markingSourceForId === selectedSite.id : false}
