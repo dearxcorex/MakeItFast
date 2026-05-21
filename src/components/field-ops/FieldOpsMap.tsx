@@ -12,6 +12,7 @@ import type { InterferenceSite } from "@/types/interference";
 import { makeClusterIcon } from "@/utils/clusterIcon";
 import { bucketForStation, bucketForSite } from "@/utils/pinBucket";
 import { createLocationIcon } from "@/utils/mapHelpers";
+import NavigationPill from "@/components/interference/NavigationPill";
 
 export type FieldSelection =
   | { kind: "fm"; id: string | number }
@@ -392,7 +393,6 @@ export function FieldOpsMap({
       ),
     [interference]
   );
-  const sourceLineColor = theme === "light" ? "#c0392b" : "#ff5b4a";
   const fmMarkers = useMemo(
     () => stations.filter((s) => Number.isFinite(s.latitude) && Number.isFinite(s.longitude)),
     [stations]
@@ -478,8 +478,38 @@ export function FieldOpsMap({
       ? '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
       : '&copy; <a href="https://www.openstreetmap.org/copyright">OSM</a> &copy; <a href="https://carto.com/attributions">CARTO</a>';
 
+  const selectedSite =
+    selection?.kind === "int"
+      ? interference.find((s) => s.id === selection.id) ?? null
+      : null;
+  const showPill =
+    selectedSite !== null &&
+    (selectedSite.direction != null ||
+      (selectedSite.sourceLat !== null && selectedSite.sourceLong !== null));
+
   return (
-    <MapContainer
+    <div style={{ position: "relative", width: "100%", height: "100%" }}>
+      {showPill && selectedSite && (
+        <div
+          style={{
+            position: "absolute",
+            top: 12,
+            left: 12,
+            zIndex: 1000,
+            pointerEvents: "none",
+          }}
+        >
+          <NavigationPill
+            bearing={selectedSite.direction ?? null}
+            distance={
+              selectedSite.sourceLat !== null && selectedSite.sourceLong !== null
+                ? selectedSite.estimateDistance ?? null
+                : null
+            }
+          />
+        </div>
+      )}
+      <MapContainer
       center={THAILAND_CENTER}
       zoom={7}
       style={{ width: "100%", height: "100%" }}
@@ -575,11 +605,9 @@ export function FieldOpsMap({
             key={`src-line-${s.id}`}
             positions={[[lat, lng], [sLat, sLng]]}
             pathOptions={{
-              color: sourceLineColor,
-              weight: 2,
+              color: "var(--fo-accent)",
+              weight: 3,
               opacity: 0.85,
-              dashArray: "4 6",
-              interactive: false,
             }}
           />
         );
@@ -621,5 +649,6 @@ export function FieldOpsMap({
       <InvalidateOnResize />
       {userLocation && <RecenterButton location={userLocation} />}
     </MapContainer>
+    </div>
   );
 }
