@@ -5,7 +5,7 @@ import LoginPage from '@/app/login/page';
 
 // next/navigation hooks are required by the login page.
 vi.mock('next/navigation', () => ({
-  useRouter: () => ({ replace: vi.fn() }),
+  useRouter: () => ({ replace: vi.fn(), prefetch: vi.fn() }),
   useSearchParams: () => new URLSearchParams(),
 }));
 
