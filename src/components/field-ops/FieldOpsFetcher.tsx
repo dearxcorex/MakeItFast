@@ -7,25 +7,30 @@ import FieldOpsClient from "./FieldOpsClient";
 export default async function FieldOpsFetcher() {
   try {
     const session = await getSession();
-    const [stations, interferenceRows, fmCityData, fmProvinceData] = await Promise.all([
+    const [stations, interferenceRows, fmGeoGroups] = await Promise.all([
       prisma.fm_station.findMany({ orderBy: { name: "asc" } }),
       prisma.interference_site.findMany({ orderBy: { site_name: "asc" } }),
-      prisma.fm_station.findMany({
-        select: { district: true },
-        distinct: ["district"],
-        orderBy: { district: "asc" },
-      }),
-      prisma.fm_station.findMany({
-        select: { province: true },
-        distinct: ["province"],
-        orderBy: { province: "asc" },
+      // One groupBy replaces the two distinct findManys we used to issue —
+      // half the Prisma round trips, same shape coming out.
+      prisma.fm_station.groupBy({
+        by: ["district", "province"],
+        orderBy: [{ district: "asc" }, { province: "asc" }],
       }),
     ]);
 
     const transformedStations = stations.map(convertToFMStation);
     const transformedInterference = interferenceRows.map(convertToInterferenceSite);
-    const fmCities = fmCityData.map((r) => r.district).filter((c): c is string => !!c);
-    const fmProvinces = fmProvinceData.map((r) => r.province).filter((p): p is string => !!p);
+
+    const fmCities = Array.from(
+      new Set(
+        fmGeoGroups
+          .map((r) => r.district)
+          .filter((c): c is string => !!c)
+      )
+    ).sort();
+    const fmProvinces = fmGeoGroups
+      .map((r) => r.province)
+      .filter((p): p is string => !!p);
 
     const interferenceProvinces = Array.from(
       new Set(
@@ -33,7 +38,7 @@ export default async function FieldOpsFetcher() {
           .map((s) => s.changwat)
           .filter((p): p is string => !!p)
       )
-    ).sort();
+    );
 
     const provinces = Array.from(new Set([...fmProvinces, ...interferenceProvinces])).sort();
 
