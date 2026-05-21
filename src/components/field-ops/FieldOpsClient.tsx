@@ -644,7 +644,7 @@ export default function FieldOpsClient({
 
           {tab === "analytics" && (
             <div style={{ flex: 1, overflow: "auto", background: "var(--fo-canvas)" }}>
-              <AnalyticsDashboard />
+              <AnalyticsDashboard currentUser={currentUser} />
             </div>
           )}
         </main>

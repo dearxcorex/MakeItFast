@@ -1,13 +1,15 @@
 // src/components/analytics/InspectorsSection.tsx
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import type { InspectorsAnalytics } from '@/types/analytics';
 import FoBarChart from './charts/FoBarChart';
 import FoDonut from './charts/FoDonut';
-import TopPerformer from './TopPerformer';
+import TimeframePills, { type Timeframe } from './TimeframePills';
+import InspectorPodium, { type PodiumInspector } from './InspectorPodium';
+import InspectorPodiumMobile from './InspectorPodiumMobile';
+import InspectorLeaderboard, { type LeaderboardInspector } from './InspectorLeaderboard';
 
-// Stable palette for usernames. Falls back to ink for unknown names.
 const USER_COLORS: Record<string, string> = {
   admin: '#5d4fff',
   ice: '#1da1c4',
@@ -19,64 +21,26 @@ function colorFor(username: string): string {
   return USER_COLORS[username] ?? 'var(--fo-ink)';
 }
 
-function daysAgo(iso: string | null): string {
-  if (!iso) return '—';
-  const then = new Date(`${iso}T00:00:00Z`);
-  const now = new Date();
-  const ms = now.getTime() - then.getTime();
-  const days = Math.max(0, Math.floor(ms / 86_400_000));
-  if (days === 0) return 'today';
-  if (days === 1) return '1 day ago';
-  return `${days} days ago`;
+const THAI_MONTHS = [
+  'JAN', 'FEB', 'MAR', 'APR', 'MAY', 'JUN',
+  'JUL', 'AUG', 'SEP', 'OCT', 'NOV', 'DEC',
+];
+
+function monthLabelFor(thisMonth: string): string {
+  const [y, m] = thisMonth.split('-');
+  const idx = Math.max(0, Math.min(11, Number(m) - 1));
+  return `${THAI_MONTHS[idx]} ${y}`;
 }
 
-function SectionHeader({ thisYear }: { thisYear: number }) {
+function SectionHeader() {
   return (
     <div style={{ marginTop: 32, marginBottom: 12 }}>
       <div className="fo-mono" style={{ color: 'var(--fo-accent)', letterSpacing: 0.6 }}>
         INSPECTORS
       </div>
       <div className="fo-serif" style={{ fontSize: 22, color: 'var(--fo-ink)' }}>
-        Year-to-date team performance · {thisYear}
+        Team leaderboard
       </div>
-    </div>
-  );
-}
-
-
-function LeaderboardTable({ inspectors }: { inspectors: InspectorsAnalytics['inspectors'] }) {
-  const top = inspectors[0];
-  return (
-    <div style={{ overflowX: 'auto', marginBottom: 24 }}>
-      <table style={{ width: '100%', borderCollapse: 'collapse', fontFamily: 'var(--fo-body)' }}>
-        <thead>
-          <tr style={{ textAlign: 'left', borderBottom: '1px solid var(--fo-line)' }}>
-            <th style={{ padding: '8px 12px' }}>Inspector</th>
-            <th style={{ padding: '8px 12px', textAlign: 'right' }}>YTD total</th>
-            <th style={{ padding: '8px 12px', textAlign: 'right' }}>This month</th>
-            <th style={{ padding: '8px 12px', textAlign: 'right' }}>As lead</th>
-            <th style={{ padding: '8px 12px', textAlign: 'right' }}>As helper</th>
-            <th style={{ padding: '8px 12px' }}>Last active</th>
-          </tr>
-        </thead>
-        <tbody>
-          {inspectors.map((u) => (
-            <tr key={u.userId} style={{ borderBottom: '1px solid var(--fo-line)' }}>
-              <td style={{ padding: '8px 12px' }}>
-                {top && u.userId === top.userId && u.ytdTotal > 0 && (
-                  <span style={{ color: '#ffd24a', marginRight: 4 }} aria-hidden>★</span>
-                )}
-                {u.displayName}
-              </td>
-              <td style={{ padding: '8px 12px', textAlign: 'right' }}>{u.ytdTotal}</td>
-              <td style={{ padding: '8px 12px', textAlign: 'right' }}>{u.monthTotal}</td>
-              <td style={{ padding: '8px 12px', textAlign: 'right' }}>{u.ytdAsLead}</td>
-              <td style={{ padding: '8px 12px', textAlign: 'right' }}>{u.ytdAsHelper}</td>
-              <td style={{ padding: '8px 12px' }}>{daysAgo(u.lastActive)}</td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
     </div>
   );
 }
@@ -92,7 +56,7 @@ function MonthlyParticipationChart({
   const data = series
     .filter((m) => m.month.startsWith(yearPrefix))
     .map((m) => ({
-      label: m.month.slice(5), // "01".."12" — month only, year is in the title
+      label: m.month.slice(5),
       v: Object.values(m.perUser).reduce((s, n) => s + n, 0),
       color: 'var(--fo-accent)',
     }));
@@ -124,9 +88,14 @@ function PerUserRoleDonuts({ inspectors }: { inspectors: InspectorsAnalytics['in
   );
 }
 
-export default function InspectorsSection() {
+export default function InspectorsSection({
+  currentUserId = null,
+}: {
+  currentUserId?: number | null;
+}) {
   const [data, setData] = useState<InspectorsAnalytics | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [timeframe, setTimeframe] = useState<Timeframe>('month');
 
   useEffect(() => {
     let cancelled = false;
@@ -143,21 +112,31 @@ export default function InspectorsSection() {
     return () => { cancelled = true; };
   }, []);
 
+  const ranked: (PodiumInspector & LeaderboardInspector)[] = useMemo(() => {
+    if (!data) return [];
+    return [...data.inspectors]
+      .map((u) => ({
+        userId: u.userId,
+        displayName: u.displayName,
+        points: timeframe === 'month' ? u.monthTotal : u.ytdTotal,
+      }))
+      .sort((a, b) => b.points - a.points);
+  }, [data, timeframe]);
+
   if (error) {
     return (
       <section>
-        <SectionHeader thisYear={new Date().getUTCFullYear()} />
+        <SectionHeader />
         <div className="fo-mono" style={{ padding: 12, border: '1px solid var(--fo-crit)', color: 'var(--fo-crit)', borderRadius: 8 }}>
           Failed to load inspector analytics ({error}).
         </div>
       </section>
     );
   }
-
   if (!data) {
     return (
       <section>
-        <SectionHeader thisYear={new Date().getUTCFullYear()} />
+        <SectionHeader />
         <div className="fo-mono" style={{ padding: 12, color: 'var(--fo-rail-mute)' }}>
           Loading...
         </div>
@@ -165,25 +144,19 @@ export default function InspectorsSection() {
     );
   }
 
-  const hasAnyActivity = data.inspectors.some((u) => u.ytdTotal > 0)
-    || data.monthlySeries.some((m) => Object.keys(m.perUser).length > 0);
-
-  if (!hasAnyActivity) {
-    return (
-      <section>
-        <SectionHeader thisYear={data.thisYear} />
-        <div className="fo-mono" style={{ padding: 12, color: 'var(--fo-rail-mute)' }}>
-          No inspection activity yet.
-        </div>
-      </section>
-    );
-  }
+  const monthLabel = monthLabelFor(data.thisMonth);
 
   return (
     <section>
-      <SectionHeader thisYear={data.thisYear} />
-      <TopPerformer inspectors={data.inspectors} thisYear={data.thisYear} />
-      <LeaderboardTable inspectors={data.inspectors} />
+      <SectionHeader />
+      <TimeframePills value={timeframe} onChange={setTimeframe} monthLabel={monthLabel} />
+      <div className="hidden md:block">
+        <InspectorPodium inspectors={ranked} currentUserId={currentUserId} />
+      </div>
+      <div className="block md:hidden">
+        <InspectorPodiumMobile inspectors={ranked} currentUserId={currentUserId} />
+      </div>
+      <InspectorLeaderboard inspectors={ranked} currentUserId={currentUserId} />
       <MonthlyParticipationChart series={data.monthlySeries} thisYear={data.thisYear} />
       <PerUserRoleDonuts inspectors={data.inspectors} />
     </section>

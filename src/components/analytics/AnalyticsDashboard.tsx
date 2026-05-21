@@ -7,7 +7,11 @@ import InspectorsSection from "./InspectorsSection";
 const RANGES = ["7D", "30D", "90D", "YTD"] as const;
 type Range = (typeof RANGES)[number];
 
-export default function AnalyticsDashboard() {
+export default function AnalyticsDashboard({
+  currentUser,
+}: {
+  currentUser?: { id: number; displayName: string };
+} = {}) {
   const [data, setData] = useState<AnalyticsSummary | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -265,7 +269,7 @@ export default function AnalyticsDashboard() {
           </div>
         </div>
 
-        <InspectorsSection />
+        <InspectorsSection currentUserId={currentUser?.id ?? null} />
       </div>
     </div>
   );
