@@ -21,6 +21,7 @@ export function FieldOpsBottomSheet({
   onSelectSite,
   onToggleInspection,
   onToggleLawPaper,
+  onToggleOnAir,
   onClose,
   pending,
   marking = false,
@@ -42,6 +43,7 @@ export function FieldOpsBottomSheet({
   onSelectSite?: (id: number) => void;
   onToggleInspection: () => void;
   onToggleLawPaper: () => void;
+  onToggleOnAir?: () => void;
   onClose?: () => void;
   pending: boolean;
   marking?: boolean;
@@ -179,6 +181,7 @@ export function FieldOpsBottomSheet({
   const inspected = isFM ? station!.inspection69 === "ตรวจแล้ว" : site!.status === "ตรวจแล้ว";
   const lawSent = !isFM && !!site!.lawPaperSent;
   const revoked = !!isFM && station!.revoked === true;
+  const onAir = !!isFM && station!.onAir !== false;
   const lat = isFM ? station!.latitude : (site!.lat ?? 0);
   const lng = isFM ? station!.longitude : (site!.long ?? 0);
   const canNavigate = isFM ? true : site!.lat !== null && site!.long !== null;
@@ -260,6 +263,20 @@ export function FieldOpsBottomSheet({
         >
           {inspected ? "INSPECTED" : "PENDING"}
         </span>
+        {isFM && (
+          <span
+            className="fo-mono"
+            style={{
+              padding: "3px 8px",
+              borderRadius: 999,
+              border: `1px solid ${onAir ? "var(--fo-accent)" : "var(--fo-rail-mute)"}`,
+              color: onAir ? "var(--fo-accent)" : "var(--fo-rail-mute)",
+              fontSize: 9,
+            }}
+          >
+            {onAir ? "ON AIR" : "OFF AIR"}
+          </span>
+        )}
         {onClose && (
           <button
             type="button"
@@ -395,6 +412,32 @@ export function FieldOpsBottomSheet({
           {inspected ? "✓ INSPECTED" : "✓ INSPECT"}
         </button>
       </div>
+
+      {isFM && onToggleOnAir && (
+        <div style={{ padding: "8px 16px 0" }}>
+          <button
+            type="button"
+            onClick={onToggleOnAir}
+            disabled={pending}
+            className="fo-mono"
+            style={{
+              width: "100%",
+              padding: "12px",
+              background: onAir ? "var(--fo-warn)" : "var(--fo-accent)",
+              color: "var(--fo-ink)",
+              border: `1px solid ${onAir ? "var(--fo-warn)" : "var(--fo-accent)"}`,
+              borderRadius: 999,
+              fontSize: 11,
+              letterSpacing: "0.2em",
+              fontWeight: 700,
+              cursor: pending ? "wait" : "pointer",
+              opacity: pending ? 0.6 : 1,
+            }}
+          >
+            {onAir ? "📡 ON AIR · STOP" : "📡 OFF AIR · GO LIVE"}
+          </button>
+        </div>
+      )}
 
       {((isFM && station!.inspection69 !== 'ตรวจแล้ว')
         || (isINT && site!.status !== 'ตรวจแล้ว'))
