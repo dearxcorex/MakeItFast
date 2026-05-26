@@ -7,9 +7,9 @@ export type PodiumInspector = {
 };
 
 const TONE = {
-  gold: { bg: '#ffc845', ink: '#001e2b', height: 140 },
-  silver: { bg: '#c0c0c0', ink: '#001e2b', height: 115 },
-  bronze: { bg: '#cd7f32', ink: '#ffffff', height: 95 },
+  gold: { bg: 'var(--fo-podium-gold)', ink: 'var(--fo-podium-gold-ink)', height: 140 },
+  silver: { bg: 'var(--fo-podium-silver)', ink: 'var(--fo-podium-silver-ink)', height: 115 },
+  bronze: { bg: 'var(--fo-podium-bronze)', ink: 'var(--fo-podium-bronze-ink)', height: 95 },
 } as const;
 
 type Tone = keyof typeof TONE;
@@ -46,12 +46,14 @@ function Pedestal({
       }}
     >
       {rank === 1 && <div style={{ fontSize: 18 }} aria-hidden>🏆</div>}
-      <div className="fo-mono" style={{ fontSize: 22, fontWeight: 800 }}>#{rank}</div>
-      <div className="fo-serif" style={{ fontSize: 14, fontWeight: 700, marginTop: 2 }}>
+      <div className="fo-mono" style={{ fontSize: 10, letterSpacing: '0.14em' }}>
+        {rank === 1 ? '1ST' : rank === 2 ? '2ND' : '3RD'}
+      </div>
+      <div className="fo-serif" style={{ fontSize: 16, fontWeight: 700, marginTop: 2 }}>
         {inspector.displayName}
       </div>
-      <div className="fo-mono" style={{ fontSize: 11, opacity: 0.75, marginTop: 2 }}>
-        {inspector.points} {inspector.points === 1 ? 'inspection' : 'inspections'}
+      <div className="fo-mono" style={{ fontSize: 22, fontWeight: 800, marginTop: 4 }}>
+        {inspector.points}
       </div>
     </div>
   );

@@ -168,14 +168,14 @@ export default function AnalyticsDashboard({
 
   return (
     <div className="fo-light" style={{ minHeight: "100%", display: "flex" }}>
-      {/* Sidebar */}
+      {/* Sidebar — desktop only */}
       <aside
+        className="hidden md:flex"
         style={{
           width: 200,
           flexShrink: 0,
           borderRight: "1px solid var(--fo-line)",
           padding: "20px 16px",
-          display: "flex",
           flexDirection: "column",
           gap: 6,
           background: "var(--fo-surface)",

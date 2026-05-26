@@ -37,7 +37,7 @@ export default function TimeframePills({
               borderRadius: 999,
               border: `1px solid ${active ? 'var(--fo-accent)' : 'var(--fo-line)'}`,
               background: active ? 'var(--fo-accent)' : 'transparent',
-              color: active ? 'var(--fo-ink)' : 'var(--fo-rail-mute)',
+              color: active ? 'var(--fo-ink)' : 'var(--fo-mute)',
               fontSize: 11,
               letterSpacing: '0.14em',
               cursor: 'pointer',

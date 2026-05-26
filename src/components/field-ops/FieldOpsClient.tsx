@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import dynamic from "next/dynamic";
 import type { FMStation } from "@/types/station";
+import type { InspectionMember } from '@/types/inspection';
 import type { InterferenceSite } from "@/types/interference";
 import { FieldOpsNav, type FieldOpsTab } from "./FieldOpsNav";
 import { FieldOpsHeader } from "./FieldOpsHeader";
@@ -81,6 +82,11 @@ export default function FieldOpsClient({
   const [markingSourceForId, setMarkingSourceForId] = useState<number | null>(null);
   const [inspectors, setInspectors] = useState<{ id: number; username: string; displayName: string }[]>([]);
   const [helperUserIds, setHelperUserIds] = useState<number[]>([]);
+  const [lastInspection, setLastInspection] = useState<{
+    lead: InspectionMember;
+    helpers: InspectionMember[];
+    inspectedOn: string;
+  } | null>(null);
   const [defaultCrew, setDefaultCrew] = useState<number[] | null>(null);
   const [crewModalOpen, setCrewModalOpen] = useState(false);
   const [crewSaveError, setCrewSaveError] = useState<string | undefined>(undefined);
@@ -180,6 +186,36 @@ export default function FieldOpsClient({
   useEffect(() => {
     setHelperUserIds(defaultCrew ?? []);
   }, [selectedTargetKey, defaultCrew]);
+
+  useEffect(() => {
+    setLastInspection(null);
+    if (!selection) return;
+
+    const isInspected =
+      (selection.kind === 'fm' && selectedStation?.inspection69 === 'ตรวจแล้ว') ||
+      (selection.kind === 'int' && selectedSite?.status === 'ตรวจแล้ว');
+    if (!isInspected) return;
+
+    let cancelled = false;
+    const url =
+      selection.kind === 'fm'
+        ? `/api/stations/${selection.id}/inspections`
+        : `/api/interference/${selection.id}/inspections`;
+
+    fetch(url)
+      .then((r) => (r.ok ? r.json() : null))
+      .then((data) => {
+        if (cancelled || !data?.inspections?.length) return;
+        const latest = data.inspections[0];
+        setLastInspection({
+          lead: latest.lead,
+          helpers: latest.helpers ?? [],
+          inspectedOn: latest.inspectedOn,
+        });
+      })
+      .catch(() => {});
+    return () => { cancelled = true; };
+  }, [selectedTargetKey, selectedStation?.inspection69, selectedSite?.status]);
 
   // Auto-dismiss the selection (and its details panel / bottom sheet) when
   // the current filter no longer includes the selected item — e.g. switching
@@ -292,7 +328,18 @@ export default function FieldOpsClient({
           }),
         });
         if (!res.ok) throw new Error("FM update failed");
-        if (next === "ตรวจแล้ว") setHelperUserIds([]);
+        if (next === "ตรวจแล้ว") {
+          setHelperUserIds([]);
+          fetch(`/api/stations/${selectedStation.id}/inspections`)
+            .then((r) => r.ok ? r.json() : null)
+            .then((data) => {
+              if (data?.inspections?.length) {
+                const latest = data.inspections[0];
+                setLastInspection({ lead: latest.lead, helpers: latest.helpers ?? [], inspectedOn: latest.inspectedOn });
+              }
+            })
+            .catch(() => {});
+        }
       } else if (selection.kind === "int" && selectedSite) {
         const next = selectedSite.status === "ตรวจแล้ว" ? "ยังไม่ตรวจ" : "ตรวจแล้ว";
         setInterference((all) =>
@@ -307,7 +354,18 @@ export default function FieldOpsClient({
           }),
         });
         if (!res.ok) throw new Error("Interference update failed");
-        if (next === "ตรวจแล้ว") setHelperUserIds(defaultCrew ?? []);
+        if (next === "ตรวจแล้ว") {
+          setHelperUserIds(defaultCrew ?? []);
+          fetch(`/api/interference/${selectedSite.id}/inspections`)
+            .then((r) => r.ok ? r.json() : null)
+            .then((data) => {
+              if (data?.inspections?.length) {
+                const latest = data.inspections[0];
+                setLastInspection({ lead: latest.lead, helpers: latest.helpers ?? [], inspectedOn: latest.inspectedOn });
+              }
+            })
+            .catch(() => {});
+        }
       }
     } catch (err) {
       console.error(err);
@@ -558,6 +616,7 @@ export default function FieldOpsClient({
                         currentUser={currentUser}
                         helperUserIds={helperUserIds}
                         onHelperUserIdsChange={setHelperUserIds}
+                        lastInspection={lastInspection}
                       />
                     )}
                     {selection?.kind === "int" && selectedSite && (
@@ -577,6 +636,7 @@ export default function FieldOpsClient({
                         currentUser={currentUser}
                         helperUserIds={helperUserIds}
                         onHelperUserIdsChange={setHelperUserIds}
+                        lastInspection={lastInspection}
                       />
                     )}
                     {!selection && (
@@ -624,6 +684,7 @@ export default function FieldOpsClient({
                   currentUser={currentUser}
                   helperUserIds={helperUserIds}
                   onHelperUserIdsChange={setHelperUserIds}
+                  lastInspection={lastInspection}
                 />
               )}
             </>

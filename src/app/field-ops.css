@@ -179,6 +179,13 @@
   --fo-note: #fff6c8;
   --fo-grid: rgba(0, 30, 43, 0.08);
 
+  --fo-podium-gold: #ffc845;
+  --fo-podium-gold-ink: #001e2b;
+  --fo-podium-silver: #d5d8dc;
+  --fo-podium-silver-ink: #1c2d38;
+  --fo-podium-bronze: #d4a574;
+  --fo-podium-bronze-ink: #1c2d38;
+
   --fo-serif: var(--fo-font-serif), 'Playfair Display', Georgia, serif;
   --fo-body: var(--fo-font-inter), 'Inter', -apple-system, system-ui, sans-serif;
   --fo-mono: var(--fo-font-mono), 'Source Code Pro', ui-monospace, monospace;
@@ -391,6 +398,13 @@
   --fo-blue: #5fa8ff;
   --fo-note: #2a2410;
   --fo-grid: rgba(255, 255, 255, 0.08);
+
+  --fo-podium-gold: #ffc845;
+  --fo-podium-gold-ink: #001e2b;
+  --fo-podium-silver: #4a5568;
+  --fo-podium-silver-ink: #ffffff;
+  --fo-podium-bronze: #7b5b3a;
+  --fo-podium-bronze-ink: #ffffff;
 }
 
 .field-ops-root[data-theme="dark"] .fo-light .fo-sticky,

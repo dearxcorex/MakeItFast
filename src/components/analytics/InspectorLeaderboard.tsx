@@ -38,7 +38,7 @@ function Row({
     >
       <span
         className="fo-mono"
-        style={{ width: 36, color: 'var(--fo-rail-mute)', fontSize: 12 }}
+        style={{ width: 36, color: 'var(--fo-mute)', fontSize: 12 }}
       >
         #{rank}
       </span>
@@ -78,7 +78,9 @@ export default function InspectorLeaderboard({
       {showPinned && you && (
         <Row rank={you.rank} inspector={you} isYou pinned />
       )}
-      {tailRows.map((i) => (
+      {tailRows
+        .filter((i) => !(showPinned && you && i.userId === you.userId))
+        .map((i) => (
         <Row
           key={i.userId}
           rank={i.rank}
