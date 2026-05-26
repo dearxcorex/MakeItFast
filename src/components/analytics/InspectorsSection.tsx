@@ -29,6 +29,22 @@ function SectionHeader() {
       <div className="fo-serif" style={{ fontSize: 22, color: 'var(--fo-ink)' }}>
         Team leaderboard
       </div>
+      <div
+        style={{
+          marginTop: 8,
+          padding: '8px 12px',
+          background: 'var(--fo-surface)',
+          border: '1px solid var(--fo-line)',
+          borderRadius: 8,
+          fontSize: 12,
+          color: 'var(--fo-mute)',
+          lineHeight: 1.5,
+        }}
+      >
+        <span style={{ marginRight: 6 }}>💡</span>
+        คะแนนนับจากการตรวจสถานี FM และ INT รวมกัน
+        — ไม่ว่าจะเป็น<strong style={{ color: 'var(--fo-ink)' }}>หัวหน้าทีม</strong>หรือ<strong style={{ color: 'var(--fo-ink)' }}>ผู้ช่วย</strong>ได้ 1 คะแนนเท่ากัน
+      </div>
     </div>
   );
 }

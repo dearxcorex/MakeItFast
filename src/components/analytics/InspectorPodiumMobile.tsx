@@ -3,9 +3,9 @@
 import type { PodiumInspector } from './InspectorPodium';
 
 const TONE = {
-  gold: { bg: '#ffc845', ink: '#001e2b', label: '1ST', icon: '🏆' },
-  silver: { bg: '#4a5568', ink: '#ffffff', label: '2ND', icon: '2' },
-  bronze: { bg: '#7b5b3a', ink: '#ffffff', label: '3RD', icon: '3' },
+  gold: { bg: 'var(--fo-podium-gold)', ink: 'var(--fo-podium-gold-ink)', label: '1ST', icon: '🏆' },
+  silver: { bg: 'var(--fo-podium-silver)', ink: 'var(--fo-podium-silver-ink)', label: '2ND', icon: '2' },
+  bronze: { bg: 'var(--fo-podium-bronze)', ink: 'var(--fo-podium-bronze-ink)', label: '3RD', icon: '3' },
 } as const;
 
 type Tone = keyof typeof TONE;
