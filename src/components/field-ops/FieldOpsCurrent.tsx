@@ -5,6 +5,8 @@ import type { FMStation } from "@/types/station";
 import type { InterferenceSite } from "@/types/interference";
 import { parseLatLngInput } from "@/utils/parseLatLng";
 import TeammatePicker, { type InspectorOption } from "./TeammatePicker";
+import InspectionTeamChips from './InspectionTeamChips';
+import type { InspectionMember } from '@/types/inspection';
 
 interface CommonAction {
   label: string;
@@ -34,6 +36,7 @@ export function FieldOpsCurrentFM({
   currentUser,
   helperUserIds,
   onHelperUserIdsChange,
+  lastInspection,
 }: {
   station: FMStation;
   coLocated?: FMStation[];
@@ -45,6 +48,11 @@ export function FieldOpsCurrentFM({
   currentUser?: { id: number; displayName: string };
   helperUserIds?: number[];
   onHelperUserIdsChange?: (helperUserIds: number[]) => void;
+  lastInspection?: {
+    lead: InspectionMember;
+    helpers: InspectionMember[];
+    inspectedOn: string;
+  } | null;
 }) {
   const inspected = station.inspection69 === "ตรวจแล้ว";
   const main = isMain(station);
@@ -148,6 +156,14 @@ export function FieldOpsCurrentFM({
         />
       )}
 
+      {inspected && lastInspection && (
+        <InspectionTeamChips
+          lead={lastInspection.lead}
+          helpers={lastInspection.helpers}
+          inspectedOn={lastInspection.inspectedOn}
+        />
+      )}
+
       {onToggleOnAir && (
         <ButtonRow
           actions={[
@@ -241,6 +257,7 @@ export function FieldOpsCurrentINT({
   currentUser,
   helperUserIds,
   onHelperUserIdsChange,
+  lastInspection,
 }: {
   site: InterferenceSite;
   coLocated?: InterferenceSite[];
@@ -257,6 +274,11 @@ export function FieldOpsCurrentINT({
   currentUser?: { id: number; displayName: string };
   helperUserIds?: number[];
   onHelperUserIdsChange?: (helperUserIds: number[]) => void;
+  lastInspection?: {
+    lead: InspectionMember;
+    helpers: InspectionMember[];
+    inspectedOn: string;
+  } | null;
 }) {
   const inspected = site.status === "ตรวจแล้ว";
   const lawSent = !!site.lawPaperSent;
@@ -378,6 +400,14 @@ export function FieldOpsCurrentINT({
           value={helperUserIds ?? []}
           onChange={onHelperUserIdsChange}
           disabled={pending}
+        />
+      )}
+
+      {inspected && lastInspection && (
+        <InspectionTeamChips
+          lead={lastInspection.lead}
+          helpers={lastInspection.helpers}
+          inspectedOn={lastInspection.inspectedOn}
         />
       )}
 
