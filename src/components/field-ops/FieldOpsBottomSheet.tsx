@@ -6,6 +6,8 @@ import type { InterferenceSite } from "@/types/interference";
 import type { FieldSelection } from "./FieldOpsMap";
 import { parseLatLngInput } from "@/utils/parseLatLng";
 import TeammatePicker, { type InspectorOption } from "./TeammatePicker";
+import InspectionTeamChips from './InspectionTeamChips';
+import type { InspectionMember } from '@/types/inspection';
 
 function googleMapsUrl(lat: number, lng: number) {
   return `https://www.google.com/maps/dir/?api=1&destination=${lat},${lng}&travelmode=driving`;
@@ -33,6 +35,7 @@ export function FieldOpsBottomSheet({
   currentUser,
   helperUserIds,
   onHelperUserIdsChange,
+  lastInspection,
 }: {
   selection: FieldSelection;
   station: FMStation | null;
@@ -55,6 +58,11 @@ export function FieldOpsBottomSheet({
   currentUser?: { id: number; displayName: string };
   helperUserIds?: number[];
   onHelperUserIdsChange?: (helperUserIds: number[]) => void;
+  lastInspection?: {
+    lead: InspectionMember;
+    helpers: InspectionMember[];
+    inspectedOn: string;
+  } | null;
 }) {
   const [expanded, setExpanded] = useState(false);
   const [coordsOpen, setCoordsOpen] = useState(false);
@@ -445,6 +453,16 @@ export function FieldOpsBottomSheet({
             value={helperUserIds ?? []}
             onChange={onHelperUserIdsChange}
             disabled={pending}
+          />
+        </div>
+      )}
+
+      {inspected && lastInspection && (
+        <div style={{ padding: '0 16px' }}>
+          <InspectionTeamChips
+            lead={lastInspection.lead}
+            helpers={lastInspection.helpers}
+            inspectedOn={lastInspection.inspectedOn}
           />
         </div>
       )}
