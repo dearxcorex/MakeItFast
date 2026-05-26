@@ -8,8 +8,8 @@ export type PodiumInspector = {
 
 const TONE = {
   gold: { bg: '#ffc845', ink: '#001e2b', height: 140 },
-  silver: { bg: '#c0c0c0', ink: '#001e2b', height: 115 },
-  bronze: { bg: '#cd7f32', ink: '#ffffff', height: 95 },
+  silver: { bg: '#4a5568', ink: '#ffffff', height: 115 },
+  bronze: { bg: '#7b5b3a', ink: '#ffffff', height: 95 },
 } as const;
 
 type Tone = keyof typeof TONE;
@@ -46,12 +46,9 @@ function Pedestal({
       }}
     >
       {rank === 1 && <div style={{ fontSize: 18 }} aria-hidden>🏆</div>}
-      <div className="fo-mono" style={{ fontSize: 22, fontWeight: 800 }}>#{rank}</div>
+      <div className="fo-mono" style={{ fontSize: 28, fontWeight: 800 }}>{inspector.points}</div>
       <div className="fo-serif" style={{ fontSize: 14, fontWeight: 700, marginTop: 2 }}>
         {inspector.displayName}
-      </div>
-      <div className="fo-mono" style={{ fontSize: 11, opacity: 0.75, marginTop: 2 }}>
-        {inspector.points} {inspector.points === 1 ? 'inspection' : 'inspections'}
       </div>
     </div>
   );

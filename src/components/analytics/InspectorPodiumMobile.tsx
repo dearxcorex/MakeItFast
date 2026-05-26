@@ -4,8 +4,8 @@ import type { PodiumInspector } from './InspectorPodium';
 
 const TONE = {
   gold: { bg: '#ffc845', ink: '#001e2b', label: '1ST', icon: '🏆' },
-  silver: { bg: '#c0c0c0', ink: '#001e2b', label: '2ND', icon: '2' },
-  bronze: { bg: '#cd7f32', ink: '#ffffff', label: '3RD', icon: '3' },
+  silver: { bg: '#4a5568', ink: '#ffffff', label: '2ND', icon: '2' },
+  bronze: { bg: '#7b5b3a', ink: '#ffffff', label: '3RD', icon: '3' },
 } as const;
 
 type Tone = keyof typeof TONE;
@@ -46,7 +46,7 @@ function MedalCard({
         {rank === 1 ? t.icon : rank}
       </div>
       <div style={{ flex: 1, minWidth: 0 }}>
-        <div className="fo-mono" style={{ fontSize: 10, letterSpacing: '0.14em', opacity: 0.75 }}>
+        <div className="fo-mono" style={{ fontSize: 10, letterSpacing: '0.14em' }}>
           {t.label}
         </div>
         <div className="fo-serif" style={{ fontSize: 16, fontWeight: 700 }}>

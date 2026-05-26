@@ -6,7 +6,6 @@ import type { InterferenceSite } from "@/types/interference";
 import type { FieldSelection } from "./FieldOpsMap";
 import { parseLatLngInput } from "@/utils/parseLatLng";
 import TeammatePicker, { type InspectorOption } from "./TeammatePicker";
-import NavigationPill from "@/components/interference/NavigationPill";
 
 function googleMapsUrl(lat: number, lng: number) {
   return `https://www.google.com/maps/dir/?api=1&destination=${lat},${lng}&travelmode=driving`;
@@ -320,20 +319,6 @@ export function FieldOpsBottomSheet({
           {province.toUpperCase()} · {district}
         </div>
       </div>
-
-      {isINT && (site!.direction != null || (site!.sourceLat !== null && site!.sourceLong !== null)) && (
-        <div style={{ padding: '4px 16px 0' }}>
-          <NavigationPill
-            bearing={site!.direction ?? null}
-            distance={
-              site!.sourceLat !== null && site!.sourceLong !== null
-                ? site!.estimateDistance ?? null
-                : null
-            }
-            style={{ fontSize: 13, padding: '8px 14px' }}
-          />
-        </div>
-      )}
 
       <CoLocatedStrip
         isFM={!!isFM}
@@ -679,13 +664,6 @@ export function FieldOpsBottomSheet({
               }
               if (station!.dateInspected) {
                 cells.push(<Cell key="inspected" label="INSPECTED" value={station!.dateInspected} />);
-              }
-            } else {
-              if (site!.estimateDistance !== null && site!.estimateDistance !== undefined) {
-                cells.push(<Cell key="dist" label="DIST" value={`${site!.estimateDistance.toFixed(1)} km`} />);
-              }
-              if (site!.nbtcArea) {
-                cells.push(<Cell key="nbtc" label="NBTC AREA" value={site!.nbtcArea} />);
               }
             }
             if (cells.length === 0) return null;
