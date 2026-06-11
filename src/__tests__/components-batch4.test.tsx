@@ -205,12 +205,12 @@ describe('IntermodCalculator', () => {
 
   it('renders the Intermod Calculator heading', () => {
     const { container } = render(<IntermodCalculatorReal {...defaultProps} />);
-    expect(container.textContent).toContain('Intermod Calculator');
+    expect(container.textContent).toContain('INTERMOD CALCULATOR');
   });
 
   it('renders the mode selector with two options', () => {
     const { container } = render(<IntermodCalculatorReal {...defaultProps} />);
-    expect(container.textContent).toContain('Mode');
+    expect(container.textContent).toContain('MODE');
     const selects = container.querySelectorAll('select');
     expect(selects.length).toBeGreaterThanOrEqual(1);
     const modeSelect = selects[0];
@@ -222,33 +222,33 @@ describe('IntermodCalculator', () => {
 
   it('renders aircraft frequency input in aircraft-check mode by default', () => {
     const { container } = render(<IntermodCalculatorReal {...defaultProps} />);
-    expect(container.textContent).toContain('Aircraft Frequency');
-    expect(container.textContent).toContain('(108-137 MHz)');
+    expect(container.textContent).toContain('AIRCRAFT FREQUENCY');
+    expect(container.textContent).toContain('108–137 MHZ');
   });
 
   it('renders the Find FM Pairs button', () => {
     const { container } = render(<IntermodCalculatorReal {...defaultProps} />);
     const buttons = container.querySelectorAll('button');
-    const findBtn = Array.from(buttons).find(b => b.textContent?.includes('Find FM Pairs'));
+    const findBtn = Array.from(buttons).find(b => b.textContent?.includes('FIND FM PAIRS'));
     expect(findBtn).toBeTruthy();
   });
 
   it('renders Clear All button', () => {
     const { container } = render(<IntermodCalculatorReal {...defaultProps} />);
     const buttons = container.querySelectorAll('button');
-    const clearBtn = Array.from(buttons).find(b => b.textContent?.includes('Clear All'));
+    const clearBtn = Array.from(buttons).find(b => b.textContent?.includes('CLEAR ALL'));
     expect(clearBtn).toBeTruthy();
   });
 
   it('renders the Results panel with empty state', () => {
     const { container } = render(<IntermodCalculatorReal {...defaultProps} />);
-    expect(container.textContent).toContain('Results');
-    expect(container.textContent).toContain('No Results Yet');
+    expect(container.textContent).toContain('RESULTS');
+    expect(container.textContent).toContain('No results yet');
   });
 
   it('renders Aviation Band info section', () => {
     const { container } = render(<IntermodCalculatorReal {...defaultProps} />);
-    expect(container.textContent).toContain('Aviation Band (108-137 MHz)');
+    expect(container.textContent).toContain('AVIATION BAND · 108–137 MHZ');
     expect(container.textContent).toContain('VOR/ILS Navigation');
     expect(container.textContent).toContain('Emergency');
     expect(container.textContent).toContain('ATC Voice');
@@ -256,12 +256,13 @@ describe('IntermodCalculator', () => {
 
   it('renders common frequencies reference', () => {
     const { container } = render(<IntermodCalculatorReal {...defaultProps} />);
-    expect(container.textContent).toContain('Common Frequencies Reference');
+    expect(container.textContent).toContain('COMMON FREQUENCIES REFERENCE');
   });
 
   it('shows station count in reverse lookup info', () => {
     const { container } = render(<IntermodCalculatorReal {...defaultProps} />);
-    expect(container.textContent).toContain('2 FM stations');
+    expect(container.textContent).toContain('REVERSE LOOKUP');
+    expect(container.textContent).toContain('Finds all FM station pairs from 2 stations');
   });
 });
 

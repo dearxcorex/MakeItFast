@@ -51,10 +51,10 @@ describe('FieldOpsDrawer', () => {
     expect(container.textContent).toContain('DARK');
     expect(container.textContent).toContain('LIVE');
     expect(container.textContent).toContain('STATS');
-    expect(container.textContent).toContain('TOTAL');
-    expect(container.textContent).toContain('26');
     expect(container.textContent).toContain('INSPECTED');
     expect(container.textContent).toContain('0/200');
+    expect(container.textContent).toContain('PENDING');
+    expect(container.textContent).toContain('26');
     expect(container.textContent).toContain('CRITICAL');
   });
 

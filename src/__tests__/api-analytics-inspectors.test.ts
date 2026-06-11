@@ -1,5 +1,5 @@
 // src/__tests__/api-analytics-inspectors.test.ts
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { NextRequest } from 'next/server';
 import { mintCookie } from './helpers/session';
 import { COOKIE_NAME } from '@/lib/session';
@@ -46,6 +46,12 @@ async function loadRoute() {
 beforeEach(async () => {
   process.env.SESSION_PASSWORD =
     process.env.SESSION_PASSWORD ?? 'test-session-password-32-chars-or-more!!!';
+  // The route derives "this year/month" from new Date(). Pin the clock to a
+  // fixed point inside May 2026 so the mocked April/May aggregates line up with
+  // "this month" — otherwise the assertions rot as real time moves forward.
+  // Fake only Date so the route's async/await (microtask) flow is untouched.
+  vi.useFakeTimers({ toFake: ['Date'] });
+  vi.setSystemTime(new Date('2026-05-15T12:00:00Z'));
   cookieStore.clear();
   vi.resetModules();
   // Re-bind the test's prisma reference to the fresh module instance,
@@ -53,6 +59,10 @@ beforeEach(async () => {
   const prismaMod = await import('@/lib/prisma');
   prisma = prismaMod.default;
   vi.resetAllMocks();
+});
+
+afterEach(() => {
+  vi.useRealTimers();
 });
 
 async function req(cookie?: string): Promise<NextRequest> {
