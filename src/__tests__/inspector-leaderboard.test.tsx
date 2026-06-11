@@ -28,7 +28,7 @@ describe("InspectorLeaderboard", () => {
     expect(rows[1]?.textContent).toContain('Eak');
   });
 
-  it("pins the current user at top when they are rank 5+, and keeps them inline", () => {
+  it("pins the current user at top when they are rank 5+, and removes their duplicate inline row", () => {
     const list = [
       mk(1, "Aom", 18),
       mk(2, "Boom", 14),
@@ -44,10 +44,18 @@ describe("InspectorLeaderboard", () => {
     const pinned = container.querySelectorAll('[data-pinned="true"]');
     expect(pinned).toHaveLength(1);
     expect(pinned[0]?.textContent).toContain('You');
+    // "You" appears only as the pinned row — the inline tail lists the others
+    // without a duplicate "You" row.
     const inline = container.querySelectorAll('[data-row]:not([data-pinned="true"])');
-    expect(Array.from(inline).map((r) => r.textContent)).toEqual(
-      expect.arrayContaining([expect.stringContaining('Daeng'), expect.stringContaining('You'), expect.stringContaining('Eak'), expect.stringContaining('Fay')])
+    const inlineText = Array.from(inline).map((r) => r.textContent);
+    expect(inlineText).toEqual(
+      expect.arrayContaining([
+        expect.stringContaining('Daeng'),
+        expect.stringContaining('Eak'),
+        expect.stringContaining('Fay'),
+      ])
     );
+    expect(inlineText.some((t) => t?.includes('You'))).toBe(false);
   });
 
   it("highlights the current user's row with the accent border in inline position", () => {
