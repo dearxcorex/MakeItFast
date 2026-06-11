@@ -2,10 +2,13 @@
 
 import { useState, type FormEvent } from "react";
 import { useSearchParams } from "next/navigation";
+import { safeNextPath } from "@/lib/safeRedirect";
 
 export default function LoginPage() {
   const params = useSearchParams();
-  const next = params.get("next") ?? "/";
+  // `next` is attacker-controllable via the URL; sanitize to a same-origin
+  // path so window.location.assign() below can't be turned into an open redirect.
+  const next = safeNextPath(params.get("next"));
 
   // We use a hard browser navigation after login (window.location.assign),
   // not Next.js router methods. Reasons:

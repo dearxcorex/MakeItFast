@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { COOKIE_NAME, readSessionFromCookie } from "@/lib/session";
+import { safeNextPath } from "@/lib/safeRedirect";
 
 const PUBLIC_PATHS = ["/login", "/api/auth/login", "/api/health"];
 const ASSET_PREFIXES = ["/_next", "/favicon", "/tiles", "/icons"];
@@ -26,8 +27,7 @@ export async function middleware(req: NextRequest) {
     const cookieValue = req.cookies.get(COOKIE_NAME)?.value;
     const session = await readSessionFromCookie(cookieValue);
     if (session) {
-      const nextParam = req.nextUrl.searchParams.get("next");
-      const target = nextParam && nextParam.startsWith("/") ? nextParam : "/";
+      const target = safeNextPath(req.nextUrl.searchParams.get("next"));
       return NextResponse.redirect(new URL(target, req.url), 307);
     }
     return NextResponse.next();
