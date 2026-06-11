@@ -52,6 +52,18 @@ describe("middleware", () => {
     expect(res.headers.get("location")).toMatch(/^http:\/\/localhost\/$/);
   });
 
+  it("ignores protocol-relative ?next values to prevent open redirect", async () => {
+    // "//evil.com" starts with "/" so the old guard let it through, but
+    // browsers resolve it to https://evil.com — safeNextPath now blocks it.
+    const c = await mintCookie();
+    const url = new URL("http://localhost/login?next=%2F%2Fevil.com%2Fx");
+    const req = new NextRequest(url, { method: "GET" });
+    req.cookies.set(COOKIE_NAME, c.value);
+    const res = await middleware(req);
+    expect(res.status).toBe(307);
+    expect(res.headers.get("location")).toMatch(/^http:\/\/localhost\/$/);
+  });
+
   it("allows /api/auth/login without a session", async () => {
     const res = await middleware(reqWithCookie("/api/auth/login"));
     expect(res.status).not.toBe(307);
