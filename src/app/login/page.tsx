@@ -37,6 +37,13 @@ export default function LoginPage() {
         body: JSON.stringify({ username, password, rememberMe }),
       });
       if (res.ok) {
+        // Keep the spinner running through the hard navigation below.
+        // window.location.assign() starts the navigation but does NOT block,
+        // so resetting `submitting` here (or in a finally) would flip the
+        // button back to its idle "Sign in" state while the browser is still
+        // fetching `next` — a visible gap where the page looks done but isn't.
+        // Leaving `submitting` true means the spinner stays until this page is
+        // torn down by the navigation, keeping the spinner synced to the redirect.
         window.location.assign(next);
         return;
       }
@@ -47,9 +54,10 @@ export default function LoginPage() {
       }
     } catch {
       setError("ไม่สามารถเชื่อมต่อเซิร์ฟเวอร์ได้");
-    } finally {
-      setSubmitting(false);
     }
+    // Only reached on failure — the success path returns above with the
+    // spinner still spinning.
+    setSubmitting(false);
   }
 
   return (
