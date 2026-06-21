@@ -100,23 +100,58 @@ export function getAffectedService(frequency: number): AviationService | undefin
 }
 
 /**
- * Calculate radio line-of-sight distance
+ * Default FM transmitting antenna height in meters.
+ * No per-station height is stored in the DB, so this single value is used for
+ * every tower's radio-horizon calculation. See docs/adr/0001.
+ */
+export const DEFAULT_TOWER_HEIGHT_M = 60;
+
+/**
+ * Assumed transmit power (watts) when a station's transmitterPower is missing
+ * or zero. Used only for signal-strength scoring, never for the displayed
+ * combinedPower. See docs/adr/0001.
+ */
+export const DEFAULT_TX_POWER_W = 500;
+
+/** Feet → meters */
+const FEET_TO_METERS = 0.3048;
+
+/**
+ * Calculate radio line-of-sight distance (4/3-Earth radio horizon)
  * @param stationHeight Station antenna height in meters
  * @param aircraftAltitude Aircraft altitude in feet
- * @returns Line of sight distance in kilometers
+ * @returns Maximum line of sight distance in kilometers
  */
 export function calculateLineOfSight(
   stationHeight: number,
   aircraftAltitude: number
 ): number {
   // Convert aircraft altitude from feet to meters
-  const aircraftHeightM = aircraftAltitude * 0.3048;
+  const aircraftHeightM = aircraftAltitude * FEET_TO_METERS;
 
   // Radio horizon formula: d = 4.12 × (√h_tx + √h_rx) km
   // where h is in meters
   const distance = 4.12 * (Math.sqrt(stationHeight) + Math.sqrt(aircraftHeightM));
 
   return distance;
+}
+
+/**
+ * Estimate the received signal power at the aircraft from one tower.
+ * Isotropic EIRP is assumed (no antenna gain). Missing/zero power → 500 W.
+ * @param transmitterPower Tower transmit power in watts (may be undefined)
+ * @param distanceKm Tower-to-aircraft distance in km
+ * @param frequencyMHz Tower frequency in MHz
+ * @returns Received power in dBm
+ */
+export function receivedPowerDbm(
+  transmitterPower: number | undefined,
+  distanceKm: number,
+  frequencyMHz: number
+): number {
+  const powerW = transmitterPower && transmitterPower > 0 ? transmitterPower : DEFAULT_TX_POWER_W;
+  const txDbm = 10 * Math.log10(powerW * 1000); // watts → mW → dBm
+  return txDbm - calculatePathLoss(distanceKm, frequencyMHz);
 }
 
 /**
@@ -256,30 +291,46 @@ export function assessInterferenceRisk(
         frequencyDelta = Math.abs(product.frequency - aircraftData.frequency);
       }
 
-      // Calculate distance to aircraft if location provided
+      // Per-station physics (aircraft-receiver mixing model — see docs/adr/0001)
+      const hasPosition =
+        aircraftData?.latitude !== undefined &&
+        aircraftData?.longitude !== undefined;
+      const hasAltitude = !!aircraftData?.altitude && aircraftData.altitude > 0;
+
       let distanceToAircraft: number | undefined;
+      let weightedRxDbm: number | undefined;
+      // true = both towers reach the aircraft (or LOS not evaluated yet)
       let lineOfSight = true;
 
-      if (
-        aircraftData?.latitude !== undefined &&
-        aircraftData?.longitude !== undefined
-      ) {
-        // Use midpoint between stations for distance calculation
-        const midLat = (pair.station1.latitude + pair.station2.latitude) / 2;
-        const midLon = (pair.station1.longitude + pair.station2.longitude) / 2;
-
-        distanceToAircraft = calculateDistance(
-          midLat,
-          midLon,
-          aircraftData.latitude,
-          aircraftData.longitude
+      if (hasPosition) {
+        const d1 = calculateDistance(
+          pair.station1.latitude,
+          pair.station1.longitude,
+          aircraftData!.latitude!,
+          aircraftData!.longitude!
         );
+        const d2 = calculateDistance(
+          pair.station2.latitude,
+          pair.station2.longitude,
+          aircraftData!.latitude!,
+          aircraftData!.longitude!
+        );
+        // Report the binding (farther) tower distance
+        distanceToAircraft = Math.max(d1, d2);
 
-        // Check line of sight if altitude provided
-        if (aircraftData.altitude) {
-          // Assume average station height of 100m
-          const losDistance = calculateLineOfSight(100, aircraftData.altitude);
-          lineOfSight = distanceToAircraft <= losDistance;
+        // Received power at the aircraft from each tower
+        const rx1 = receivedPowerDbm(pair.station1.transmitterPower, d1, pair.station1.frequency);
+        const rx2 = receivedPowerDbm(pair.station2.transmitterPower, d2, pair.station2.frequency);
+
+        // Third-order 2:1 weighting: the doubled station dominates the product.
+        // '2f1-f2' → station1 (f1) doubled; '2f2-f1' → station2 (f2) doubled.
+        const [rxDoubled, rxOther] = product.type === '2f1-f2' ? [rx1, rx2] : [rx2, rx1];
+        weightedRxDbm = (2 * rxDoubled + rxOther) / 3;
+
+        // Per-station line of sight, only when altitude is known
+        if (hasAltitude) {
+          const horizon = calculateLineOfSight(DEFAULT_TOWER_HEIGHT_M, aircraftData!.altitude!);
+          lineOfSight = d1 <= horizon && d2 <= horizon;
         }
       }
 
@@ -288,8 +339,7 @@ export function assessInterferenceRisk(
         product,
         pair,
         frequencyDelta,
-        distanceToAircraft,
-        lineOfSight
+        { hasPosition, weightedRxDbm, lineOfSight }
       );
 
       riskAssessments.push({
@@ -312,18 +362,25 @@ export function assessInterferenceRisk(
 }
 
 /**
- * Calculate risk level based on various factors
+ * Calculate risk level based on various factors.
+ *
+ * Affected service is the primary driver (safety-first). When an aircraft
+ * position is known, physics (signal strength + line of sight) modulates the
+ * score; otherwise it falls back to the tower-to-tower proximity heuristic.
  */
 function calculateRiskLevel(
   product: IntermodProduct,
   pair: IntermodPair,
   frequencyDelta: number,
-  distanceToAircraft?: number,
-  lineOfSight?: boolean
+  physics: {
+    hasPosition: boolean;
+    weightedRxDbm?: number;
+    lineOfSight?: boolean;
+  }
 ): { riskLevel: RiskLevel; riskScore: number } {
   let score = 0;
 
-  // Emergency frequency is always critical
+  // Affected service sets the floor (Emergency/VOR-ILS safety-first)
   if (product.affectedService === 'Emergency') {
     score += 100;
   } else if (product.affectedService === 'VOR/ILS') {
@@ -332,18 +389,7 @@ function calculateRiskLevel(
     score += 60;
   }
 
-  // Closer stations = higher risk (stronger intermod)
-  if (pair.distance < 5) {
-    score += 40;
-  } else if (pair.distance < 10) {
-    score += 30;
-  } else if (pair.distance < 20) {
-    score += 20;
-  } else if (pair.distance < 50) {
-    score += 10;
-  }
-
-  // Frequency match proximity
+  // Frequency match proximity (how close the product lands on the target)
   if (frequencyDelta > 0) {
     if (frequencyDelta < 0.05) {
       score += 30; // Exact match
@@ -354,31 +400,47 @@ function calculateRiskLevel(
     }
   }
 
-  // Distance to aircraft
-  if (distanceToAircraft !== undefined) {
-    if (distanceToAircraft < 50) {
+  if (physics.hasPosition && physics.weightedRxDbm !== undefined) {
+    // Signal-strength scoring: stronger combined signal at the receiver = higher risk
+    const rx = physics.weightedRxDbm;
+    if (rx >= -55) {
+      score += 40;
+    } else if (rx >= -65) {
       score += 30;
-    } else if (distanceToAircraft < 100) {
+    } else if (rx >= -75) {
       score += 20;
-    } else if (distanceToAircraft < 200) {
+    } else if (rx >= -90) {
+      score += 10;
+    } else {
+      score += 5;
+    }
+
+    // Out of line of sight: demote (but never bury — service floor stands)
+    if (physics.lineOfSight === false) {
+      score -= 40;
+    }
+  } else {
+    // Fallback heuristic when no aircraft position is supplied:
+    // tower-to-tower proximity + combined transmit power
+    if (pair.distance < 5) {
+      score += 40;
+    } else if (pair.distance < 10) {
+      score += 30;
+    } else if (pair.distance < 20) {
+      score += 20;
+    } else if (pair.distance < 50) {
       score += 10;
     }
-  }
 
-  // Line of sight
-  if (lineOfSight === false) {
-    score -= 30; // Reduce score if not in line of sight
-  }
-
-  // Combined transmitter power (if available)
-  const combinedPower =
-    (pair.station1.transmitterPower || 0) + (pair.station2.transmitterPower || 0);
-  if (combinedPower > 20000) {
-    score += 20;
-  } else if (combinedPower > 10000) {
-    score += 15;
-  } else if (combinedPower > 5000) {
-    score += 10;
+    const combinedPower =
+      (pair.station1.transmitterPower || 0) + (pair.station2.transmitterPower || 0);
+    if (combinedPower > 20000) {
+      score += 20;
+    } else if (combinedPower > 10000) {
+      score += 15;
+    } else if (combinedPower > 5000) {
+      score += 10;
+    }
   }
 
   // Determine risk level from score

@@ -497,6 +497,32 @@ export default function IntermodCalculator({
                     />
                   </div>
                 </div>
+                <div style={{ marginTop: 8 }}>
+                  <label className="fo-mono" style={{ display: 'block', marginBottom: 4 }}>
+                    ALTITUDE (FT)
+                  </label>
+                  <input
+                    type="number"
+                    step="500"
+                    min="0"
+                    value={aircraftData.altitude || ''}
+                    onChange={(e) =>
+                      setAircraftData((prev) => ({
+                        ...prev,
+                        altitude: e.target.value ? parseFloat(e.target.value) : undefined,
+                      }))
+                    }
+                    placeholder="35000"
+                    className="fo-input"
+                    style={{ fontSize: 12, padding: '7px 10px' }}
+                  />
+                  <div
+                    className="fo-mono"
+                    style={{ marginTop: 4, fontSize: 10, color: 'var(--fo-mute)', letterSpacing: '0.08em' }}
+                  >
+                    LAT/LNG + ALTITUDE ENABLE LINE-OF-SIGHT (TOWER {`${60}`}M)
+                  </div>
+                </div>
               </details>
 
               <div
@@ -955,20 +981,36 @@ export default function IntermodCalculator({
                         }}
                       >
                         <span className={`fo-risk-pill ${tone.pillClass}`}>{risk.riskLevel}</span>
-                        {product?.affectedService && (
-                          <span
-                            className="fo-mono"
-                            style={{
-                              color: 'var(--fo-accent-2)',
-                              background: 'rgba(0,104,74,0.08)',
-                              padding: '2px 8px',
-                              borderRadius: 999,
-                              border: '1px solid rgba(0,104,74,0.2)',
-                            }}
-                          >
-                            {product.affectedService}
-                          </span>
-                        )}
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
+                          {risk.lineOfSight === false && (
+                            <span
+                              className="fo-mono"
+                              style={{
+                                color: 'var(--fo-crit)',
+                                background: 'rgba(227,75,75,0.1)',
+                                padding: '2px 8px',
+                                borderRadius: 999,
+                                border: '1px solid rgba(227,75,75,0.35)',
+                              }}
+                            >
+                              NO LINE OF SIGHT
+                            </span>
+                          )}
+                          {product?.affectedService && (
+                            <span
+                              className="fo-mono"
+                              style={{
+                                color: 'var(--fo-accent-2)',
+                                background: 'rgba(0,104,74,0.08)',
+                                padding: '2px 8px',
+                                borderRadius: 999,
+                                border: '1px solid rgba(0,104,74,0.2)',
+                              }}
+                            >
+                              {product.affectedService}
+                            </span>
+                          )}
+                        </div>
                       </div>
 
                       <div
