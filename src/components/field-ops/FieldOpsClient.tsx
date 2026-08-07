@@ -15,7 +15,6 @@ import { FieldOpsCurrentFM, FieldOpsCurrentINT } from "./FieldOpsCurrent";
 import { FieldOpsBottomSheet } from "./FieldOpsBottomSheet";
 import { FieldOpsDrawer } from "./FieldOpsDrawer";
 import { MobileFilterBar } from "./MobileFilterBar";
-import CrewModal from "./CrewModal";
 import { computeKpis } from "@/utils/fieldOpsKpi";
 import type { FieldSelection } from "./FieldOpsMap";
 
@@ -87,28 +86,7 @@ export default function FieldOpsClient({
     helpers: InspectionMember[];
     inspectedOn: string;
   } | null>(null);
-  const [defaultCrew, setDefaultCrew] = useState<number[] | null>(null);
-  const [crewModalOpen, setCrewModalOpen] = useState(false);
-  const [crewSaveError, setCrewSaveError] = useState<string | undefined>(undefined);
-  const [crewSaving, setCrewSaving] = useState(false);
   const { userLocation, status: locationStatus, retry: retryLocation } = useGeolocation();
-
-  useEffect(() => {
-    let cancelled = false;
-    fetch('/api/users/me/crew')
-      .then((r) => (r.ok ? r.json() : { defaultHelperUserIds: null }))
-      .then((j: { defaultHelperUserIds: number[] | null }) => {
-        if (cancelled) return;
-        setDefaultCrew(j.defaultHelperUserIds);
-        if (j.defaultHelperUserIds === null) setCrewModalOpen(true);
-      })
-      .catch(() => {
-        if (cancelled) return;
-        setDefaultCrew(null);
-        setCrewModalOpen(true);
-      });
-    return () => { cancelled = true; };
-  }, []);
 
   useEffect(() => {
     fetch("/api/users/inspectors")
@@ -184,8 +162,8 @@ export default function FieldOpsClient({
 
   const selectedTargetKey = selection ? `${selection.kind}-${selection.id}` : null;
   useEffect(() => {
-    setHelperUserIds(defaultCrew ?? []);
-  }, [selectedTargetKey, defaultCrew]);
+    setHelperUserIds([]);
+  }, [selectedTargetKey]);
 
   useEffect(() => {
     setLastInspection(null);
@@ -276,36 +254,6 @@ export default function FieldOpsClient({
     }
   };
 
-  async function persistCrew(ids: number[]) {
-    setCrewSaving(true);
-    setCrewSaveError(undefined);
-    try {
-      const res = await fetch('/api/users/me/crew', {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ defaultHelperUserIds: ids }),
-      });
-      if (!res.ok) {
-        const j = await res.json().catch(() => ({}));
-        throw new Error(j?.error ?? 'crew_save_failed');
-      }
-      const j = (await res.json()) as { defaultHelperUserIds: number[] };
-      setDefaultCrew(j.defaultHelperUserIds);
-      setCrewModalOpen(false);
-    } catch (err) {
-      const code = err instanceof Error ? err.message : 'crew_save_failed';
-      const friendly =
-        code === 'invalid_helper'   ? 'That teammate is no longer active.' :
-        code === 'self_in_list'     ? "You can't add yourself." :
-        code === 'too_many'         ? 'You can pick up to 5 teammates.' :
-        code === 'invalid_body'     ? "Something's wrong with the form." :
-                                      "Couldn't save — try again.";
-      setCrewSaveError(friendly);
-    } finally {
-      setCrewSaving(false);
-    }
-  }
-
   const handleToggleInspection = async () => {
     if (!selection) return;
     setPending(true);
@@ -355,7 +303,7 @@ export default function FieldOpsClient({
         });
         if (!res.ok) throw new Error("Interference update failed");
         if (next === "ตรวจแล้ว") {
-          setHelperUserIds(defaultCrew ?? []);
+          setHelperUserIds([]);
           fetch(`/api/interference/${selectedSite.id}/inspections`)
             .then((r) => r.ok ? r.json() : null)
             .then((data) => {
@@ -532,9 +480,6 @@ export default function FieldOpsClient({
         onOpenDrawer={() => setDrawerOpen(true)}
         locationStatus={locationStatus}
         onRetryLocation={retryLocation}
-        defaultCrew={defaultCrew}
-        inspectors={inspectors}
-        onOpenCrew={() => setCrewModalOpen(true)}
       />
 
       <div style={{ flex: 1, display: "flex", minHeight: 0 }}>
@@ -720,25 +665,8 @@ export default function FieldOpsClient({
           onChangeTab={setTab}
           onToggleTheme={() => setTheme((t) => (t === "dark" ? "light" : "dark"))}
           onClose={() => setDrawerOpen(false)}
-          defaultCrew={defaultCrew}
-          inspectors={inspectors}
-          onOpenCrew={() => {
-            setDrawerOpen(false);
-            setCrewModalOpen(true);
-          }}
         />
       )}
-      <CrewModal
-        open={crewModalOpen}
-        inspectors={inspectors}
-        currentUserId={currentUser?.id ?? -1}
-        initialSelected={defaultCrew ?? []}
-        onSave={(ids) => persistCrew(ids)}
-        onSolo={() => persistCrew([])}
-        onClose={() => setCrewModalOpen(false)}
-        error={crewSaveError}
-        pending={crewSaving}
-      />
     </div>
   );
 }

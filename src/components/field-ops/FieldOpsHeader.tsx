@@ -7,7 +7,6 @@ import type { TypeFilter } from "./FieldOpsFilters";
 import type { GeolocationStatus } from "@/hooks/useGeolocation";
 import { computeKpis } from "@/utils/fieldOpsKpi";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
-import CrewIndicator from "./CrewIndicator";
 
 export function FieldOpsHeader({
   stations,
@@ -19,9 +18,6 @@ export function FieldOpsHeader({
   onOpenDrawer,
   locationStatus,
   onRetryLocation,
-  defaultCrew,
-  inspectors,
-  onOpenCrew,
 }: {
   stations: FMStation[];
   interference: InterferenceSite[];
@@ -32,9 +28,6 @@ export function FieldOpsHeader({
   onOpenDrawer?: () => void;
   locationStatus?: GeolocationStatus;
   onRetryLocation?: () => void;
-  defaultCrew?: number[] | null;
-  inspectors?: { id: number; username: string; displayName: string }[];
-  onOpenCrew?: () => void;
 }) {
   const kpis = computeKpis(stations, interference, type);
 
@@ -59,9 +52,6 @@ export function FieldOpsHeader({
       locationStatus={locationStatus}
       onRetryLocation={onRetryLocation}
       labelColor={labelColor}
-      defaultCrew={defaultCrew}
-      inspectors={inspectors}
-      onOpenCrew={onOpenCrew}
     />;
   }
 
@@ -115,15 +105,6 @@ export function FieldOpsHeader({
         onRetry={onRetryLocation}
         labelColor={labelColor}
       />
-
-      {onOpenCrew && (
-        <CrewIndicator
-          defaultCrew={defaultCrew ?? null}
-          inspectors={inspectors ?? []}
-          onOpen={onOpenCrew}
-          compact={false}
-        />
-      )}
 
       <button
         type="button"
@@ -234,9 +215,6 @@ function MobileHeader({
   locationStatus,
   onRetryLocation,
   labelColor,
-  defaultCrew,
-  inspectors,
-  onOpenCrew,
 }: {
   scopeLabel: string;
   headerBg: string;
@@ -247,9 +225,6 @@ function MobileHeader({
   locationStatus?: GeolocationStatus;
   onRetryLocation?: () => void;
   labelColor: string;
-  defaultCrew?: number[] | null;
-  inspectors?: { id: number; username: string; displayName: string }[];
-  onOpenCrew?: () => void;
 }) {
   return (
     <header
@@ -297,14 +272,6 @@ function MobileHeader({
         onRetry={onRetryLocation}
         labelColor={labelColor}
       />
-      {onOpenCrew && (
-        <CrewIndicator
-          defaultCrew={defaultCrew ?? null}
-          inspectors={inspectors ?? []}
-          onOpen={onOpenCrew}
-          compact={true}
-        />
-      )}
     </header>
   );
 }

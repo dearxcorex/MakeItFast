@@ -18,8 +18,6 @@ vi.mock("@/lib/prisma", () => ({
           created_at: new Date(),
           updated_at: new Date(),
           created_by: null,
-          default_helper_user_ids: [],
-          crew_decided: false,
         };
       }),
     },
