@@ -88,6 +88,8 @@ export async function POST(req: NextRequest) {
   session.role = row.role === "admin" ? "admin" : "inspector";
   session.issuedAt = Date.now();
   session.mustChangePassword = row.must_change_password;
+  session.sessionEpoch = row.session_epoch;
+  session.mode = mode;
   await session.save();
 
   return NextResponse.json(

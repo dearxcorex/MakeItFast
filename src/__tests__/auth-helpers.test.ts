@@ -70,6 +70,48 @@ describe("requireUser", () => {
 
     await expect(requireUser()).rejects.toMatchObject({ status: 401 });
   });
+
+  it("throws 401 when the session epoch is behind the row", async () => {
+    // This is what makes an admin password reset actually cut off a user who
+    // is already signed in, rather than only flagging their row.
+    const cookie = await mintCookie({ userId: 42, sessionEpoch: 1 });
+    cookieStore.set(COOKIE_NAME, cookie.value);
+    vi.mocked(prisma.user.findUnique).mockResolvedValue({
+      id: 42,
+      username: "tester",
+      display_name: "Tester",
+      role: "inspector",
+      active: true,
+      password_hash: "x",
+      session_epoch: 2,
+      created_at: new Date(),
+      updated_at: new Date(),
+      created_by: null,
+    } as any);
+
+    await expect(requireUser()).rejects.toMatchObject({ status: 401 });
+  });
+
+  it("accepts a pre-epoch cookie against a row still at 0", async () => {
+    // Cookies sealed before the column existed carry no epoch; they must keep
+    // working, or deploying the change would log every user out.
+    const cookie = await mintCookie({ userId: 42 });
+    cookieStore.set(COOKIE_NAME, cookie.value);
+    vi.mocked(prisma.user.findUnique).mockResolvedValue({
+      id: 42,
+      username: "tester",
+      display_name: "Tester",
+      role: "inspector",
+      active: true,
+      password_hash: "x",
+      session_epoch: 0,
+      created_at: new Date(),
+      updated_at: new Date(),
+      created_by: null,
+    } as any);
+
+    await expect(requireUser()).resolves.toMatchObject({ id: 42 });
+  });
 });
 
 describe("requireAdmin", () => {

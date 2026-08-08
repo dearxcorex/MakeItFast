@@ -98,4 +98,24 @@ describe("POST /api/admin/users/[id]/reset-password", () => {
       })
     );
   });
+
+  it("revokes the target's live sessions by bumping the epoch", async () => {
+    // Without this the reset only flags the row: a user already signed in
+    // sails past the middleware gate on their old cookie and keeps full access.
+    const c = await mintAdminCookie();
+    cookieStore.set(COOKIE_NAME, c.value);
+    vi.mocked(prisma.user.findUnique).mockResolvedValue(adminRow() as any);
+    vi.mocked(prisma.user.update).mockResolvedValue({} as any);
+    await POST(req("5", { newPassword: "longenough1" }), {
+      params: Promise.resolve({ id: "5" }),
+    });
+    expect(prisma.user.update).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: expect.objectContaining({
+          must_change_password: true,
+          session_epoch: { increment: 1 },
+        }),
+      })
+    );
+  });
 });

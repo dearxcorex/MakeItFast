@@ -15,6 +15,20 @@ export type SessionData = {
    * field existed still validate — absent means "nothing to change".
    */
   mustChangePassword?: boolean;
+  /**
+   * The user's `session_epoch` at the moment this session was issued. Every
+   * password write bumps the column, so a session sealed before a reset no
+   * longer matches and is refused. Optional so cookies sealed before this
+   * field existed still validate — absent is treated as epoch 0, the default
+   * every pre-existing row carries.
+   */
+  sessionEpoch?: number;
+  /**
+   * Which cookie lifetime the user chose at login. Recorded so a later
+   * `save()` (e.g. after a password change) re-issues the cookie under the
+   * same mode instead of silently promoting a 2-hour session to 7 days.
+   */
+  mode?: SessionCookieMode;
 };
 
 function getPassword(): string {
@@ -72,7 +86,9 @@ function isSessionData(value: unknown): value is SessionData {
     (v.role === "admin" || v.role === "inspector") &&
     typeof v.issuedAt === "number" &&
     (v.mustChangePassword === undefined ||
-      typeof v.mustChangePassword === "boolean")
+      typeof v.mustChangePassword === "boolean") &&
+    (v.sessionEpoch === undefined || typeof v.sessionEpoch === "number") &&
+    (v.mode === undefined || v.mode === "persistent" || v.mode === "session")
   );
 }
 

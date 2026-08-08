@@ -18,9 +18,14 @@ vi.mock("@/lib/password", () => ({
 const session: Record<string, unknown> & { save: ReturnType<typeof vi.fn> } = {
   save: vi.fn(),
 };
+/** Records the cookie mode each getSession() call asks for. */
+const { getSessionMode } = vi.hoisted(() => ({ getSessionMode: vi.fn() }));
 vi.mock("@/lib/session", () => ({
   COOKIE_NAME: "fm_session",
-  getSession: async () => session,
+  getSession: async (mode?: string) => {
+    getSessionMode(mode);
+    return session;
+  },
 }));
 
 import prisma from "@/lib/prisma";
@@ -35,6 +40,7 @@ const row = (over: Record<string, unknown> = {}) => ({
   active: true,
   password_hash: "hash:oldpassword",
   must_change_password: false,
+  session_epoch: 0,
   created_at: new Date(),
   updated_at: new Date(),
   created_by: 1,
@@ -56,6 +62,8 @@ beforeEach(() => {
   }
   session.userId = 7;
   session.mustChangePassword = false;
+  session.sessionEpoch = 0;
+  vi.mocked(prisma.user.update).mockResolvedValue({ session_epoch: 1 } as never);
 });
 
 describe("POST /api/auth/change-password", () => {
@@ -117,7 +125,6 @@ describe("POST /api/auth/change-password", () => {
     });
 
     it("200 and rehashes when the current password checks out", async () => {
-      vi.mocked(prisma.user.update).mockResolvedValue({} as never);
       const res = await POST(
         req({ currentPassword: "oldpassword", newPassword: "brandnew123" })
       );
@@ -128,6 +135,7 @@ describe("POST /api/auth/change-password", () => {
         data: {
           password_hash: "hash:brandnew123",
           must_change_password: false,
+          session_epoch: { increment: 1 },
         },
       });
     });
@@ -139,7 +147,6 @@ describe("POST /api/auth/change-password", () => {
       vi.mocked(prisma.user.findUnique).mockResolvedValue(
         row({ must_change_password: true }) as never
       );
-      vi.mocked(prisma.user.update).mockResolvedValue({} as never);
     });
 
     it("does not demand the admin-issued password back", async () => {
@@ -157,6 +164,32 @@ describe("POST /api/auth/change-password", () => {
       expect(prisma.user.update).not.toHaveBeenCalled();
     });
 
+    it("still demands the current password when only the row says forced", async () => {
+      // An admin reset flips the row while an existing session sails on with
+      // the flag it was sealed with. Waiving the proof here would let anyone
+      // reaching that unlocked session seize the account.
+      session.mustChangePassword = false;
+      const res = await POST(req({ newPassword: "brandnew123" }));
+      expect(res.status).toBe(400);
+      await expect(res.json()).resolves.toEqual({
+        error: "current_password_required",
+      });
+      expect(prisma.user.update).not.toHaveBeenCalled();
+    });
+
+    it("still demands the current password when only the cookie says forced", async () => {
+      // The mirror case: a cookie sealed before the change was completed on
+      // another device must not waive the proof for the password it never saw.
+      vi.mocked(prisma.user.findUnique).mockResolvedValue(
+        row({ must_change_password: false }) as never
+      );
+      const res = await POST(req({ newPassword: "brandnew123" }));
+      expect(res.status).toBe(400);
+      await expect(res.json()).resolves.toEqual({
+        error: "current_password_required",
+      });
+    });
+
     it("clears the flag in the DB and in the session", async () => {
       await POST(req({ newPassword: "brandnew123" }));
       expect(prisma.user.update).toHaveBeenCalledWith(
@@ -166,6 +199,55 @@ describe("POST /api/auth/change-password", () => {
       );
       expect(session.mustChangePassword).toBe(false);
       expect(session.save).toHaveBeenCalled();
+    });
+
+    it("bumps the epoch and carries the new value into this session", async () => {
+      await POST(req({ newPassword: "brandnew123" }));
+      expect(prisma.user.update).toHaveBeenCalledWith(
+        expect.objectContaining({
+          data: expect.objectContaining({ session_epoch: { increment: 1 } }),
+        })
+      );
+      // The device doing the change must survive its own revocation.
+      expect(session.sessionEpoch).toBe(1);
+    });
+  });
+
+  describe("session revocation", () => {
+    it("401s a session whose epoch is behind the row", async () => {
+      session.sessionEpoch = 3;
+      vi.mocked(prisma.user.findUnique).mockResolvedValue(
+        row({ session_epoch: 4, must_change_password: true }) as never
+      );
+      const res = await POST(req({ newPassword: "brandnew123" }));
+      expect(res.status).toBe(401);
+      await expect(res.json()).resolves.toEqual({ error: "not_authenticated" });
+      expect(prisma.user.update).not.toHaveBeenCalled();
+    });
+
+    it("treats a cookie sealed before the column existed as epoch 0", async () => {
+      delete session.sessionEpoch;
+      vi.mocked(prisma.user.findUnique).mockResolvedValue(
+        row({ session_epoch: 0 }) as never
+      );
+      const res = await POST(
+        req({ currentPassword: "oldpassword", newPassword: "brandnew123" })
+      );
+      expect(res.status).toBe(200);
+    });
+  });
+
+  describe("cookie lifetime", () => {
+    it("re-issues under the mode recorded at login, not the default", async () => {
+      // getSession() defaults to "persistent" (7 days). Saving through it
+      // would silently promote a 2-hour non-remember-me cookie.
+      session.mode = "session";
+      vi.mocked(prisma.user.findUnique).mockResolvedValue(
+        row({ must_change_password: true }) as never
+      );
+      session.mustChangePassword = true;
+      await POST(req({ newPassword: "brandnew123" }));
+      expect(getSessionMode).toHaveBeenCalledWith("session");
     });
   });
 });

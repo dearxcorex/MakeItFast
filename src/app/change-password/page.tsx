@@ -4,6 +4,9 @@ import { useEffect, useState, type FormEvent } from "react";
 
 const MIN_LENGTH = 8;
 
+/** Sentinel: the bootstrap fetch has navigated away, so don't render into it. */
+const REDIRECTING = Symbol("redirecting");
+
 export default function ChangePasswordPage() {
   const [forced, setForced] = useState<boolean | null>(null);
   const [currentPassword, setCurrentPassword] = useState("");
@@ -17,8 +20,21 @@ export default function ChangePasswordPage() {
   // view of the account, not on how the user arrived at this page.
   useEffect(() => {
     fetch("/api/auth/me", { credentials: "include" })
-      .then((r) => (r.ok ? r.json() : null))
-      .then((j) => setForced(Boolean(j?.user?.mustChangePassword)))
+      .then(async (r) => {
+        // A 401 here means the cookie is stale — revoked by a password write
+        // elsewhere, or simply expired. Middleware still routes it here on the
+        // strength of the flag it was sealed with, so without this bounce the
+        // user loops between the gate and a form that cannot succeed.
+        if (r.status === 401) {
+          window.location.assign("/login?next=%2Fchange-password");
+          return REDIRECTING;
+        }
+        return r.ok ? r.json() : {};
+      })
+      .then((j) => {
+        if (j === REDIRECTING) return;
+        setForced(Boolean(j?.user?.mustChangePassword));
+      })
       .catch(() => setForced(false));
   }, []);
 

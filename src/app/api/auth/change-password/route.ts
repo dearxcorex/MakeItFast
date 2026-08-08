@@ -30,12 +30,25 @@ export async function POST(req: NextRequest) {
   if (!row || !row.active) {
     return NextResponse.json({ error: "not_authenticated" }, { status: 401 });
   }
+  if ((session.sessionEpoch ?? 0) !== (row.session_epoch ?? 0)) {
+    return NextResponse.json({ error: "not_authenticated" }, { status: 401 });
+  }
 
-  // A forced change is already gated by the login that issued the session, so
-  // we don't demand the temporary password back. A voluntary change is not
-  // gated by anything, so it must prove possession of the current one --
-  // otherwise a borrowed unlocked session could silently seize the account.
-  if (!row.must_change_password) {
+  // The current-password proof is waived only when BOTH the session and the
+  // row agree the password is admin-issued. Both halves matter:
+  //
+  //  - session only: a stale cookie whose flag was already cleared elsewhere
+  //    would waive the proof for a password the holder never saw.
+  //  - row only: an admin reset flips the row while the user's existing
+  //    session is untouched, so anyone reaching that already-unlocked session
+  //    could seize the account without knowing any password.
+  //
+  // Requiring both means the waiver survives exactly one case -- a session
+  // minted by logging in with the admin-issued password itself.
+  const forced =
+    session.mustChangePassword === true && row.must_change_password === true;
+
+  if (!forced) {
     if (typeof currentPassword !== "string" || currentPassword.length === 0) {
       return NextResponse.json({ error: "current_password_required" }, { status: 400 });
     }
@@ -51,16 +64,24 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "password_reused" }, { status: 400 });
   }
 
-  await prisma.user.update({
+  // Bumping the epoch revokes this user's other sessions — a password change
+  // should not leave the old credential's sessions alive on other devices.
+  const updated = await prisma.user.update({
     where: { id: row.id },
     data: {
       password_hash: await hashPassword(newPassword),
       must_change_password: false,
+      session_epoch: { increment: 1 },
     },
   });
 
-  session.mustChangePassword = false;
-  await session.save();
+  // Re-acquire under the mode chosen at login before saving: `getSession()`
+  // defaults to "persistent", so saving through it would quietly re-issue a
+  // 2-hour "session" cookie with a 7-day lifetime.
+  const current = await getSession(session.mode ?? "persistent");
+  current.mustChangePassword = false;
+  current.sessionEpoch = updated.session_epoch;
+  await current.save();
 
   return NextResponse.json({ ok: true }, { status: 200 });
 }

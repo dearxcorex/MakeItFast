@@ -28,11 +28,18 @@ export async function POST(
     }
 
     // An admin now knows this password, so it is a handover credential only:
-    // the user must replace it before the account is usable again.
+    // the user must replace it before the account is usable again. Bumping
+    // session_epoch cuts off any session the user already holds — without it
+    // a signed-in user sails past the middleware gate on their old cookie and
+    // the forced rotation never happens.
     const password_hash = await hashPassword(newPassword);
     await prisma.user.update({
       where: { id },
-      data: { password_hash, must_change_password: true },
+      data: {
+        password_hash,
+        must_change_password: true,
+        session_epoch: { increment: 1 },
+      },
     });
 
     return NextResponse.json({ ok: true }, { status: 200 });

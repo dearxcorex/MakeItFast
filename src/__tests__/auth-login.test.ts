@@ -35,6 +35,7 @@ const userRow = async (over: Partial<any> = {}) => ({
   updated_at: new Date(),
   created_by: null,
   must_change_password: false,
+  session_epoch: 0,
   ...over,
 });
 

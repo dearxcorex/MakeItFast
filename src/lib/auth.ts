@@ -47,6 +47,12 @@ export async function requireUser(): Promise<PublicUser> {
   if (!row || !row.active) {
     throw new AuthError(401, "not_authenticated");
   }
+  // A password write bumps session_epoch, so a session issued before it no
+  // longer matches. This is the point where an admin reset actually revokes
+  // the target's live sessions rather than merely flagging the row.
+  if ((session.sessionEpoch ?? 0) !== (row.session_epoch ?? 0)) {
+    throw new AuthError(401, "not_authenticated");
+  }
   return toPublic(row);
 }
 

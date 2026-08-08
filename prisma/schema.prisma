@@ -88,6 +88,10 @@ model user {
   updated_at    DateTime @updatedAt
   created_by    Int?
   must_change_password Boolean @default(false)
+  // Bumped on every password write. Sessions seal the value they were issued
+  // under, so a session minted before a reset no longer matches and is refused
+  // — this is what makes an admin reset actually cut off live access.
+  session_epoch        Int     @default(0)
 
   inspections_led        station_inspection[]             @relation("inspection_lead")
   inspection_members     station_inspection_member[]
