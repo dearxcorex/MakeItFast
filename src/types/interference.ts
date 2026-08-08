@@ -49,12 +49,6 @@ export interface InterferenceFilter {
   lawPaperSent?: 'sent' | 'not_sent';
 }
 
-export interface PropagationOverlay {
-  siteId: number;
-  pngUrl: string;
-  leafletBounds: [[number, number], [number, number]];
-}
-
 export interface BearingValidation {
   calculatedBearing: number;       // 0-360 degrees
   storedDirection: number;         // from site.direction (normalized)
@@ -62,31 +56,5 @@ export interface BearingValidation {
   compassDirection: string;        // e.g., "NE (42°)"
   isMatch: boolean;               // within tolerance
   toleranceDeg: number;           // tolerance used
-}
-
-// Equipment & Propagation types
-
-export type DeploymentType = 'macro_urban' | 'macro_suburban' | 'macro_rural';
-
-export interface EquipmentProfile {
-  name: string;
-  deploymentType: DeploymentType;
-  txPower: number;        // Watts
-  antennaGain: number;    // dBi
-  antennaHeight: number;  // meters
-  hBeamwidth: number;     // horizontal degrees
-  vBeamwidth: number;     // vertical degrees
-  downtilt: number;       // degrees
-  bandwidth: number;      // MHz
-  feederLoss: number;     // dB
-}
-
-export interface EnvironmentConfig {
-  climate: string;
-  landcover: 0 | 1;
-  buildings: 0 | 1;
-  propagationModel: number;
-  diffraction: 0 | 1;
-  reliability: number;
 }
 

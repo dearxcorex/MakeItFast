@@ -19,7 +19,6 @@ vi.mock('react-leaflet', () => ({
   Marker: ({ children }: { children: React.ReactNode }) => <div data-testid="marker">{children}</div>,
   Popup: ({ children }: { children: React.ReactNode }) => <div data-testid="popup">{children}</div>,
   Polyline: () => <div data-testid="polyline" />,
-  ImageOverlay: () => <div data-testid="image-overlay" />,
   useMap: () => ({ flyTo: vi.fn() }),
 }));
 

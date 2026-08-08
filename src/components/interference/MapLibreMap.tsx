@@ -3,7 +3,7 @@
 import { useEffect, useRef } from 'react';
 import maplibregl from 'maplibre-gl';
 import 'maplibre-gl/dist/maplibre-gl.css';
-import type { InterferenceSite, PropagationOverlay } from '@/types/interference';
+import type { InterferenceSite } from '@/types/interference';
 import type { UserLocation } from '@/types/station';
 import { createSectorSVG, siteToSectors, groupSiteSectors, getRankingColor } from '@/utils/sectorMarkers';
 import { calculateEndpoint, validateBearing } from '@/utils/bearingUtils';
@@ -16,58 +16,14 @@ interface MapLibreMapProps {
   sites: InterferenceSite[];
   selectedSite: InterferenceSite | null;
   onSiteSelect: (site: InterferenceSite) => void;
-  propagationOverlays: PropagationOverlay[];
   flyToSite: { lat: number; lng: number; timestamp: number } | null;
   userLocation?: UserLocation;
-}
-
-const SIGNAL_SCALE = [
-  { color: '#ff0000', label: '-50', desc: 'Excellent' },
-  { color: '#ff5500', label: '-60' },
-  { color: '#ff8800', label: '-70', desc: 'Good' },
-  { color: '#ffcc00', label: '-80' },
-  { color: '#ffff00', label: '-85', desc: 'Fair' },
-  { color: '#88ff00', label: '-90' },
-  { color: '#00ff00', label: '-95', desc: 'Weak' },
-  { color: '#00ffaa', label: '-100' },
-  { color: '#00ccff', label: '-105', desc: 'Very Weak' },
-  { color: '#0066ff', label: '-110' },
-  { color: '#0000ff', label: '-115', desc: 'No Signal' },
-];
-
-function SignalLegend() {
-  return (
-    <div className="absolute bottom-6 right-3 z-[10] bg-white/90 dark:bg-gray-900/90 backdrop-blur-sm rounded-lg shadow-lg px-2.5 py-2 pointer-events-auto">
-      <div className="text-[10px] font-semibold text-gray-700 dark:text-gray-200 mb-1.5 text-center">
-        Signal (dBm)
-      </div>
-      <div className="flex flex-col gap-px">
-        {SIGNAL_SCALE.map((s) => (
-          <div key={s.label} className="flex items-center gap-1.5">
-            <div
-              className="w-5 h-2.5 rounded-sm flex-shrink-0"
-              style={{ backgroundColor: s.color }}
-            />
-            <span className="text-[9px] font-mono text-gray-600 dark:text-gray-300 w-7 text-right">
-              {s.label}
-            </span>
-            {s.desc && (
-              <span className="text-[8px] text-gray-400 dark:text-gray-500">
-                {s.desc}
-              </span>
-            )}
-          </div>
-        ))}
-      </div>
-    </div>
-  );
 }
 
 export default function MapLibreMap({
   sites,
   selectedSite,
   onSiteSelect,
-  propagationOverlays,
   flyToSite,
   userLocation,
 }: MapLibreMapProps) {
@@ -76,7 +32,6 @@ export default function MapLibreMap({
   const markersRef = useRef<Map<string, maplibregl.Marker>>(new Map());
   const userMarkerRef = useRef<maplibregl.Marker | null>(null);
   const lastFlyTimestamp = useRef<number>(0);
-  const overlayIdsRef = useRef<Set<string>>(new Set());
 
   // Initialize map
   useEffect(() => {
@@ -366,59 +321,6 @@ export default function MapLibreMap({
     };
   }, [sites, selectedSite, onSiteSelect]);
 
-  // Propagation overlays
-  useEffect(() => {
-    const map = mapRef.current;
-    if (!map) return;
-
-    const applyOverlays = () => {
-      // Remove old overlays
-      for (const id of overlayIdsRef.current) {
-        if (map.getLayer(id)) map.removeLayer(id);
-        if (map.getSource(id)) map.removeSource(id);
-      }
-      overlayIdsRef.current.clear();
-
-      // Add new overlays
-      for (const overlay of propagationOverlays) {
-        const sourceId = `propagation-${overlay.siteId}`;
-        const layerId = `propagation-layer-${overlay.siteId}`;
-
-        // leafletBounds is [[south, west], [north, east]]
-        const [[south, west], [north, east]] = overlay.leafletBounds;
-
-        map.addSource(sourceId, {
-          type: 'image',
-          url: overlay.pngUrl,
-          coordinates: [
-            [west, north], // top-left
-            [east, north], // top-right
-            [east, south], // bottom-right
-            [west, south], // bottom-left
-          ],
-        });
-
-        map.addLayer({
-          id: layerId,
-          type: 'raster',
-          source: sourceId,
-          paint: {
-            'raster-opacity': 0.6,
-          },
-        });
-
-        overlayIdsRef.current.add(sourceId);
-        overlayIdsRef.current.add(layerId);
-      }
-    };
-
-    if (map.loaded()) {
-      applyOverlays();
-    } else {
-      map.on('load', applyOverlays);
-    }
-  }, [propagationOverlays]);
-
   // Fly to site
   useEffect(() => {
     const map = mapRef.current;
@@ -465,10 +367,7 @@ export default function MapLibreMap({
   }, [userLocation]);
 
   return (
-    <div className="relative h-full w-full">
-      {propagationOverlays.length > 0 && <SignalLegend />}
-      <div ref={containerRef} className="h-full w-full" />
-    </div>
+    <div ref={containerRef} className="h-full w-full" />
   );
 }
 

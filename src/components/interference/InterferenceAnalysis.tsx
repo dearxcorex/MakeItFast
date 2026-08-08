@@ -2,12 +2,11 @@
 
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import dynamic from 'next/dynamic';
-import type { InterferenceSite, InterferenceFilter, PropagationOverlay } from '@/types/interference';
+import type { InterferenceSite, InterferenceFilter } from '@/types/interference';
 import type { UserLocation } from '@/types/station';
 import { validateBearing } from '@/utils/bearingUtils';
 import InterferenceFilterPanel from './InterferenceFilterPanel';
 import InterferenceSiteDetail from './InterferenceSiteDetail';
-import CloudRFControls from './CloudRFControls';
 
 const InterferenceMap = dynamic(() => import('./MapLibreMap'), { ssr: false });
 
@@ -29,7 +28,6 @@ export default function InterferenceAnalysis({ userLocation, onStatsChange }: In
   const [sites, setSites] = useState<InterferenceSite[]>([]);
   const [selectedSite, setSelectedSite] = useState<InterferenceSite | null>(null);
   const [filters, setFilters] = useState<InterferenceFilter>({});
-  const [propagationOverlays, setPropagationOverlays] = useState<PropagationOverlay[]>([]);
   const [showDetail, setShowDetail] = useState(false);
   const [flyToSite, setFlyToSite] = useState<{ lat: number; lng: number; timestamp: number } | null>(null);
   const [mobileFiltersOpen, setMobileFiltersOpen] = useState(false);
@@ -103,17 +101,6 @@ export default function InterferenceAnalysis({ userLocation, onStatsChange }: In
     if (site.lat && site.long) {
       setFlyToSite({ lat: site.lat, lng: site.long, timestamp: Date.now() });
     }
-  }, []);
-
-  const handlePropagationResult = useCallback((overlay: PropagationOverlay) => {
-    setPropagationOverlays((prev) => {
-      const filtered = prev.filter((o) => o.siteId !== overlay.siteId);
-      return [...filtered, overlay];
-    });
-  }, []);
-
-  const handleClearOverlays = useCallback(() => {
-    setPropagationOverlays([]);
   }, []);
 
   const handleUpdateSite = useCallback(async (siteId: number, updates: { status?: string; lawPaperSent?: boolean }) => {
@@ -218,12 +205,6 @@ export default function InterferenceAnalysis({ userLocation, onStatsChange }: In
               </button>
               <div className="flex-1 overflow-y-auto space-y-3 scrollbar-stable">
                 <InterferenceSiteDetail site={selectedSite} onUpdateSite={handleUpdateSite} />
-                <CloudRFControls
-                  site={selectedSite}
-                  onResult={handlePropagationResult}
-                  onClearOverlays={handleClearOverlays}
-                  overlayCount={propagationOverlays.length}
-                />
               </div>
             </div>
           ) : (
@@ -244,7 +225,6 @@ export default function InterferenceAnalysis({ userLocation, onStatsChange }: In
               sites={displaySites}
               selectedSite={selectedSite}
               onSiteSelect={handleSiteSelect}
-              propagationOverlays={propagationOverlays}
               flyToSite={flyToSite}
               userLocation={userLocation}
             />
@@ -283,12 +263,6 @@ export default function InterferenceAnalysis({ userLocation, onStatsChange }: In
               {/* Content */}
               <div className="flex-1 overflow-y-auto p-4 space-y-4">
                 <InterferenceSiteDetail site={selectedSite} onUpdateSite={handleUpdateSite} />
-                <CloudRFControls
-                  site={selectedSite}
-                  onResult={handlePropagationResult}
-                  onClearOverlays={handleClearOverlays}
-                  overlayCount={propagationOverlays.length}
-                />
               </div>
             </div>
           )}

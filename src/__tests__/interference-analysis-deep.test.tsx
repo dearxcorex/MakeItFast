@@ -30,17 +30,6 @@ vi.mock('@/components/interference/InterferenceSiteDetail', () => ({
   default: ({ site }: { site: { siteName: string } }) => <div data-testid="site-detail">{site.siteName}</div>,
 }));
 
-vi.mock('@/components/interference/CloudRFControls', () => ({
-  default: ({ onResult, onClearOverlays, overlayCount }: { onResult: (o: unknown) => void; onClearOverlays?: () => void; overlayCount?: number }) => (
-    <div data-testid="cloudrf-controls">
-      <button data-testid="run-prop" onClick={() => onResult({ siteId: 1, pngUrl: 'http://x.com/i.png', leafletBounds: [[13, 100], [14, 101]] })}>
-        Run
-      </button>
-      {onClearOverlays && <button data-testid="clear-overlays" onClick={onClearOverlays}>Clear {overlayCount}</button>}
-    </div>
-  ),
-}));
-
 const mockFetch = vi.fn();
 global.fetch = mockFetch;
 
@@ -122,7 +111,6 @@ describe('InterferenceAnalysis - site selection via map', () => {
     });
 
     expect(container.querySelector('[data-testid="site-detail"]')?.textContent).toContain('Selected Site');
-    expect(container.querySelector('[data-testid="cloudrf-controls"]')).toBeTruthy();
     expect(container.textContent).toContain('Back to filters');
   });
 
@@ -146,62 +134,6 @@ describe('InterferenceAnalysis - site selection via map', () => {
     fireEvent.click(backBtn);
 
     expect(container.querySelector('[data-testid="filter-panel"]')).toBeTruthy();
-  });
-});
-
-describe('InterferenceAnalysis - propagation overlays', () => {
-  it('adds overlay via CloudRFControls and shows overlay count', async () => {
-    const sites = [makeSite({ id: 1, siteName: 'Site' })];
-    mockFetch.mockResolvedValue({ json: () => Promise.resolve({ sites }) });
-
-    const { container } = render(<InterferenceAnalysis />);
-
-    await waitFor(() => expect(capturedMapProps.onSiteSelect).toBeTruthy());
-
-    // Select site to show CloudRFControls
-    const onSiteSelect = capturedMapProps.onSiteSelect as (s: unknown) => void;
-    act(() => {
-      onSiteSelect(sites[0]);
-    });
-
-    // Click Run in mocked CloudRFControls
-    const runBtn = container.querySelector('[data-testid="run-prop"]')!;
-    fireEvent.click(runBtn);
-
-    // Should show overlay count
-    await waitFor(() => {
-      expect(container.textContent).toContain('Clear 1');
-    });
-  });
-
-  it('clears overlays via CloudRFControls', async () => {
-    const sites = [makeSite({ id: 1, siteName: 'Site' })];
-    mockFetch.mockResolvedValue({ json: () => Promise.resolve({ sites }) });
-
-    const { container } = render(<InterferenceAnalysis />);
-
-    await waitFor(() => expect(capturedMapProps.onSiteSelect).toBeTruthy());
-
-    const onSiteSelect = capturedMapProps.onSiteSelect as (s: unknown) => void;
-    act(() => {
-      onSiteSelect(sites[0]);
-    });
-
-    // Add overlay
-    const runBtn = container.querySelector('[data-testid="run-prop"]')!;
-    fireEvent.click(runBtn);
-
-    await waitFor(() => {
-      expect(container.textContent).toContain('Clear 1');
-    });
-
-    // Clear overlays
-    const clearBtn = container.querySelector('[data-testid="clear-overlays"]')!;
-    fireEvent.click(clearBtn);
-
-    await waitFor(() => {
-      expect(container.textContent).toContain('Clear 0');
-    });
   });
 });
 

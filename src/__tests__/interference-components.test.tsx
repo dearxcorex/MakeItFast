@@ -38,30 +38,6 @@ vi.mock('@/components/interference/InterferenceSiteDetail', () => ({
   ),
 }));
 
-vi.mock('@/components/interference/CloudRFControls', () => ({
-  default: ({
-    site,
-    onResult,
-    onClearOverlays,
-    overlayCount,
-  }: {
-    site: { id: number };
-    onResult: (o: unknown) => void;
-    onClearOverlays: () => void;
-    overlayCount: number;
-  }) => (
-    <div data-testid="cloudrf-controls">
-      CloudRF for site {site.id}, overlays: {overlayCount}
-      <button data-testid="add-overlay" onClick={() => onResult({ siteId: site.id, pngUrl: 'test.png', leafletBounds: [[0,0],[1,1]] })}>
-        Add Overlay
-      </button>
-      <button data-testid="clear-overlays" onClick={onClearOverlays}>
-        Clear
-      </button>
-    </div>
-  ),
-}));
-
 import InterferenceAnalysis from '@/components/interference/InterferenceAnalysis';
 
 afterEach(() => {

@@ -77,20 +77,6 @@ model interference_site {
   @@index([status])
 }
 
-model cloudrf_cache {
-  id             Int      @id @default(autoincrement())
-  request_type   String
-  request_hash   String   @unique
-  request_params Json
-  response_data  Json
-  png_url        String?
-  bounds         Json?
-  viewer_url     String?
-  site_id        Int?
-  created_at     DateTime @default(now())
-  expires_at     DateTime
-}
-
 model user {
   id            Int      @id @default(autoincrement())
   username      String   @unique

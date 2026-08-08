@@ -19,7 +19,7 @@ A persistent wiki lives at `wiki/`. At session start, read `wiki/index.md` and `
 
 ## Architecture Overview
 
-FM radio station tracker for NBTC (Thailand), built with Next.js 15, TypeScript, Tailwind CSS 4, and Prisma + PostgreSQL. Three main features: station tracking/inspection, intermodulation calculator, and interference analysis with CloudRF propagation modeling.
+FM radio station tracker for NBTC (Thailand), built with Next.js 15, TypeScript, Tailwind CSS 4, and Prisma + PostgreSQL. Three main features: station tracking/inspection, intermodulation calculator, and interference analysis.
 
 ### Data Flow
 1. **`FMStationsFetcher`** (server component) loads all stations from PostgreSQL via Prisma at page load
@@ -36,15 +36,9 @@ FM radio station tracker for NBTC (Thailand), built with Next.js 15, TypeScript,
 
 ### Database
 - PostgreSQL via Prisma ORM, schema in `prisma/schema.prisma`
-- Three models: `fm_station`, `interference_site`, `cloudrf_cache`
+- Two models: `fm_station`, `interference_site`
 - Connection configured via `DATABASE_URL` env var
 - Prisma client singleton in `src/lib/prisma.ts` with global caching for dev
-
-### CloudRF Integration
-- `src/utils/cloudrf.ts` - API client with request hashing, caching (7-day TTL in `cloudrf_cache`), and rate limiting
-- `src/utils/equipmentProfiles.ts` - Equipment profiles (macro_urban/suburban/rural) and Thailand-specific environment config
-- API routes: `/api/cloudrf/area` (coverage), `/api/cloudrf/path` (point-to-point), `/api/cloudrf/multisite`, `/api/cloudrf/interference`
-- Requires `CLOUDRF_API_KEY` env var for live API calls
 
 ### Component Organization
 - `src/components/map/` - Map sub-components (popups, station cards, navigation button)

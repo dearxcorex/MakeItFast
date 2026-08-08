@@ -1,8 +1,8 @@
 'use client';
 
 import { Fragment, useEffect, useRef } from 'react';
-import { MapContainer, TileLayer, Marker, Popup, Polyline, ImageOverlay, useMap } from 'react-leaflet';
-import type { InterferenceSite, PropagationOverlay } from '@/types/interference';
+import { MapContainer, TileLayer, Marker, Popup, Polyline, useMap } from 'react-leaflet';
+import type { InterferenceSite } from '@/types/interference';
 import type { UserLocation } from '@/types/station';
 import { createTowerIcon, createSourceIcon } from '@/utils/interferenceMapHelpers';
 import { createLocationIcon } from '@/utils/mapHelpers';
@@ -15,51 +15,8 @@ interface InterferenceMapProps {
   sites: InterferenceSite[];
   selectedSite: InterferenceSite | null;
   onSiteSelect: (site: InterferenceSite) => void;
-  propagationOverlays: PropagationOverlay[];
   flyToSite: { lat: number; lng: number; timestamp: number } | null;
   userLocation?: UserLocation;
-}
-
-const SIGNAL_SCALE = [
-  { color: '#ff0000', label: '-50', desc: 'Excellent' },
-  { color: '#ff5500', label: '-60' },
-  { color: '#ff8800', label: '-70', desc: 'Good' },
-  { color: '#ffcc00', label: '-80' },
-  { color: '#ffff00', label: '-85', desc: 'Fair' },
-  { color: '#88ff00', label: '-90' },
-  { color: '#00ff00', label: '-95', desc: 'Weak' },
-  { color: '#00ffaa', label: '-100' },
-  { color: '#00ccff', label: '-105', desc: 'Very Weak' },
-  { color: '#0066ff', label: '-110' },
-  { color: '#0000ff', label: '-115', desc: 'No Signal' },
-];
-
-function SignalLegend() {
-  return (
-    <div className="absolute bottom-6 right-3 z-[1000] bg-white/90 dark:bg-gray-900/90 backdrop-blur-sm rounded-lg shadow-lg px-2.5 py-2 pointer-events-auto">
-      <div className="text-[10px] font-semibold text-gray-700 dark:text-gray-200 mb-1.5 text-center">
-        Signal (dBm)
-      </div>
-      <div className="flex flex-col gap-px">
-        {SIGNAL_SCALE.map((s) => (
-          <div key={s.label} className="flex items-center gap-1.5">
-            <div
-              className="w-5 h-2.5 rounded-sm flex-shrink-0"
-              style={{ backgroundColor: s.color }}
-            />
-            <span className="text-[9px] font-mono text-gray-600 dark:text-gray-300 w-7 text-right">
-              {s.label}
-            </span>
-            {s.desc && (
-              <span className="text-[8px] text-gray-400 dark:text-gray-500">
-                {s.desc}
-              </span>
-            )}
-          </div>
-        ))}
-      </div>
-    </div>
-  );
 }
 
 function FlyToHandler({ flyToSite }: { flyToSite: InterferenceMapProps['flyToSite'] }) {
@@ -95,7 +52,6 @@ export default function InterferenceMap({
   sites,
   selectedSite,
   onSiteSelect,
-  propagationOverlays,
   flyToSite,
   userLocation,
 }: InterferenceMapProps) {
@@ -113,7 +69,6 @@ export default function InterferenceMap({
         />
       </div>
     )}
-    {propagationOverlays.length > 0 && <SignalLegend />}
     <MapContainer
       center={[15.0, 103.5]}
       zoom={7}
@@ -149,16 +104,6 @@ export default function InterferenceMap({
           </Popup>
         </Marker>
       )}
-
-      {/* Propagation overlays */}
-      {propagationOverlays.map((overlay) => (
-        <ImageOverlay
-          key={`overlay-${overlay.siteId}`}
-          url={overlay.pngUrl}
-          bounds={overlay.leafletBounds}
-          opacity={0.6}
-        />
-      ))}
 
       {/* Tower markers — click only, no popup */}
       {sites.map((site) => {
