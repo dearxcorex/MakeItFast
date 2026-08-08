@@ -2,5 +2,6 @@
   "buildCommand": "npm run build",
   "outputDirectory": ".next",
   "cleanUrls": true,
-  "trailingSlash": false
+  "trailingSlash": false,
+  "regions": ["sin1"]
 }
