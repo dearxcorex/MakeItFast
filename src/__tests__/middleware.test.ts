@@ -100,3 +100,56 @@ describe("middleware", () => {
     expect(res.status).not.toBe(307);
   });
 });
+
+describe("middleware forced password change", () => {
+  it("redirects a pending user to /change-password", async () => {
+    const c = await mintCookie({ mustChangePassword: true });
+    const res = await middleware(reqWithCookie("/", c.value));
+    expect(res.status).toBe(307);
+    expect(res.headers.get("location")).toMatch(/\/change-password$/);
+  });
+
+  it("returns 403 JSON for API calls while a change is pending", async () => {
+    const c = await mintCookie({ mustChangePassword: true });
+    const res = await middleware(reqWithCookie("/api/stations", c.value));
+    expect(res.status).toBe(403);
+    await expect(res.json()).resolves.toEqual({
+      error: "password_change_required",
+    });
+  });
+
+  it("lets the change-password page and its API through", async () => {
+    const c = await mintCookie({ mustChangePassword: true });
+    for (const path of [
+      "/change-password",
+      "/api/auth/change-password",
+      "/api/auth/logout",
+      "/api/auth/me",
+    ]) {
+      const res = await middleware(reqWithCookie(path, c.value));
+      expect(res.status, path).not.toBe(307);
+      expect(res.status, path).not.toBe(403);
+    }
+  });
+
+  it("gates an admin too — the temp password is not an admin bypass", async () => {
+    const c = await mintAdminCookie({ mustChangePassword: true });
+    const res = await middleware(reqWithCookie("/api/admin/users", c.value));
+    expect(res.status).toBe(403);
+    await expect(res.json()).resolves.toEqual({
+      error: "password_change_required",
+    });
+  });
+
+  it("does not gate a session without the flag", async () => {
+    const c = await mintCookie();
+    const res = await middleware(reqWithCookie("/", c.value));
+    expect(res.status).not.toBe(307);
+  });
+
+  it("still lets a settled user visit /change-password voluntarily", async () => {
+    const c = await mintCookie({ mustChangePassword: false });
+    const res = await middleware(reqWithCookie("/change-password", c.value));
+    expect(res.status).not.toBe(307);
+  });
+});

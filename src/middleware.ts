@@ -17,6 +17,17 @@ function isAdminPath(pathname: string): boolean {
   return pathname.startsWith("/admin") || pathname.startsWith("/api/admin");
 }
 
+// Reachable while a forced password change is pending. Everything else is
+// blocked, so a user handed an admin-issued password cannot use the app until
+// they replace it — /logout stays open so they can always back out.
+const CHANGE_PASSWORD_PATH = "/change-password";
+const PASSWORD_CHANGE_ALLOWED = [
+  CHANGE_PASSWORD_PATH,
+  "/api/auth/change-password",
+  "/api/auth/logout",
+  "/api/auth/me",
+];
+
 export async function middleware(req: NextRequest) {
   const { pathname } = req.nextUrl;
 
@@ -50,6 +61,16 @@ export async function middleware(req: NextRequest) {
     const next = encodeURIComponent(pathname);
     const loginUrl = new URL(`/login?next=${next}`, req.url);
     return NextResponse.redirect(loginUrl, 307);
+  }
+
+  if (session.mustChangePassword && !PASSWORD_CHANGE_ALLOWED.includes(pathname)) {
+    if (pathname.startsWith("/api/")) {
+      return NextResponse.json(
+        { error: "password_change_required" },
+        { status: 403 }
+      );
+    }
+    return NextResponse.redirect(new URL(CHANGE_PASSWORD_PATH, req.url), 307);
   }
 
   if (isAdminPath(pathname) && session.role !== "admin") {

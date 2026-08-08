@@ -9,6 +9,12 @@ export type SessionData = {
   displayName: string;
   role: "admin" | "inspector";
   issuedAt: number;
+  /**
+   * Set when an admin issued this user's current password. Gates every route
+   * until the user picks their own. Optional so cookies sealed before this
+   * field existed still validate — absent means "nothing to change".
+   */
+  mustChangePassword?: boolean;
 };
 
 function getPassword(): string {
@@ -64,7 +70,9 @@ function isSessionData(value: unknown): value is SessionData {
     typeof v.username === "string" &&
     typeof v.displayName === "string" &&
     (v.role === "admin" || v.role === "inspector") &&
-    typeof v.issuedAt === "number"
+    typeof v.issuedAt === "number" &&
+    (v.mustChangePassword === undefined ||
+      typeof v.mustChangePassword === "boolean")
   );
 }
 

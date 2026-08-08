@@ -82,6 +82,40 @@ describe("UserList", () => {
     expect(disableSelf).not.toBeNull();
   });
 
+  it("shows the database id for each user", () => {
+    const { container } = render(
+      <UserList
+        users={users}
+        currentUserId={1}
+        onResetPassword={() => {}}
+        onEdit={() => {}}
+        onToggleActive={() => {}}
+      />
+    );
+    const bobRow = container.querySelector('[data-userid="3"]');
+    expect(bobRow?.textContent).toContain("3");
+    expect(container.querySelector("thead")?.textContent).toContain("ID");
+  });
+
+  it("badges only the users still holding an admin-issued password", () => {
+    render(
+      <UserList
+        users={[
+          users[0],
+          { ...users[1], mustChangePassword: true },
+          users[2],
+        ]}
+        currentUserId={1}
+        onResetPassword={() => {}}
+        onEdit={() => {}}
+        onToggleActive={() => {}}
+      />
+    );
+    expect(screen.getByTestId("must-change-2")).toBeInTheDocument();
+    expect(screen.queryByTestId("must-change-1")).toBeNull();
+    expect(screen.queryByTestId("must-change-3")).toBeNull();
+  });
+
   it("fires onResetPassword when button clicked", () => {
     const onReset = vi.fn();
     render(

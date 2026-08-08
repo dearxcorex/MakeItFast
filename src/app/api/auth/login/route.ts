@@ -87,6 +87,7 @@ export async function POST(req: NextRequest) {
   session.displayName = row.display_name;
   session.role = row.role === "admin" ? "admin" : "inspector";
   session.issuedAt = Date.now();
+  session.mustChangePassword = row.must_change_password;
   await session.save();
 
   return NextResponse.json(
@@ -99,6 +100,7 @@ export async function POST(req: NextRequest) {
         active: row.active,
         createdAt: row.created_at.toISOString(),
         createdBy: row.created_by,
+        mustChangePassword: row.must_change_password,
       },
     },
     { status: 200 }

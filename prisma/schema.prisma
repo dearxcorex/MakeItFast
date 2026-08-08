@@ -101,6 +101,7 @@ model user {
   created_at    DateTime @default(now())
   updated_at    DateTime @updatedAt
   created_by    Int?
+  must_change_password Boolean @default(false)
 
   inspections_led        station_inspection[]             @relation("inspection_lead")
   inspection_members     station_inspection_member[]

@@ -2,6 +2,8 @@
 
 import { useState } from "react";
 import type { PublicUser } from "@/types/user";
+import { generatePassword } from "@/lib/passwordGenerator";
+import { CopyablePassword } from "./CopyablePassword";
 
 type Props = {
   user: PublicUser;
@@ -55,12 +57,14 @@ export function ResetPasswordModal({ user, onClose, onDone }: Props) {
         {success ? (
           <>
             <p className="text-sm">
-              Password reset. Tell the user the new password verbally or via
-              chat:
+              Password reset. This is the only time it is shown — copy it now
+              and pass it to the user verbally or via chat.
             </p>
-            <pre className="rounded-md bg-black/40 p-3 font-mono text-sm select-all">
-              {newPassword}
-            </pre>
+            <CopyablePassword value={newPassword} />
+            <p className="text-xs opacity-70">
+              {user.displayName} must choose their own password the next time
+              they sign in; this one stops working then.
+            </p>
             <div className="flex justify-end">
               <button
                 type="button"
@@ -73,6 +77,20 @@ export function ResetPasswordModal({ user, onClose, onDone }: Props) {
           </>
         ) : (
           <>
+            <button
+              type="button"
+              data-testid="generate-password"
+              onClick={() => {
+                const pw = generatePassword();
+                setNewPassword(pw);
+                setConfirm(pw);
+                setShowPw(true);
+              }}
+              className="w-full rounded-md border border-[var(--fo-divider)] py-2 text-sm"
+            >
+              Generate strong password
+            </button>
+
             <label className="block text-sm">
               New password
               <div className="relative">

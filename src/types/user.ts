@@ -8,4 +8,6 @@ export type PublicUser = {
   active: boolean;
   createdAt: string; // ISO
   createdBy: number | null;
+  /** True while an admin-issued password is still in force. */
+  mustChangePassword?: boolean;
 };

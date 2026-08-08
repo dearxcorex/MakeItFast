@@ -1,6 +1,8 @@
 "use client";
 
 import { useState } from "react";
+import { generatePassword } from "@/lib/passwordGenerator";
+import { CopyablePassword } from "./CopyablePassword";
 
 type Props = {
   onClose: () => void;
@@ -17,6 +19,7 @@ export function CreateUserModal({ onClose, onCreated }: Props) {
   const [showPw, setShowPw] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [created, setCreated] = useState(false);
 
   const usernameOk = USERNAME_RE.test(username.trim().toLowerCase());
   const passwordOk = password.length >= 8;
@@ -40,7 +43,9 @@ export function CreateUserModal({ onClose, onCreated }: Props) {
     });
     setSubmitting(false);
     if (res.ok) {
-      onCreated();
+      // Don't close yet: a generated password is only knowable from this
+      // screen, so the admin needs a beat to copy it before it's gone.
+      setCreated(true);
       return;
     }
     if (res.status === 409) {
@@ -61,6 +66,28 @@ export function CreateUserModal({ onClose, onCreated }: Props) {
       >
         <h2 className="text-lg font-semibold">New user</h2>
 
+        {created ? (
+          <>
+            <p className="text-sm">
+              <span className="font-mono">{username.trim().toLowerCase()}</span>{" "}
+              created. This is the only time the password is shown — copy it now.
+            </p>
+            <CopyablePassword value={password} />
+            <p className="text-xs opacity-70">
+              They must choose their own password the first time they sign in.
+            </p>
+            <div className="flex justify-end">
+              <button
+                type="button"
+                onClick={onCreated}
+                className="rounded-md bg-[var(--fo-accent)] text-black px-3 py-1.5 text-sm"
+              >
+                Done
+              </button>
+            </div>
+          </>
+        ) : (
+        <>
         <label className="block text-sm">
           Username
           <input
@@ -84,6 +111,18 @@ export function CreateUserModal({ onClose, onCreated }: Props) {
             className="mt-1 w-full rounded-md border border-[var(--fo-divider)] bg-transparent px-3 py-2"
           />
         </label>
+
+        <button
+          type="button"
+          data-testid="generate-password"
+          onClick={() => {
+            setPassword(generatePassword());
+            setShowPw(true);
+          }}
+          className="w-full rounded-md border border-[var(--fo-divider)] py-2 text-sm"
+        >
+          Generate strong password
+        </button>
 
         <label className="block text-sm">
           Password
@@ -150,6 +189,8 @@ export function CreateUserModal({ onClose, onCreated }: Props) {
             {submitting ? "..." : "Create"}
           </button>
         </div>
+        </>
+        )}
       </form>
     </div>
   );

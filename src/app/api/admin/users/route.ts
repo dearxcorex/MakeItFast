@@ -16,6 +16,7 @@ type UserRow = {
   created_at: Date;
   updated_at: Date;
   created_by: number | null;
+  must_change_password?: boolean;
 };
 
 function toPublic(row: UserRow): PublicUser {
@@ -27,6 +28,7 @@ function toPublic(row: UserRow): PublicUser {
     active: row.active,
     createdAt: row.created_at.toISOString(),
     createdBy: row.created_by,
+    mustChangePassword: row.must_change_password ?? false,
   };
 }
 
@@ -90,6 +92,9 @@ export async function POST(req: NextRequest) {
         role,
         active: true,
         created_by: me.id,
+        // The creating admin chose this password, so it is a handover
+        // credential: the new user replaces it on first login.
+        must_change_password: true,
       },
     });
 

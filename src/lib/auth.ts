@@ -22,6 +22,7 @@ function toPublic(row: {
   active: boolean;
   created_at: Date;
   created_by: number | null;
+  must_change_password?: boolean;
 }): PublicUser {
   return {
     id: row.id,
@@ -31,6 +32,7 @@ function toPublic(row: {
     active: row.active,
     createdAt: row.created_at.toISOString(),
     createdBy: row.created_by,
+    mustChangePassword: row.must_change_password ?? false,
   };
 }
 

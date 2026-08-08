@@ -27,10 +27,12 @@ export async function POST(
       return NextResponse.json({ error: "validation_error" }, { status: 400 });
     }
 
+    // An admin now knows this password, so it is a handover credential only:
+    // the user must replace it before the account is usable again.
     const password_hash = await hashPassword(newPassword);
     await prisma.user.update({
       where: { id },
-      data: { password_hash },
+      data: { password_hash, must_change_password: true },
     });
 
     return NextResponse.json({ ok: true }, { status: 200 });
