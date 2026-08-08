@@ -46,14 +46,24 @@ export default function ChangePasswordPage() {
     setSubmitting(true);
     setError(null);
 
-    const res = await fetch("/api/auth/change-password", {
-      method: "POST",
-      credentials: "include",
-      headers: { "content-type": "application/json" },
-      body: JSON.stringify(
-        forced ? { newPassword } : { currentPassword, newPassword }
-      ),
-    });
+    let res: Response;
+    try {
+      res = await fetch("/api/auth/change-password", {
+        method: "POST",
+        credentials: "include",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify(
+          forced ? { newPassword } : { currentPassword, newPassword }
+        ),
+      });
+    } catch {
+      // Without this the rejection escapes and setSubmitting(false) never
+      // runs, leaving the only button on the page stuck on "Saving…" — and
+      // middleware blocks every other route while a change is pending.
+      setError("Could not reach the server. Check your connection and retry.");
+      setSubmitting(false);
+      return;
+    }
 
     if (res.ok) {
       // Hard navigation for the same reason the login page uses one: the
@@ -63,16 +73,37 @@ export default function ChangePasswordPage() {
       return;
     }
 
+    if (res.status === 401 && !forced) {
+      // Distinguish a rejected current password from a dead session: only the
+      // former is something the user can retype their way out of.
+      const body = await res.json().catch(() => ({}));
+      if (body?.error === "invalid_credentials") {
+        setError("Current password is incorrect.");
+        setSubmitting(false);
+        return;
+      }
+    }
+    if (res.status === 401) {
+      window.location.assign("/login?next=%2Fchange-password");
+      return;
+    }
+
     const body = await res.json().catch(() => ({}));
-    setError(
-      body?.error === "invalid_credentials"
-        ? "Current password is incorrect."
-        : body?.error === "password_reused"
-          ? "Pick a password you haven't used here before."
-          : body?.error === "current_password_required"
-            ? "Enter your current password."
-            : `Password must be at least ${MIN_LENGTH} characters.`
-    );
+    if (body?.error === "current_password_required") {
+      // The account is no longer in the forced state the page was rendered
+      // for. Reveal the field so the message is actionable instead of naming
+      // an input that isn't on screen.
+      setForced(false);
+      setError("Enter your current password.");
+    } else if (body?.error === "invalid_credentials") {
+      setError("Current password is incorrect.");
+    } else if (body?.error === "password_reused") {
+      setError("Pick a password you haven't used here before.");
+    } else if (body?.error === "validation_error") {
+      setError(`Password must be at least ${MIN_LENGTH} characters.`);
+    } else {
+      setError("Something went wrong. Please try again.");
+    }
     setSubmitting(false);
   }
 

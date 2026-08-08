@@ -117,7 +117,13 @@ export default function AdminUsersPage() {
         <ResetPasswordModal
           user={resetting}
           onClose={() => setResetting(null)}
-          onDone={() => setResetting(null)}
+          onDone={() => {
+            setResetting(null);
+            // Refetch like the create and edit flows: the reset sets
+            // must_change_password, and without this the "temp pw" badge never
+            // appears, so the list looks like the reset never happened.
+            fetchUsers();
+          }}
         />
       )}
     </div>

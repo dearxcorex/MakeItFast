@@ -53,7 +53,7 @@ describe("CopyablePassword", () => {
     expect(writeText).toHaveBeenCalledWith("Qw3!rtyUiop");
   });
 
-  it("stays usable when the clipboard API rejects", async () => {
+  it("says so out loud when the clipboard API rejects", async () => {
     Object.defineProperty(navigator, "clipboard", {
       value: {
         writeText: async () => {
@@ -64,11 +64,15 @@ describe("CopyablePassword", () => {
     });
     render(<CopyablePassword value="Qw3!rtyUiop" />);
     fireEvent.click(screen.getByRole("button", { name: "Copy" }));
-    // No crash, no false "Copied", and the value is still on screen to read.
+    // A silent failure reads as "not clicked yet", so the admin pastes stale
+    // clipboard contents and then dismisses the only copy of the password.
     await waitFor(() =>
-      expect(screen.getByTestId("handover-password").textContent).toBe(
-        "Qw3!rtyUiop"
-      )
+      expect(screen.getByTestId("copy-failed")).toBeInTheDocument()
+    );
+    expect(screen.getByRole("alert").textContent).toMatch(/by hand/i);
+    expect(screen.queryByRole("button", { name: "Copied" })).toBeNull();
+    expect(screen.getByTestId("handover-password").textContent).toBe(
+      "Qw3!rtyUiop"
     );
   });
 });

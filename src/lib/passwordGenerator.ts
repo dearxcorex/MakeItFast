@@ -19,14 +19,23 @@ export const GENERATED_PASSWORD_LENGTH = 16;
  * skew the charset.
  */
 function randomBelow(max: number): number {
-  const limit = Math.floor(256 / max) * max;
-  const buf = new Uint8Array(1);
-  let v = limit;
-  while (v >= limit) {
-    globalThis.crypto.getRandomValues(buf);
-    v = buf[0];
+  if (!Number.isInteger(max) || max < 1) {
+    throw new RangeError(`randomBelow needs a positive integer, got ${max}`);
   }
-  return v % max;
+  // Draw enough bytes to cover `max`. With a single byte, any max > 256 makes
+  // `limit` collapse to 0 and the rejection loop spin forever, since a byte is
+  // always >= 0. Shuffling a long password reaches max > 256 legitimately.
+  const bytes = Math.ceil(Math.log2(max) / 8) || 1;
+  const space = 2 ** (bytes * 8);
+  const limit = Math.floor(space / max) * max;
+
+  const buf = new Uint8Array(bytes);
+  for (;;) {
+    globalThis.crypto.getRandomValues(buf);
+    let v = 0;
+    for (const b of buf) v = v * 256 + b;
+    if (v < limit) return v % max;
+  }
 }
 
 function pick(charset: string): string {

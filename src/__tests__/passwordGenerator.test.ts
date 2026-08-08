@@ -49,6 +49,22 @@ describe("generatePassword", () => {
     expect(symbolAtIndex3).toBeLessThan(60);
   });
 
+  it("terminates for lengths whose shuffle draws above a single byte", () => {
+    // The shuffle calls randomBelow(i + 1), so any length > 256 asks for a
+    // bound a one-byte sampler cannot express; it used to spin forever.
+    expect(generatePassword(300)).toHaveLength(300);
+  });
+
+  it("still shuffles across the whole string on a wide bound", () => {
+    // The guaranteed classes are seeded at indices 0-3; if the wide-bound
+    // sampler were broken they would stay there. Over 30 long passwords the
+    // symbol should land in the tail at least once.
+    const inTail = Array.from({ length: 30 }, () =>
+      /[!@#$%^&*\-_=+]/.test(generatePassword(300).slice(150))
+    ).filter(Boolean).length;
+    expect(inTail).toBeGreaterThan(0);
+  });
+
   it("does not repeat", () => {
     const seen = new Set(Array.from({ length: 200 }, () => generatePassword()));
     expect(seen.size).toBe(200);
