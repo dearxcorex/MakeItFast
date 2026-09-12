@@ -32,12 +32,3 @@ export interface UserLocation {
   speed?: number | null;
   stale?: boolean;
 }
-
-export type FilterType = {
-  onAir?: boolean;
-  city?: string;
-  province?: string;
-  inspection69?: string;
-  search?: string;
-  submitRequest?: string;
-}

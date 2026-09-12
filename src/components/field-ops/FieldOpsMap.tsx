@@ -10,7 +10,17 @@ import "leaflet.markercluster/dist/MarkerCluster.Default.css";
 import type { FMStation, UserLocation } from "@/types/station";
 import type { InterferenceSite } from "@/types/interference";
 import { makeClusterIcon } from "@/utils/clusterIcon";
+import type { PinBucket } from "@/utils/pinBucket";
 import { bucketForStation, bucketForSite } from "@/utils/pinBucket";
+import {
+  BADGE_LAW,
+  BADGE_MAIN,
+  PIN_COLORS,
+  PIN_GLYPHS,
+  PIN_INK,
+  PIN_SELECTION,
+  PIN_STROKE,
+} from "@/utils/pinTokens";
 import { createLocationIcon } from "@/utils/mapHelpers";
 import NavigationPill from "@/components/interference/NavigationPill";
 
@@ -26,50 +36,27 @@ function isMainStation(s: FMStation): boolean {
 }
 
 /**
- * FM marker — clean teardrop pin, ~24px tall, with distinct glyphs per state.
- *  - PENDING (not inspected): solid neon green + white ring + tiny inner dot
- *  - INSPECTED: solid dark green + white ring + white ✓ glyph
- *  - OFF-AIR: solid grey + white ring + ⊘ glyph
- *  - MAIN STATION (สถานีหลัก): gold ★ badge upper-right
- *  - STACKED (multiple stations at same coords): "+N" badge upper-left
+ * FM marker — clean teardrop pin, ~24px tall.
+ *
+ * Body colour and inner glyph both come from `bucketForStation`, so a pin can
+ * never contradict the cluster arc that summarises it: red ! = revoked,
+ * grey x = off air, green check = inspected, amber ring = not yet inspected.
+ *
+ * Badges are a separate, orthogonal channel — they describe what the station
+ * *is*, not what state it is in:
+ *  - MAIN STATION (สถานีหลัก): gold star, upper-right
+ *  - STACKED (multiple stations at the same coords): "+N", upper-left
  */
 function fmIcon(
   station: FMStation,
   selected: boolean,
   stackCount: number
 ) {
-  const inspected = station.inspection69 === "ตรวจแล้ว";
-  const offAir = !station.onAir;
+  const bucket = bucketForStation(station);
   const main = isMainStation(station);
-  const revoked = station.revoked === true;
 
-  // Color priority: revoked > offAir > inspected > pending. Revoked always wins
-  // because a revoked station broadcasting is a legal-risk state regardless of
-  // inspection or on-air metadata.
-  const bodyFill = revoked
-    ? "#e34b4b"
-    : offAir
-      ? "#5c6c75"
-      : inspected
-        ? "#00684a"
-        : "#f5a623";
-
-  // Glyph reflects inspection state, even on revoked pins — once a revoked
-  // station is inspected we still want the ✓ confirmation, just on the red
-  // body. Color (red) keeps the legal-risk signal; glyph tells you whether
-  // it has been checked.
-  const checkGlyph = `<path d="M8.5 12.5 l2.5 2.5 l5 -5" stroke="#ffffff" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" fill="none"/>`;
-  const warningGlyph = `<path d="M12 7 L12 14 M12 16.5 L12 17.5" stroke="#ffffff" stroke-width="2.4" stroke-linecap="round"/>`;
-  const offAirGlyph = `<path d="M9 9 l6 6 M15 9 l-6 6" stroke="#ffffff" stroke-width="2" stroke-linecap="round"/>`;
-  const pendingDotGlyph = `<g><line x1="12" y1="8" x2="12" y2="13" stroke="#ffffff" stroke-width="2.2" stroke-linecap="round"/><circle cx="12" cy="16" r="1.3" fill="#ffffff"/></g>`;
-
-  const innerGlyph = revoked
-    ? (inspected ? checkGlyph : warningGlyph)
-    : offAir
-      ? offAirGlyph
-      : inspected
-        ? checkGlyph
-        : pendingDotGlyph;
+  const bodyFill = PIN_COLORS[bucket];
+  const innerGlyph = PIN_GLYPHS[bucket];
 
   const baseSize = selected ? 30 : 24;
   const wrapW = baseSize + 14;
@@ -81,28 +68,28 @@ function fmIcon(
     "M12 32 C 12 32 22 22 22 11 A 10 10 0 1 0 2 11 C 2 22 12 32 12 32 Z";
 
   const haloRing = selected
-    ? `<circle cx="12" cy="11" r="13" fill="none" stroke="#00ed64" stroke-width="2" opacity="0.55"/>`
+    ? `<circle cx="12" cy="11" r="13" fill="none" stroke="${PIN_SELECTION}" stroke-width="2" opacity="0.55"/>`
     : "";
 
   const starBadge = main
     ? `<g transform="translate(16, -3)">
-         <circle cx="6" cy="6" r="6" fill="#ffd24a" stroke="#001e2b" stroke-width="1"/>
-         <path d="M6 1.8 L7.2 4.6 L10.2 5 L8 7.1 L8.6 10 L6 8.5 L3.4 10 L4 7.1 L1.8 5 L4.8 4.6 Z" fill="#001e2b"/>
+         <circle cx="6" cy="6" r="6" fill="${BADGE_MAIN}" stroke="${PIN_INK}" stroke-width="1"/>
+         <path d="M6 1.8 L7.2 4.6 L10.2 5 L8 7.1 L8.6 10 L6 8.5 L3.4 10 L4 7.1 L1.8 5 L4.8 4.6 Z" fill="${PIN_INK}"/>
        </g>`
     : "";
 
   const stackBadge =
     stackCount > 1
       ? `<g transform="translate(-3, -3)">
-           <circle cx="6" cy="6" r="6" fill="#001e2b" stroke="#ffffff" stroke-width="1.2"/>
-           <text x="6" y="9" text-anchor="middle" font-size="9" font-family="ui-monospace,monospace" font-weight="700" fill="#ffffff">+${stackCount - 1}</text>
+           <circle cx="6" cy="6" r="6" fill="${PIN_INK}" stroke="${PIN_STROKE}" stroke-width="1.2"/>
+           <text x="6" y="9" text-anchor="middle" font-size="9" font-family="ui-monospace,monospace" font-weight="700" fill="${PIN_STROKE}">+${stackCount - 1}</text>
          </g>`
       : "";
 
   const html = `<div style="position:relative;width:${wrapW}px;height:${wrapH}px;transition:all 120ms ease;">
     <svg width="${wrapW}" height="${wrapH}" viewBox="-7 -3 ${24 + 14} ${32 + 6}" style="position:absolute;left:0;top:0;overflow:visible;">
       ${haloRing}
-      <path d="${pinPath}" fill="${bodyFill}" stroke="#ffffff" stroke-width="1.8" stroke-linejoin="round" filter="drop-shadow(0 1px 2px rgba(0,30,43,0.4))"/>
+      <path d="${pinPath}" fill="${bodyFill}" stroke="${PIN_STROKE}" stroke-width="1.8" stroke-linejoin="round" filter="drop-shadow(0 1px 2px rgba(0,30,43,0.4))"/>
       ${innerGlyph}
       ${starBadge}
       ${stackBadge}
@@ -110,7 +97,7 @@ function fmIcon(
   </div>`;
 
   return L.divIcon({
-    className: `fo-marker fo-marker--fm fo-bucket--${bucketForStation(station)} ${main ? "is-main" : ""} ${selected ? "is-selected" : ""}`,
+    className: `fo-marker fo-marker--fm fo-bucket--${bucket} ${main ? "is-main" : ""} ${selected ? "is-selected" : ""}`,
     html,
     iconSize: [wrapW, wrapH],
     iconAnchor: [wrapW / 2, wrapH - 3],
@@ -119,11 +106,21 @@ function fmIcon(
 }
 
 /**
- * INT marker — same clean teardrop language as FM, with state on top:
- *  - PIN COLOR = ranking severity (Critical=red, Major=amber, Minor=light orange)
- *  - GLYPH = inspection status (✓ inspected, ! pending)
- *  - GOLD ★ in upper-right when LAW PAPER SENT
- *  - SECTOR WEDGE behind the pin when direction is known
+ * INT marker — same teardrop language as FM, same two channels.
+ *
+ * Body colour and glyph come from `bucketForSite`: pending + ranking Critical
+ * is red, every other pending ranking is amber, inspected is green. Ranking
+ * used to paint Minor sites a salmon that no legend could tell apart from
+ * critical red; the exact ranking lives in the detail sheet instead.
+ *
+ * Badges (orthogonal):
+ *  - LAW PAPER SENT: pale document, upper-right. Not the gold star — that
+ *    already means "main station" on FM pins.
+ *  - STACKED: "+N", upper-left.
+ *
+ * SECTOR WEDGES take each sibling's own bucket colour, so an inspected sector
+ * shows a green wedge behind a green pin rather than a wedge still shouting
+ * its old severity.
  */
 function intIcon(
   site: InterferenceSite,
@@ -131,20 +128,11 @@ function intIcon(
   stackCount: number,
   siblings: InterferenceSite[]
 ) {
-  const ranking = (site.ranking || "").toLowerCase();
-  const inspected = site.status === "ตรวจแล้ว";
-  // Inspected sites = green (matches FM's "done" semantics).
-  // Pending sites = ranking severity color so the user can see what's open.
-  const rankingColor =
-    ranking === "critical" ? "#ff5b4a" : ranking === "major" ? "#ffb800" : "#ff8b7e";
-  const bodyFill = inspected ? "#00684a" : rankingColor;
-  const wedgeColor = rankingColor;
+  const bucket = bucketForSite(site);
+  const bodyFill = PIN_COLORS[bucket];
+  const innerGlyph = PIN_GLYPHS[bucket];
   const lawSent = site.lawPaperSent === true;
   const direction = site.direction ?? null;
-
-  const innerGlyph = inspected
-    ? `<path d="M8.5 12.5 l2.5 2.5 l5 -5" stroke="#ffffff" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" fill="none"/>`
-    : `<g><line x1="12" y1="8" x2="12" y2="13" stroke="#ffffff" stroke-width="2.2" stroke-linecap="round"/><circle cx="12" cy="16" r="1.3" fill="#ffffff"/></g>`;
 
   const baseSize = selected ? 30 : 24;
   const wrapW = baseSize + 14;
@@ -154,7 +142,7 @@ function intIcon(
     "M12 32 C 12 32 22 22 22 11 A 10 10 0 1 0 2 11 C 2 22 12 32 12 32 Z";
 
   const haloRing = selected
-    ? `<circle cx="12" cy="11" r="13" fill="none" stroke="#ff5b4a" stroke-width="2" opacity="0.55"/>`
+    ? `<circle cx="12" cy="11" r="13" fill="none" stroke="${PIN_SELECTION}" stroke-width="2" opacity="0.55"/>`
     : "";
 
   // Direction wedges — render ALL co-located sectors as separate wedges
@@ -163,13 +151,7 @@ function intIcon(
   const sectorWedges = siblings
     .map((s) => {
       if (s.direction === null || s.direction === undefined) return "";
-      const sRanking = (s.ranking || "").toLowerCase();
-      const c =
-        sRanking === "critical"
-          ? "#ff5b4a"
-          : sRanking === "major"
-            ? "#ffb800"
-            : "#ff8b7e";
+      const c = PIN_COLORS[bucketForSite(s)];
       const isHead = s.id === site.id;
       const opacity = isHead ? (selected ? 0.9 : 0.7) : 0.55;
       return `<g transform="translate(12, 11)">
@@ -185,23 +167,24 @@ function intIcon(
     siblings.length === 0 && direction !== null
       ? `<g transform="translate(12, 11)" style="transform-origin:0 0;">
            <g transform="rotate(${direction})">
-             <path d="M 0 0 L -10 -28 L 10 -28 Z" fill="${wedgeColor}" opacity="${selected ? 0.85 : 0.65}" stroke="${wedgeColor}" stroke-width="0.5" stroke-opacity="0.9"/>
+             <path d="M 0 0 L -10 -28 L 10 -28 Z" fill="${bodyFill}" opacity="${selected ? 0.85 : 0.65}" stroke="${bodyFill}" stroke-width="0.5" stroke-opacity="0.9"/>
            </g>
          </g>`
       : "";
 
   const lawBadge = lawSent
     ? `<g transform="translate(16, -3)">
-         <circle cx="6" cy="6" r="6" fill="#ffd24a" stroke="#001e2b" stroke-width="1"/>
-         <path d="M6 1.8 L7.2 4.6 L10.2 5 L8 7.1 L8.6 10 L6 8.5 L3.4 10 L4 7.1 L1.8 5 L4.8 4.6 Z" fill="#001e2b"/>
+         <circle cx="6" cy="6" r="6" fill="${BADGE_LAW}" stroke="${PIN_INK}" stroke-width="1"/>
+         <path d="M3.6 2.4 h4.8 v7.2 h-4.8 Z" fill="${PIN_INK}"/>
+         <path d="M4.8 4.3 h2.4 M4.8 6 h2.4 M4.8 7.7 h1.5" stroke="${BADGE_LAW}" stroke-width="0.7" stroke-linecap="round"/>
        </g>`
     : "";
 
   const stackBadge =
     stackCount > 1
       ? `<g transform="translate(-3, -3)">
-           <circle cx="6" cy="6" r="6" fill="#001e2b" stroke="#ffffff" stroke-width="1.2"/>
-           <text x="6" y="9" text-anchor="middle" font-size="9" font-family="ui-monospace,monospace" font-weight="700" fill="#ffffff">+${stackCount - 1}</text>
+           <circle cx="6" cy="6" r="6" fill="${PIN_INK}" stroke="${PIN_STROKE}" stroke-width="1.2"/>
+           <text x="6" y="9" text-anchor="middle" font-size="9" font-family="ui-monospace,monospace" font-weight="700" fill="${PIN_STROKE}">+${stackCount - 1}</text>
          </g>`
       : "";
 
@@ -209,7 +192,7 @@ function intIcon(
     <svg width="${wrapW}" height="${wrapH}" viewBox="-7 -3 ${24 + 14} ${32 + 6}" style="position:absolute;left:0;top:0;overflow:visible;">
       ${sectorWedges || singleWedge}
       ${haloRing}
-      <path d="${pinPath}" fill="${bodyFill}" stroke="#ffffff" stroke-width="1.8" stroke-linejoin="round" filter="drop-shadow(0 1px 2px rgba(0,30,43,0.4))"/>
+      <path d="${pinPath}" fill="${bodyFill}" stroke="${PIN_STROKE}" stroke-width="1.8" stroke-linejoin="round" filter="drop-shadow(0 1px 2px rgba(0,30,43,0.4))"/>
       ${innerGlyph}
       ${stackBadge}
       ${lawBadge}
@@ -217,7 +200,7 @@ function intIcon(
   </div>`;
 
   return L.divIcon({
-    className: `fo-marker fo-marker--int fo-bucket--${bucketForSite(site)} ${selected ? "is-selected" : ""}`,
+    className: `fo-marker fo-marker--int fo-bucket--${bucket} ${selected ? "is-selected" : ""}`,
     html,
     iconSize: [wrapW, wrapH],
     iconAnchor: [wrapW / 2, wrapH - 3],
@@ -258,7 +241,7 @@ function makeSourceIcon(): L.DivIcon {
     <div style="
       width:18px;height:18px;border-radius:50%;
       display:flex;align-items:center;justify-content:center;
-      background:#ff5b4a;border:2px solid #ffffff;
+      background:${PIN_COLORS.critical};border:2px solid ${PIN_STROKE};
       box-shadow:0 0 0 2px rgba(0,30,43,0.45), 0 1px 4px rgba(0,30,43,0.5);
       color:#ffffff;font-family:'Source Code Pro',ui-monospace,monospace;
       font-weight:800;font-size:11px;line-height:1;
@@ -360,7 +343,6 @@ export function FieldOpsMap({
   selection,
   onSelect,
   flyTarget,
-  theme = "dark",
   markingSourceForId = null,
   onMarkSource,
   onCancelMarkSource,
@@ -371,7 +353,6 @@ export function FieldOpsMap({
   selection: FieldSelection;
   onSelect: (sel: FieldSelection) => void;
   flyTarget: [number, number] | null;
-  theme?: "dark" | "light";
   markingSourceForId?: number | null;
   onMarkSource?: (siteId: number, lat: number, lng: number) => void;
   onCancelMarkSource?: () => void;
@@ -469,14 +450,14 @@ export function FieldOpsMap({
   const fmIconCache = useRef<Map<string, L.DivIcon>>(new Map());
   const intIconCache = useRef<Map<string, L.DivIcon>>(new Map());
 
-  const tileUrl =
-    theme === "light"
-      ? "https://tile.openstreetmap.org/{z}/{x}/{y}.png"
-      : "https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png";
+  // One keyless tile source for both themes. CARTO's raster basemaps now
+  // require an API key: unauthenticated tiles still return 200 with a valid
+  // PNG, but with "API KEY REQUIRED" painted into the image, so the dark map
+  // silently rotted. Dark mode is now a CSS filter over these same OSM tiles
+  // — see .leaflet-tile-pane in field-ops.css.
+  const tileUrl = "https://tile.openstreetmap.org/{z}/{x}/{y}.png";
   const tileAttribution =
-    theme === "light"
-      ? '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
-      : '&copy; <a href="https://www.openstreetmap.org/copyright">OSM</a> &copy; <a href="https://carto.com/attributions">CARTO</a>';
+    '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors';
 
   const selectedSite =
     selection?.kind === "int"
@@ -515,7 +496,7 @@ export function FieldOpsMap({
       style={{ width: "100%", height: "100%" }}
       preferCanvas
     >
-      <TileLayer key={theme} url={tileUrl} attribution={tileAttribution} maxZoom={19} />
+      <TileLayer url={tileUrl} attribution={tileAttribution} maxZoom={19} />
 
       {/*
         NOTE: do NOT re-enable `chunkedLoading`. It races with React updates
@@ -531,11 +512,16 @@ export function FieldOpsMap({
           getChildCount: () => number;
           getAllChildMarkers: () => Array<{ options: { icon?: { options?: { className?: string } } } }>;
         }) => {
-          const buckets = { critical: 0, pending: 0, inspected: 0 };
+          const buckets: Record<PinBucket, number> = {
+            critical: 0,
+            pending: 0,
+            offair: 0,
+            inspected: 0,
+          };
           for (const m of c.getAllChildMarkers()) {
             const cn = m.options.icon?.options?.className ?? "";
-            const match = cn.match(/fo-bucket--(critical|pending|inspected)/);
-            if (match) buckets[match[1] as keyof typeof buckets]++;
+            const match = cn.match(/fo-bucket--(critical|pending|offair|inspected)/);
+            if (match) buckets[match[1] as PinBucket]++;
           }
           return makeClusterIcon(c.getChildCount(), buckets);
         }}

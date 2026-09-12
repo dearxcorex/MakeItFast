@@ -1,5 +1,6 @@
 import { describe, it, expect } from "vitest";
 import { computeRingArcs, sizeForCount, makeClusterIcon } from "@/utils/clusterIcon";
+import { PIN_COLORS } from "@/utils/pinTokens";
 
 describe("sizeForCount", () => {
   it("44px for small clusters (≤10)", () => {
@@ -49,6 +50,24 @@ describe("computeRingArcs", () => {
       expect(a.startDeg).toBeCloseTo(cursor, 5);
       cursor += a.sweepDeg;
     }
+  });
+
+  it("counts an offair bucket and orders it after pending", () => {
+    const arcs = computeRingArcs({ critical: 1, pending: 1, offair: 1, inspected: 1 });
+    expect(arcs).toHaveLength(4);
+    expect(arcs.map((a) => a.color)).toEqual([
+      PIN_COLORS.critical,
+      PIN_COLORS.pending,
+      PIN_COLORS.offair,
+      PIN_COLORS.inspected,
+    ]);
+  });
+
+  it("treats omitted buckets as zero", () => {
+    expect(computeRingArcs({})).toEqual([]);
+    expect(computeRingArcs({ offair: 4 })).toEqual([
+      { color: PIN_COLORS.offair, startDeg: 0, sweepDeg: 360 },
+    ]);
   });
 
   it("orders arcs critical → pending → inspected (so the red is always at 12 o'clock)", () => {

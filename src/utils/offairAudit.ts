@@ -1,4 +1,7 @@
-export const TARGET_PROVINCES = ['นครราชสีมา', 'ชัยภูมิ', 'บุรีรัมย์'] as const;
+// บุรีรัมย์ left this office's coverage area and its rows were deleted
+// (scripts/delete-buriram.ts). It stays out of this list so an Excel
+// re-import cannot quietly resurrect it.
+export const TARGET_PROVINCES = ['นครราชสีมา', 'ชัยภูมิ'] as const;
 export type TargetProvince = (typeof TARGET_PROVINCES)[number];
 
 /** Shape of one row as SheetJS returns it from the xlsx file (header → cell). */

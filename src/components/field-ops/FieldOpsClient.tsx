@@ -28,10 +28,6 @@ const IntermodCalculator = dynamic(() => import("@/components/IntermodCalculator
   loading: () => <SimpleLoading label="Loading Intermod Calculator…" />,
 });
 
-const AnalyticsDashboard = dynamic(() => import("@/components/analytics/AnalyticsDashboard"), {
-  ssr: false,
-  loading: () => <SimpleLoading label="Loading Analytics…" />,
-});
 
 interface Props {
   initialStations: FMStation[];
@@ -514,7 +510,6 @@ export default function FieldOpsClient({
                     selection={selection}
                     onSelect={handleSelect}
                     flyTarget={flyTarget}
-                    theme={theme}
                     markingSourceForId={markingSourceForId}
                     onMarkSource={handleMarkSource}
                     onCancelMarkSource={() => setMarkingSourceForId(null)}
@@ -648,11 +643,6 @@ export default function FieldOpsClient({
             </div>
           )}
 
-          {tab === "analytics" && (
-            <div style={{ flex: 1, overflow: "auto", background: "var(--fo-canvas)" }}>
-              <AnalyticsDashboard currentUser={currentUser} />
-            </div>
-          )}
         </main>
       </div>
 

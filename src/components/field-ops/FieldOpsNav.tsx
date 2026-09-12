@@ -1,11 +1,10 @@
 "use client";
 
-export type FieldOpsTab = "field-ops" | "intermod" | "analytics";
+export type FieldOpsTab = "field-ops" | "intermod";
 
 const ITEMS: Array<{ id: FieldOpsTab; label: string; icon: string }> = [
   { id: "field-ops", label: "FIELD OPS", icon: "◉" },
   { id: "intermod", label: "INTERMOD", icon: "Σ" },
-  { id: "analytics", label: "ANALYTICS", icon: "▦" },
 ];
 
 export function FieldOpsNav({

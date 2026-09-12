@@ -1,6 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { convertToFMStation, groupStationsByCoordinates } from '@/services/stationService';
-import type { FMStation } from '@/types/station';
+import { convertToFMStation } from '@/services/stationService';
 
 // Mock Prisma row type
 function makeDbRow(overrides: Record<string, unknown> = {}) {
@@ -130,32 +129,5 @@ describe('convertToFMStation', () => {
   it('returns undefined permit when row.permit is null', () => {
     const result = convertToFMStation(makeDbRow({ permit: null }));
     expect(result.permit).toBeUndefined();
-  });
-});
-
-describe('groupStationsByCoordinates', () => {
-  const stations: FMStation[] = [
-    { id: '1', name: 'A', frequency: 100, latitude: 13.75, longitude: 100.5, city: '', state: '', genre: '' },
-    { id: '2', name: 'B', frequency: 101, latitude: 13.75, longitude: 100.5, city: '', state: '', genre: '' },
-    { id: '3', name: 'C', frequency: 102, latitude: 14.0, longitude: 101.0, city: '', state: '', genre: '' },
-  ];
-
-  it('groups stations at same coordinates', () => {
-    const groups = groupStationsByCoordinates(stations);
-    expect(groups.size).toBe(2);
-    expect(groups.get('13.75,100.5')?.length).toBe(2);
-    expect(groups.get('14,101')?.length).toBe(1);
-  });
-
-  it('returns empty map for empty input', () => {
-    const groups = groupStationsByCoordinates([]);
-    expect(groups.size).toBe(0);
-  });
-
-  it('each station appears in exactly one group', () => {
-    const groups = groupStationsByCoordinates(stations);
-    let total = 0;
-    groups.forEach((g) => (total += g.length));
-    expect(total).toBe(stations.length);
   });
 });

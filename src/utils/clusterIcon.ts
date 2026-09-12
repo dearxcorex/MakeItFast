@@ -1,15 +1,12 @@
 import L from "leaflet";
 import type { PinBucket } from "./pinBucket";
+import { PIN_BUCKET_ORDER, PIN_COLORS, PIN_INK } from "./pinTokens";
 
-const COLORS: Record<PinBucket, string> = {
-  critical: "#ff5b4a",
-  pending: "#ffb800",
-  inspected: "#00684a",
-};
-
-// Always render critical first (top of ring) so the most urgent colour sits at
-// 12 o'clock — that's where the eye lands.
-const ORDER: PinBucket[] = ["critical", "pending", "inspected"];
+/**
+ * Per-bucket child counts. Partial so callers can pass only the buckets they
+ * actually saw; missing keys count as zero.
+ */
+export type BucketCounts = Partial<Record<PinBucket, number>>;
 
 const MIN_SWEEP_DEG = 15;
 
@@ -36,18 +33,18 @@ export interface RingArc {
  * - 1 present bucket → one 360° arc in that bucket's colour.
  * - 2+ present buckets → each gets at least MIN_SWEEP_DEG (15°). The
  *   remaining 360 − N*MIN sweep is split proportionally to bucket counts.
- *   Arcs are emitted in critical → pending → inspected order, contiguous,
- *   starting at 0° (12 o'clock once the SVG is rotated -90°).
+ *   Arcs are emitted in PIN_BUCKET_ORDER (critical → pending → offair →
+ *   inspected), contiguous, starting at 0° (12 o'clock once the SVG is
+ *   rotated -90°).
  */
-export function computeRingArcs(
-  buckets: Record<PinBucket, number>
-): RingArc[] {
-  const total = buckets.critical + buckets.pending + buckets.inspected;
+export function computeRingArcs(buckets: BucketCounts): RingArc[] {
+  const count = (b: PinBucket) => buckets[b] ?? 0;
+  const total = PIN_BUCKET_ORDER.reduce((sum, b) => sum + count(b), 0);
   if (total === 0) return [];
 
-  const present = ORDER.filter((b) => buckets[b] > 0);
+  const present = PIN_BUCKET_ORDER.filter((b) => count(b) > 0);
   if (present.length === 1) {
-    return [{ color: COLORS[present[0]], startDeg: 0, sweepDeg: 360 }];
+    return [{ color: PIN_COLORS[present[0]], startDeg: 0, sweepDeg: 360 }];
   }
 
   const floorTotal = present.length * MIN_SWEEP_DEG;
@@ -56,8 +53,8 @@ export function computeRingArcs(
   let cursor = 0;
   const out: RingArc[] = [];
   for (const b of present) {
-    const sweep = MIN_SWEEP_DEG + (buckets[b] / total) * remaining;
-    out.push({ color: COLORS[b], startDeg: cursor, sweepDeg: sweep });
+    const sweep = MIN_SWEEP_DEG + (count(b) / total) * remaining;
+    out.push({ color: PIN_COLORS[b], startDeg: cursor, sweepDeg: sweep });
     cursor += sweep;
   }
   return out;
@@ -69,7 +66,7 @@ export function computeRingArcs(
  */
 export function makeClusterIcon(
   count: number,
-  buckets: Record<PinBucket, number>
+  buckets: BucketCounts
 ): L.DivIcon {
   const size = sizeForCount(count);
   const ringStroke = 5;
@@ -98,7 +95,7 @@ export function makeClusterIcon(
       <svg width="${size}" height="${size}" viewBox="0 0 ${size} ${size}"
         style="position:absolute;inset:0;overflow:visible;">
         ${ringSvg}
-        <circle cx="${cx}" cy="${cy}" r="${innerR}" fill="#001e2b"
+        <circle cx="${cx}" cy="${cy}" r="${innerR}" fill="${PIN_INK}"
           stroke="rgba(0,30,43,0.25)" stroke-width="1"/>
         <text x="${cx}" y="${cy}" text-anchor="middle" dominant-baseline="central"
           fill="#ffffff" font-family="'Source Code Pro', ui-monospace, monospace"

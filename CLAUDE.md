@@ -19,20 +19,22 @@ A persistent wiki lives at `wiki/`. At session start, read `wiki/index.md` and `
 
 ## Architecture Overview
 
-FM radio station tracker for NBTC (Thailand), built with Next.js 15, TypeScript, Tailwind CSS 4, and Prisma + PostgreSQL. Three main features: station tracking/inspection, intermodulation calculator, and interference analysis.
+FM radio station tracker for NBTC (Thailand), built with Next.js 15, TypeScript, Tailwind CSS 4, and Prisma + PostgreSQL. Two tabs: Field Ops (unified FM + interference map) and Intermod Calculator.
 
 ### Data Flow
-1. **`FMStationsFetcher`** (server component) loads all stations from PostgreSQL via Prisma at page load
-2. Passes transformed data to **`OptimizedFMStationClient`** (client component) which manages all client-side state
-3. **`Map`** component uses `react-leaflet` with dynamic import (`ssr: false`) — Leaflet cannot run server-side
-4. API routes under `src/app/api/` provide REST endpoints for station CRUD and interference data
+1. **`src/app/page.tsx`** renders **`FieldOpsFetcher`** — this is the only app screen
+2. **`FieldOpsFetcher`** (server component) reads `fm_station` and `interference_site` straight from Prisma, converts rows via `convertToFMStation` / `convertToInterferenceSite`, and passes them to **`FieldOpsClient`**
+3. **`FieldOpsClient`** (client component) owns all client state: active tab, filters, selection, theme, and the `isMobile` breakpoint (`window.innerWidth < 900`)
+4. **`FieldOpsMap`** uses `react-leaflet` with dynamic import (`ssr: false`) — Leaflet cannot run server-side
+5. API routes under `src/app/api/` handle mutations (inspection toggles, PATCH station/site) and inspection-history reads. Initial page data does **not** go through them
 
 ### Key Patterns
 - **Database → UI conversion**: `stationService.ts:convertToFMStation()` and `interferenceService.ts:convertToInterferenceSite()` map Prisma snake_case rows to camelCase interfaces. Field names differ significantly (e.g., `id_fm` → `id`, `freq` → `frequency`, `district` → `city`, `province` → `state`)
-- **Station grouping**: Stations at identical coordinates are grouped into clustered markers with multi-station popups (`groupStationsByCoordinates`)
-- **Three tabs**: Stations, Intermod Calculator, Interference Analysis — controlled by `ActiveTab` type in `OptimizedFMStationClient`
-- **Thai language**: Inspection statuses use Thai strings (`'ตรวจแล้ว'`/`'ยังไม่ตรวจ'`, `'ยื่น'`/`'ไม่ยื่น'`). Boolean DB values are converted to/from Thai in the UI layer
-- **Optimistic updates**: `handleUpdateStation` in `OptimizedFMStationClient` updates UI immediately, then syncs with server. Uses `stationsRef` to avoid stale closures in Leaflet popup callbacks
+- **Marker clustering**: `react-leaflet-cluster` in `FieldOpsMap`. Cluster bubbles draw a segmented ring whose arcs are proportional to the child mix (`utils/clusterIcon.ts`), and children are bucketed by `utils/pinBucket.ts` (`critical` / `pending` / `inspected`)
+- **Two tabs**: Field Ops, Intermod — controlled by `FieldOpsTab` in `field-ops/FieldOpsNav.tsx`
+- **Coverage area**: This office tracks **นครราชสีมา** and **ชัยภูมิ** only. บุรีรัมย์ was removed on 2026-09-12 (`scripts/delete-buriram.ts`) and dropped from `TARGET_PROVINCES` so an Excel re-import cannot resurrect it
+- **Thai language**: Inspection statuses use Thai strings (`'ตรวจแล้ว'`/`'ยังไม่ตรวจ'`, `'ยื่น'`/`'ไม่ยื่น'`, `'สถานีหลัก'`). These are **comparison values in logic**, not display strings — a translation pass must not rewrite them
+- **Optimistic updates**: `FieldOpsClient` updates local state immediately, then PATCHes the server and reconciles
 
 ### Database
 - PostgreSQL via Prisma ORM, schema in `prisma/schema.prisma`
@@ -41,24 +43,23 @@ FM radio station tracker for NBTC (Thailand), built with Next.js 15, TypeScript,
 - Prisma client singleton in `src/lib/prisma.ts` with global caching for dev
 
 ### Component Organization
-- `src/components/map/` - Map sub-components (popups, station cards, navigation button)
-- `src/components/sidebar/` - Sidebar sub-components (filter controls, station list items)
-- `src/components/client/` - Client-only components (header, mobile filter bar)
-- `src/components/interference/` - Interference analysis components (map, controls, filters, import)
-- `src/contexts/ThemeContext.tsx` - Theme provider
-- `src/hooks/useOptimizedFilters.ts` - Filtering with distance sorting, hashtag search, performance metrics
-- `src/utils/mapHelpers.ts` - Distance calculation (Haversine), marker icons, map utilities
+- `src/components/field-ops/` - The entire main UI: nav rail, header, map, filters, bottom sheet, mobile drawer
+- `src/components/admin/` - User management modals, reached only from `/admin/users`
+- `src/components/interference/NavigationPill.tsx` - Bearing/distance pill; the only survivor in this directory, used by `FieldOpsMap`
+- `src/contexts/ThemeContext.tsx` - Theme provider mounted in `layout.tsx`. Note Field Ops keeps its own theme state in `localStorage` under `fo-theme`
+- `src/utils/mapHelpers.ts` - `createLocationIcon` only (the user-location marker)
+- `src/utils/clusterIcon.ts`, `src/utils/pinBucket.ts` - Cluster ring rendering and pin bucketing
 - `src/utils/intermodCalculations.ts` - Third-order intermod products, aviation band analysis, path loss
 
 ### Responsive Design
-- **Desktop**: Fixed left nav sidebar + content area + map
-- **Mobile**: Collapsible filter bar, bottom tab navigation, map remains interactive
+- **Desktop**: 72px icon rail (`FieldOpsNav`) + top header (`FieldOpsHeader`) + map-dominant content
+- **Mobile** (`< 900px`): the rail is hidden; a top header with a ☰ opens `FieldOpsDrawer`, filters live in `MobileFilterBar`, and station detail opens in `FieldOpsBottomSheet`
 - Tailwind CSS 4 with CSS-based config (no `tailwind.config.js`)
 
 ## Testing
 
 - Vitest with jsdom environment, `@testing-library/react` for components
-- Tests in `src/__tests__/`, 824+ tests, 81%+ coverage
+- Tests in `src/__tests__/`, 506 tests across 69 files
 - Leaflet requires mocking: `vi.mock('leaflet')` and `vi.mock('react-leaflet')` with divIcon/icon stubs
 - CSS stub at `src/__tests__/css-stub.js` handles `leaflet/dist/leaflet.css` imports (aliased in `vitest.config.ts`)
 - API route tests mock Prisma via `vi.mock('@/lib/prisma')` with method stubs (findMany, findFirst, etc.)

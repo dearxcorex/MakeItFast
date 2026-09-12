@@ -1,7 +1,6 @@
 // src/services/inspectionService.ts
 import { Prisma } from '@prisma/client';
 import prisma from '@/lib/prisma';
-import type { SessionData } from '@/lib/session';
 import type {
   CreateInspectionInput,
   InspectionMember,
@@ -155,15 +154,4 @@ export async function createInspection(input: CreateInspectionInput): Promise<St
     },
   });
   return shape(full as unknown as Record<string, unknown>);
-}
-
-export async function deleteInspection(id: number, actor: SessionData): Promise<number> {
-  const row = await prisma.station_inspection.findUnique({ where: { id } });
-  if (!row) throw new Error('Inspection not found');
-  if (actor.role !== 'admin' && actor.userId !== row.lead_user_id) {
-    throw new Error('forbidden');
-  }
-  await prisma.station_inspection.delete({ where: { id } });
-  await recomputeStationInspectionState(row.station_id);
-  return row.station_id;
 }

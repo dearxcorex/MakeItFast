@@ -61,6 +61,19 @@ describe("bucketForStation", () => {
       bucketForStation(makeFM({ inspection69: "ยังไม่ตรวจ", revoked: false }))
     ).toBe("pending");
   });
+
+  it("off-air FM → offair, and stays offair once inspected", () => {
+    expect(bucketForStation(makeFM({ onAir: false }))).toBe("offair");
+    expect(
+      bucketForStation(makeFM({ onAir: false, inspection69: "ตรวจแล้ว" }))
+    ).toBe("offair");
+  });
+
+  it("revoked outranks off-air", () => {
+    expect(
+      bucketForStation(makeFM({ onAir: false, revoked: true }))
+    ).toBe("critical");
+  });
 });
 
 describe("bucketForSite", () => {

@@ -10,8 +10,8 @@ import {
 } from '@/utils/offairAudit';
 
 describe('TARGET_PROVINCES', () => {
-  it('contains the three Northeast provinces', () => {
-    expect(TARGET_PROVINCES).toEqual(['นครราชสีมา', 'ชัยภูมิ', 'บุรีรัมย์']);
+  it('contains the two Northeast provinces in the coverage area', () => {
+    expect(TARGET_PROVINCES).toEqual(['นครราชสีมา', 'ชัยภูมิ']);
   });
 });
 
@@ -71,7 +71,7 @@ describe('filterByProvinces', () => {
       { 'ลำดับ': 4, 'รหัสสถานี': '05520004', 'ชื่อสถานี': 'D', 'ประเภท': '', 'คลื่นความถี่เดิม': 91, 'จังหวัด': 'บุรีรัมย์', 'เขต/อำเภอ': '', 'ผู้ทดลองออกอากาศเดิม': '', 'หมายเหตุ': '' },
     ]);
     const out = filterByProvinces(parsed, TARGET_PROVINCES);
-    expect(out.map((r) => r.province)).toEqual(['นครราชสีมา', 'ชัยภูมิ', 'บุรีรัมย์']);
+    expect(out.map((r) => r.province)).toEqual(['นครราชสีมา', 'ชัยภูมิ']);
   });
 });
 

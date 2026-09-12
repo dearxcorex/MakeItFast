@@ -1,5 +1,5 @@
 import prisma from '@/lib/prisma';
-import type { InterferenceSite, InterferenceFilter } from '@/types/interference';
+import type { InterferenceSite } from '@/types/interference';
 import type { interference_site } from '@prisma/client';
 
 export function convertToInterferenceSite(row: interference_site): InterferenceSite {
@@ -39,82 +39,6 @@ export function convertToInterferenceSite(row: interference_site): InterferenceS
   };
 }
 
-export async function fetchInterferenceSites(
-  filters?: InterferenceFilter
-): Promise<InterferenceSite[]> {
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const where: any = {};
-
-  if (filters) {
-    if (filters.changwat) {
-      where.changwat = filters.changwat;
-    }
-    if (filters.ranking) {
-      where.ranking = filters.ranking;
-    }
-    if (filters.mcZone) {
-      where.mc_zone = filters.mcZone;
-    }
-    if (filters.nbtcArea) {
-      where.nbtc_area = filters.nbtcArea;
-    }
-    if (filters.hasSource) {
-      where.source_lat = { not: null };
-      where.source_long = { not: null };
-    }
-    if (filters.search) {
-      where.AND = [
-        ...(where.AND || []),
-        {
-          OR: [
-            { site_name: { contains: filters.search, mode: 'insensitive' } },
-            { site_code: { contains: filters.search, mode: 'insensitive' } },
-            { cell_name: { contains: filters.search, mode: 'insensitive' } },
-          ],
-        },
-      ];
-    }
-    if (filters.status) {
-      if (filters.status === 'ตรวจแล้ว') {
-        where.status = 'ตรวจแล้ว';
-      } else {
-        // "ยังไม่ตรวจ" means all non-inspected: null, "High interference", "ยังไม่ตรวจ", etc.
-        // Prisma NOT excludes NULLs (SQL standard), so use OR to include them
-        where.AND = [
-          ...(where.AND || []),
-          { OR: [{ status: null }, { status: { not: 'ตรวจแล้ว' } }] },
-        ];
-      }
-    }
-    if (filters.lawPaperSent) {
-      if (filters.lawPaperSent === 'sent') {
-        where.law_paper_sent = true;
-      } else {
-        where.AND = [
-          ...(where.AND || []),
-          { OR: [{ law_paper_sent: null }, { law_paper_sent: false }] },
-        ];
-      }
-    }
-    if (filters.noiseMin !== undefined || filters.noiseMax !== undefined) {
-      where.avg_ni_carrier = {};
-      if (filters.noiseMin !== undefined) {
-        where.avg_ni_carrier.gte = filters.noiseMin;
-      }
-      if (filters.noiseMax !== undefined) {
-        where.avg_ni_carrier.lte = filters.noiseMax;
-      }
-    }
-  }
-
-  const rows = await prisma.interference_site.findMany({
-    where,
-    orderBy: { site_name: 'asc' },
-  });
-
-  return rows.map(convertToInterferenceSite);
-}
-
 export async function fetchInterferenceSiteById(
   id: number
 ): Promise<InterferenceSite | null> {
@@ -122,44 +46,4 @@ export async function fetchInterferenceSiteById(
     where: { id },
   });
   return row ? convertToInterferenceSite(row) : null;
-}
-
-export async function getDistinctChangwats(): Promise<string[]> {
-  const results = await prisma.interference_site.findMany({
-    select: { changwat: true },
-    distinct: ['changwat'],
-    where: { changwat: { not: null } },
-    orderBy: { changwat: 'asc' },
-  });
-  return results.map((r) => r.changwat!);
-}
-
-export async function getDistinctRankings(): Promise<string[]> {
-  const results = await prisma.interference_site.findMany({
-    select: { ranking: true },
-    distinct: ['ranking'],
-    where: { ranking: { not: null } },
-    orderBy: { ranking: 'asc' },
-  });
-  return results.map((r) => r.ranking!);
-}
-
-export async function getDistinctMcZones(): Promise<string[]> {
-  const results = await prisma.interference_site.findMany({
-    select: { mc_zone: true },
-    distinct: ['mc_zone'],
-    where: { mc_zone: { not: null } },
-    orderBy: { mc_zone: 'asc' },
-  });
-  return results.map((r) => r.mc_zone!);
-}
-
-export async function getDistinctNbtcAreas(): Promise<string[]> {
-  const results = await prisma.interference_site.findMany({
-    select: { nbtc_area: true },
-    distinct: ['nbtc_area'],
-    where: { nbtc_area: { not: null } },
-    orderBy: { nbtc_area: 'asc' },
-  });
-  return results.map((r) => r.nbtc_area!);
 }

@@ -1,7 +1,7 @@
 // src/__tests__/api-inspections.test.ts
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { NextRequest } from 'next/server';
-import { mintCookie, mintAdminCookie } from './helpers/session';
+import { mintCookie } from './helpers/session';
 import { COOKIE_NAME } from '@/lib/session';
 
 vi.mock('@/lib/prisma', () => ({
@@ -39,7 +39,6 @@ vi.mock('next/headers', () => ({
 
 import prisma from '@/lib/prisma';
 import { GET as listInspections, POST as createInspectionRoute } from '@/app/api/stations/[id]/inspections/route';
-import { DELETE as deleteInspectionRoute } from '@/app/api/inspections/[id]/route';
 import { GET as listInspectors } from '@/app/api/users/inspectors/route';
 
 beforeEach(() => {
@@ -140,60 +139,6 @@ describe('POST /api/stations/:id/inspections', () => {
       { params: Promise.resolve({ id: '1' }) },
     );
     expect(r.status).toBe(400);
-  });
-});
-
-describe('DELETE /api/inspections/:id', () => {
-  it('lets the lead delete their own inspection', async () => {
-    vi.mocked(prisma.station_inspection.findUnique).mockResolvedValue({
-      id: 7, station_id: 1, lead_user_id: 3,
-    } as never);
-    vi.mocked(prisma.station_inspection.aggregate).mockResolvedValue({ _max: { inspected_on: null } } as never);
-    vi.mocked(prisma.station_inspection.count).mockResolvedValue(0 as never);
-    vi.mocked(prisma.fm_station.findUnique).mockResolvedValue({
-      id_fm: 1, name: 'X', freq: 95.5, lat: 0, long: 0, district: 'A', province: 'B',
-      type: '', inspection_68: false, inspection_69: false, on_air: false,
-      submit_a_request: true, date_inspected: null, note: null, revoked: false, revoked_note: null, permit: null,
-    } as never);
-
-    const c = await mintCookie(IFF);
-    const r = await deleteInspectionRoute(
-      await req('http://t/api/inspections/7', { method: 'DELETE', cookie: c.header }),
-      { params: Promise.resolve({ id: '7' }) },
-    );
-    expect(r.status).toBe(200);
-  });
-
-  it('returns 403 if not admin and not lead', async () => {
-    vi.mocked(prisma.station_inspection.findUnique).mockResolvedValue({
-      id: 7, station_id: 1, lead_user_id: 999,
-    } as never);
-    const c = await mintCookie(IFF);
-    const r = await deleteInspectionRoute(
-      await req('http://t/api/inspections/7', { method: 'DELETE', cookie: c.header }),
-      { params: Promise.resolve({ id: '7' }) },
-    );
-    expect(r.status).toBe(403);
-  });
-
-  it('admin can delete any inspection', async () => {
-    vi.mocked(prisma.station_inspection.findUnique).mockResolvedValue({
-      id: 7, station_id: 1, lead_user_id: 999,
-    } as never);
-    vi.mocked(prisma.station_inspection.aggregate).mockResolvedValue({ _max: { inspected_on: null } } as never);
-    vi.mocked(prisma.station_inspection.count).mockResolvedValue(0 as never);
-    vi.mocked(prisma.fm_station.findUnique).mockResolvedValue({
-      id_fm: 1, name: 'X', freq: 95.5, lat: 0, long: 0, district: 'A', province: 'B',
-      type: '', inspection_68: false, inspection_69: false, on_air: false,
-      submit_a_request: true, date_inspected: null, note: null, revoked: false, revoked_note: null, permit: null,
-    } as never);
-
-    const c = await mintAdminCookie();
-    const r = await deleteInspectionRoute(
-      await req('http://t/api/inspections/7', { method: 'DELETE', cookie: c.header }),
-      { params: Promise.resolve({ id: '7' }) },
-    );
-    expect(r.status).toBe(200);
   });
 });
 

@@ -33,19 +33,15 @@ vi.mock('@/lib/prisma', () => ({
 
 // Mock interferenceService
 vi.mock('@/services/interferenceService', () => ({
-  fetchInterferenceSites: vi.fn(() => []),
   fetchInterferenceSiteById: vi.fn(() => null),
   convertToInterferenceSite: vi.fn(),
 }));
 
 import prisma from '@/lib/prisma';
 
-let TEST_COOKIE = "";
-beforeAll(async () => {
+beforeAll(() => {
   process.env.SESSION_PASSWORD =
     "test-session-password-32-chars-or-more!!!";
-  const c = await mintCookie();
-  TEST_COOKIE = c.header;
 });
 
 beforeEach(() => {
@@ -100,30 +96,6 @@ describe('GET /api/stations', () => {
 });
 
 // ==================
-// /api/stations/recent
-// ==================
-describe('GET /api/stations/recent', () => {
-  it('returns transformed updates', async () => {
-    vi.mocked(prisma.fm_station.findMany).mockResolvedValue([
-      { id_fm: 1, on_air: true, inspection_68: true, submit_a_request: false } as never,
-    ]);
-    const { GET } = await import('@/app/api/stations/recent/route');
-    const res = await GET();
-    const data = await res.json();
-    expect(res.status).toBe(200);
-    expect(data.updated[0].id).toBe(1);
-    expect(data.updated[0].inspection68).toBe('ตรวจแล้ว');
-    expect(data.updated[0].submitRequest).toBe('ไม่ยื่น');
-    expect(data.count).toBe(1);
-  });
-
-  it('returns 500 on error', async () => {
-    vi.mocked(prisma.fm_station.findMany).mockRejectedValue(new Error('fail'));
-    const { GET } = await import('@/app/api/stations/recent/route');
-    const res = await GET();
-    expect(res.status).toBe(500);
-  });
-});
 
 // ==================
 // /api/stations/[id] GET
@@ -466,48 +438,6 @@ describe('PATCH /api/stations/[id]', () => {
 });
 
 // ==================
-// /api/interference
-// ==================
-describe('GET /api/interference', () => {
-  it('returns sites', async () => {
-    const { fetchInterferenceSites } = await import('@/services/interferenceService');
-    vi.mocked(fetchInterferenceSites).mockResolvedValue([]);
-    const { GET } = await import('@/app/api/interference/route');
-    const req = new NextRequest('http://localhost/api/interference', {
-      headers: { cookie: TEST_COOKIE },
-    });
-    const res = await GET(req);
-    const data = await res.json();
-    expect(res.status).toBe(200);
-    expect(data.sites).toEqual([]);
-    expect(data.total).toBe(0);
-  });
-
-  it('passes query params as filters', async () => {
-    const { fetchInterferenceSites } = await import('@/services/interferenceService');
-    vi.mocked(fetchInterferenceSites).mockResolvedValue([]);
-    const { GET } = await import('@/app/api/interference/route');
-    const req = new NextRequest('http://localhost/api/interference?changwat=Bangkok&ranking=Critical', {
-      headers: { cookie: TEST_COOKIE },
-    });
-    const res = await GET(req);
-    expect(res.status).toBe(200);
-    expect(fetchInterferenceSites).toHaveBeenCalledWith(
-      expect.objectContaining({ changwat: 'Bangkok', ranking: 'Critical' })
-    );
-  });
-
-  it('returns 500 on error', async () => {
-    const { fetchInterferenceSites } = await import('@/services/interferenceService');
-    vi.mocked(fetchInterferenceSites).mockRejectedValue(new Error('fail'));
-    const { GET } = await import('@/app/api/interference/route');
-    const req = new NextRequest('http://localhost/api/interference', {
-      headers: { cookie: TEST_COOKIE },
-    });
-    const res = await GET(req);
-    expect(res.status).toBe(500);
-  });
-});
 
 // ==================
 // /api/interference/[id]
@@ -589,43 +519,6 @@ describe('/api/interference/[id]', () => {
 });
 
 // ==================
-// /api/interference/stats
-// ==================
-describe('GET /api/interference/stats', () => {
-  it('returns stats', async () => {
-    vi.mocked(prisma.interference_site.count)
-      .mockResolvedValueOnce(100 as never) // total
-      .mockResolvedValueOnce(50 as never);  // withSource
-    vi.mocked(prisma.interference_site.aggregate).mockResolvedValue({
-      _avg: { avg_ni_carrier: -85 },
-    } as never);
-    vi.mocked(prisma.interference_site.groupBy)
-      .mockResolvedValueOnce([
-        { ranking: 'Critical', _count: 10 },
-        { ranking: 'Major', _count: 20 },
-      ] as never)
-      .mockResolvedValueOnce([
-        { changwat: 'Bangkok', _count: 30 },
-      ] as never);
-
-    const { GET } = await import('@/app/api/interference/stats/route');
-    const res = await GET();
-    const data = await res.json();
-    expect(res.status).toBe(200);
-    expect(data.total).toBe(100);
-    expect(data.withSource).toBe(50);
-    expect(data.avgNoise).toBe(-85);
-    expect(data.byRanking.Critical).toBe(10);
-    expect(data.byProvince.Bangkok).toBe(30);
-  });
-
-  it('returns 500 on error', async () => {
-    vi.mocked(prisma.interference_site.count).mockRejectedValue(new Error('fail'));
-    const { GET } = await import('@/app/api/interference/stats/route');
-    const res = await GET();
-    expect(res.status).toBe(500);
-  });
-});
 
 // ==================
 // /api/seed

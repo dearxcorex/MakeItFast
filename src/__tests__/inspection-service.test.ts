@@ -27,7 +27,6 @@ import prisma from '@/lib/prisma';
 import {
   listInspectionsForStation,
   createInspection,
-  deleteInspection,
   recomputeStationInspectionState,
 } from '@/services/inspectionService';
 
@@ -148,30 +147,6 @@ describe('recomputeStationInspectionState', () => {
   });
 });
 
-describe('deleteInspection', () => {
-  it('lets admins delete any inspection and recomputes state', async () => {
-    vi.mocked(prisma.station_inspection.findUnique).mockResolvedValue({
-      id: 7, station_id: 1, lead_user_id: 999,
-    } as never);
-    vi.mocked(prisma.station_inspection.aggregate).mockResolvedValue({ _max: { inspected_on: null } } as never);
-    vi.mocked(prisma.station_inspection.count).mockResolvedValue(0 as never);
-
-    await deleteInspection(7, { userId: 1, username: 'admin', displayName: 'Admin', role: 'admin', issuedAt: 0 });
-
-    expect(prisma.station_inspection.delete).toHaveBeenCalledWith({ where: { id: 7 } });
-  });
-
-  it('rejects non-admin who is not the lead', async () => {
-    vi.mocked(prisma.station_inspection.findUnique).mockResolvedValue({
-      id: 7, station_id: 1, lead_user_id: 999,
-    } as never);
-
-    await expect(deleteInspection(7, {
-      userId: 2, username: 'ice', displayName: 'ice', role: 'inspector', issuedAt: 0,
-    })).rejects.toThrow(/forbidden/i);
-  });
-});
-
 describe('createInspection — additional validation', () => {
   it('rejects more than 5 helpers', async () => {
     await expect(createInspection({
@@ -247,22 +222,5 @@ describe('createInspection — additional validation', () => {
       where: { id_fm: 1 },
       data: { date_inspected: '2026-04-03', inspection_69: true },
     }));
-  });
-});
-
-describe('deleteInspection — recompute runs', () => {
-  it('runs recompute after admin delete', async () => {
-    vi.mocked(prisma.station_inspection.findUnique).mockResolvedValue({
-      id: 7, station_id: 1, lead_user_id: 999,
-    } as never);
-    vi.mocked(prisma.station_inspection.aggregate).mockResolvedValue({ _max: { inspected_on: null } } as never);
-    vi.mocked(prisma.station_inspection.count).mockResolvedValue(0 as never);
-
-    await deleteInspection(7, { userId: 1, username: 'admin', displayName: 'Admin', role: 'admin', issuedAt: 0 });
-
-    expect(prisma.fm_station.update).toHaveBeenCalledWith({
-      where: { id_fm: 1 },
-      data: { date_inspected: null, inspection_69: false },
-    });
   });
 });

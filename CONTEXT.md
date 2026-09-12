@@ -4,6 +4,19 @@ A glossary of the domain language used in this project. Implementation details b
 
 ## Glossary
 
+### Coverage area
+The set of provinces this NBTC office is responsible for tracking. Currently **นครราชสีมา**
+(Nakhon Ratchasima) and **ชัยภูมิ** (Chaiyaphum). A station or interference site outside the
+coverage area is not tracked at all — it is absent, not hidden: there is no notion of an
+out-of-area record in this system. **บุรีรัมย์** (Buriram) was in the coverage area until
+2026-09-12 and is no longer.
+
+### Inspector attribution
+Who performed an inspection: one **lead** inspector plus zero or more **helpers** who went
+with them, recorded per inspection with the date. Distinct from **inspection status**, which
+is merely whether a station has been inspected in a given year and carries no person and no
+date. Deleting attribution would not change any station's inspection status.
+
 ### Intermod product
 A spurious frequency created when two FM broadcast signals mix in a nonlinear element. This project tracks **third-order** products only (`2·f1 − f2` and `2·f2 − f1`). A product matters when it lands in the **aviation band** (108–137 MHz).
 

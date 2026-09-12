@@ -115,3 +115,6 @@ reports/offair-snapshot-*.json
 .superpowers/
 reports/interference-non-critical-snapshot.json
 reports/revoked-no-coords-pre-delete.json
+
+# One-off province removal dump (machine-local rollback aid)
+reports/buriram-pre-delete-*.json

@@ -47,7 +47,6 @@ describe('FieldOpsDrawer', () => {
     expect(container.textContent).toContain('NAV');
     expect(container.textContent).toContain('FIELD OPS');
     expect(container.textContent).toContain('INTERMOD');
-    expect(container.textContent).toContain('ANALYTICS');
     expect(container.textContent).toContain('DARK');
     expect(container.textContent).toContain('LIVE');
     expect(container.textContent).toContain('STATS');

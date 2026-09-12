@@ -23,20 +23,12 @@ vi.mock('@/lib/prisma', () => ({
 
 import {
   convertToFMStation,
-  fetchFMStations,
   fetchFMStationById,
-  groupStationsByCoordinates,
-  updateFMStation,
 } from '@/services/stationService';
 
 import {
   convertToInterferenceSite,
-  fetchInterferenceSites,
   fetchInterferenceSiteById,
-  getDistinctChangwats,
-  getDistinctRankings,
-  getDistinctMcZones,
-  getDistinctNbtcAreas,
 } from '@/services/interferenceService';
 
 beforeEach(() => {
@@ -111,20 +103,6 @@ describe('stationService', () => {
     });
   });
 
-  describe('fetchFMStations', () => {
-    it('returns converted stations', async () => {
-      mockFmFindMany.mockResolvedValue([mockDbRow]);
-      const result = await fetchFMStations();
-      expect(result).toHaveLength(1);
-      expect(result[0].name).toBe('Test Station');
-      expect(mockFmFindMany).toHaveBeenCalledWith({ orderBy: { name: 'asc' } });
-    });
-
-    it('throws on database error', async () => {
-      mockFmFindMany.mockRejectedValue(new Error('DB error'));
-      await expect(fetchFMStations()).rejects.toThrow('DB error');
-    });
-  });
 
   describe('fetchFMStationById', () => {
     it('returns station when found', async () => {
@@ -147,36 +125,7 @@ describe('stationService', () => {
     });
   });
 
-  describe('updateFMStation', () => {
-    it('updates and returns converted station', async () => {
-      mockFmUpdate.mockResolvedValue(mockDbRow);
-      const result = await updateFMStation(42, { on_air: false } as never);
-      expect(result.id).toBe(42);
-      expect(mockFmUpdate).toHaveBeenCalledWith({
-        where: { id_fm: 42 },
-        data: { on_air: false },
-      });
-    });
 
-    it('throws on error', async () => {
-      mockFmUpdate.mockRejectedValue(new Error('Update failed'));
-      await expect(updateFMStation(42, {} as never)).rejects.toThrow('Update failed');
-    });
-  });
-
-  describe('groupStationsByCoordinates', () => {
-    it('groups stations at same coordinates', () => {
-      const stations = [
-        { id: '1', name: 'A', frequency: 88, latitude: 13.75, longitude: 100.5, city: 'BKK', state: 'BKK', genre: 'FM' },
-        { id: '2', name: 'B', frequency: 99, latitude: 13.75, longitude: 100.5, city: 'BKK', state: 'BKK', genre: 'FM' },
-        { id: '3', name: 'C', frequency: 101, latitude: 14.0, longitude: 101.0, city: 'CNX', state: 'CNX', genre: 'FM' },
-      ];
-      const groups = groupStationsByCoordinates(stations as never);
-      expect(groups.size).toBe(2);
-      expect(groups.get('13.75,100.5')!.length).toBe(2);
-      expect(groups.get('14,101')!.length).toBe(1);
-    });
-  });
 });
 
 // ==========================================
@@ -231,145 +180,6 @@ describe('interferenceService', () => {
     });
   });
 
-  describe('fetchInterferenceSites', () => {
-    it('returns sites without filter', async () => {
-      mockInterfereFindMany.mockResolvedValue([mockDbRow]);
-      const result = await fetchInterferenceSites();
-      expect(result).toHaveLength(1);
-      expect(result[0].siteCode).toBe('AWN-001');
-    });
-
-    it('applies changwat filter', async () => {
-      mockInterfereFindMany.mockResolvedValue([]);
-      await fetchInterferenceSites({ changwat: 'กรุงเทพ' });
-      expect(mockInterfereFindMany).toHaveBeenCalledWith(
-        expect.objectContaining({
-          where: expect.objectContaining({ changwat: 'กรุงเทพ' }),
-        })
-      );
-    });
-
-    it('applies ranking filter', async () => {
-      mockInterfereFindMany.mockResolvedValue([]);
-      await fetchInterferenceSites({ ranking: 'Critical' });
-      expect(mockInterfereFindMany).toHaveBeenCalledWith(
-        expect.objectContaining({
-          where: expect.objectContaining({ ranking: 'Critical' }),
-        })
-      );
-    });
-
-    it('applies mcZone filter', async () => {
-      mockInterfereFindMany.mockResolvedValue([]);
-      await fetchInterferenceSites({ mcZone: 'Zone1' });
-      expect(mockInterfereFindMany).toHaveBeenCalledWith(
-        expect.objectContaining({
-          where: expect.objectContaining({ mc_zone: 'Zone1' }),
-        })
-      );
-    });
-
-    it('applies nbtcArea filter', async () => {
-      mockInterfereFindMany.mockResolvedValue([]);
-      await fetchInterferenceSites({ nbtcArea: 'Area1' });
-      expect(mockInterfereFindMany).toHaveBeenCalledWith(
-        expect.objectContaining({
-          where: expect.objectContaining({ nbtc_area: 'Area1' }),
-        })
-      );
-    });
-
-    it('applies hasSource filter', async () => {
-      mockInterfereFindMany.mockResolvedValue([]);
-      await fetchInterferenceSites({ hasSource: true });
-      expect(mockInterfereFindMany).toHaveBeenCalledWith(
-        expect.objectContaining({
-          where: expect.objectContaining({
-            source_lat: { not: null },
-            source_long: { not: null },
-          }),
-        })
-      );
-    });
-
-    it('applies search filter', async () => {
-      mockInterfereFindMany.mockResolvedValue([]);
-      await fetchInterferenceSites({ search: 'test' });
-      expect(mockInterfereFindMany).toHaveBeenCalledWith(
-        expect.objectContaining({
-          where: expect.objectContaining({
-            AND: expect.arrayContaining([
-              expect.objectContaining({
-                OR: expect.arrayContaining([
-                  expect.objectContaining({ site_name: { contains: 'test', mode: 'insensitive' } }),
-                ]),
-              }),
-            ]),
-          }),
-        })
-      );
-    });
-
-    it('applies status filter for inspected sites', async () => {
-      mockInterfereFindMany.mockResolvedValue([]);
-      await fetchInterferenceSites({ status: 'ตรวจแล้ว' });
-      expect(mockInterfereFindMany).toHaveBeenCalledWith(
-        expect.objectContaining({
-          where: expect.objectContaining({
-            status: 'ตรวจแล้ว',
-          }),
-        })
-      );
-    });
-
-    it('applies status filter for non-inspected sites including nulls', async () => {
-      mockInterfereFindMany.mockResolvedValue([]);
-      await fetchInterferenceSites({ status: 'ยังไม่ตรวจ' });
-      expect(mockInterfereFindMany).toHaveBeenCalledWith(
-        expect.objectContaining({
-          where: expect.objectContaining({
-            AND: expect.arrayContaining([
-              expect.objectContaining({
-                OR: expect.arrayContaining([
-                  { status: null },
-                  { status: { not: 'ตรวจแล้ว' } },
-                ]),
-              }),
-            ]),
-          }),
-        })
-      );
-    });
-
-    it('combines search and status filters using AND', async () => {
-      mockInterfereFindMany.mockResolvedValue([]);
-      await fetchInterferenceSites({ search: 'test', status: 'ยังไม่ตรวจ' });
-      const call = mockInterfereFindMany.mock.calls[0][0];
-      expect(call.where.AND).toHaveLength(2);
-      // First AND entry: search OR
-      expect(call.where.AND[0].OR).toEqual(
-        expect.arrayContaining([
-          expect.objectContaining({ site_name: { contains: 'test', mode: 'insensitive' } }),
-        ])
-      );
-      // Second AND entry: status OR (null + not inspected)
-      expect(call.where.AND[1].OR).toEqual(
-        expect.arrayContaining([{ status: null }, { status: { not: 'ตรวจแล้ว' } }])
-      );
-    });
-
-    it('applies noise range filter', async () => {
-      mockInterfereFindMany.mockResolvedValue([]);
-      await fetchInterferenceSites({ noiseMin: -90, noiseMax: -80 });
-      expect(mockInterfereFindMany).toHaveBeenCalledWith(
-        expect.objectContaining({
-          where: expect.objectContaining({
-            avg_ni_carrier: { gte: -90, lte: -80 },
-          }),
-        })
-      );
-    });
-  });
 
   describe('fetchInterferenceSiteById', () => {
     it('returns site when found', async () => {
@@ -386,47 +196,4 @@ describe('interferenceService', () => {
     });
   });
 
-  describe('getDistinctChangwats', () => {
-    it('returns distinct changwats', async () => {
-      mockInterfereFindMany.mockResolvedValue([
-        { changwat: 'กรุงเทพ' },
-        { changwat: 'เชียงใหม่' },
-      ]);
-      const result = await getDistinctChangwats();
-      expect(result).toEqual(['กรุงเทพ', 'เชียงใหม่']);
-    });
-  });
-
-  describe('getDistinctRankings', () => {
-    it('returns distinct rankings', async () => {
-      mockInterfereFindMany.mockResolvedValue([
-        { ranking: 'Critical' },
-        { ranking: 'Major' },
-      ]);
-      const result = await getDistinctRankings();
-      expect(result).toEqual(['Critical', 'Major']);
-    });
-  });
-
-  describe('getDistinctMcZones', () => {
-    it('returns distinct mc zones', async () => {
-      mockInterfereFindMany.mockResolvedValue([
-        { mc_zone: 'Zone1' },
-        { mc_zone: 'Zone2' },
-      ]);
-      const result = await getDistinctMcZones();
-      expect(result).toEqual(['Zone1', 'Zone2']);
-    });
-  });
-
-  describe('getDistinctNbtcAreas', () => {
-    it('returns distinct nbtc areas', async () => {
-      mockInterfereFindMany.mockResolvedValue([
-        { nbtc_area: 'Area1' },
-        { nbtc_area: 'Area2' },
-      ]);
-      const result = await getDistinctNbtcAreas();
-      expect(result).toEqual(['Area1', 'Area2']);
-    });
-  });
 });

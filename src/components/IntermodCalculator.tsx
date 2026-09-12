@@ -166,84 +166,6 @@ export default function IntermodCalculator({
     };
   }, [riskAssessments]);
 
-  const handleExportPDF = useCallback(() => {
-    if (!calculationResult || !riskAssessments.length) return;
-    const printWindow = window.open('', '_blank');
-    if (!printWindow) {
-      alert('Please allow popups to generate the PDF report');
-      return;
-    }
-    const htmlContent = `<!DOCTYPE html>
-<html><head><title>Intermodulation Analysis Report</title>
-<style>
-  body { font-family: 'Inter', sans-serif; padding: 32px; max-width: 920px; margin: 0 auto; color: #001e2b; }
-  h1 { font-family: 'Playfair Display', Georgia, serif; color: #001e2b; border-bottom: 3px solid #00ed64; padding-bottom: 10px; font-weight: 400; }
-  h2 { font-family: 'Source Code Pro', monospace; color: #00684a; text-transform: uppercase; letter-spacing: 0.16em; font-size: 12px; margin-top: 28px; }
-  .summary { background: #f5f3ef; padding: 16px; border: 1px solid #e2dfd8; border-radius: 12px; margin: 18px 0; }
-  .summary-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; margin-top: 10px; }
-  .summary-item { text-align: center; padding: 10px; background: #fff; border: 1px solid #e2dfd8; border-radius: 8px; }
-  .summary-value { font-family: 'Playfair Display', serif; font-size: 28px; font-weight: 400; }
-  .critical { color: #e34b4b; }
-  .high { color: #f5a623; }
-  .medium { color: #d4a017; }
-  .low { color: #00684a; }
-  table { width: 100%; border-collapse: collapse; margin-top: 14px; }
-  th, td { padding: 9px 10px; text-align: left; border-bottom: 1px solid #e2dfd8; font-size: 12px; }
-  th { font-family: 'Source Code Pro', monospace; font-size: 10px; letter-spacing: 0.16em; text-transform: uppercase; color: #5c6c75; background: #f5f3ef; }
-  .risk-badge { padding: 2px 8px; border-radius: 999px; font-family: 'Source Code Pro', monospace; font-size: 9px; font-weight: 600; letter-spacing: 0.16em; border: 1px solid currentColor; }
-  .risk-critical { color: #e34b4b; }
-  .risk-high { color: #f5a623; }
-  .risk-medium { color: #d4a017; }
-  .risk-low { color: #00684a; }
-  .footer { margin-top: 36px; padding-top: 14px; border-top: 1px solid #e2dfd8; color: #5c6c75; font-size: 11px; }
-  @media print { body { padding: 0; } }
-</style></head><body>
-  <h1>FM Station Intermodulation Analysis</h1>
-  <p style="color:#5c6c75;font-size:12px;">Generated ${new Date().toLocaleString()} · Target ${targetAircraftFrequency} MHz</p>
-
-  <h2>Analysis Summary</h2>
-  <div class="summary">
-    <div class="summary-grid">
-      <div class="summary-item"><div class="summary-value critical">${summary?.byRisk.CRITICAL || 0}</div><div>Critical</div></div>
-      <div class="summary-item"><div class="summary-value high">${summary?.byRisk.HIGH || 0}</div><div>High</div></div>
-      <div class="summary-item"><div class="summary-value medium">${summary?.byRisk.MEDIUM || 0}</div><div>Medium</div></div>
-      <div class="summary-item"><div class="summary-value low">${summary?.byRisk.LOW || 0}</div><div>Low</div></div>
-    </div>
-    <p style="margin-top: 14px; margin-bottom: 0; font-size: 12px; color:#5c6c75;">
-      Total stations analyzed: ${totalStationsCount}<br>
-      FM station pairs found: ${calculationResult?.dangerousPairs.length}<br>
-      Calculation time: ${calculationResult?.calculationTimeMs.toFixed(2)} ms
-    </p>
-  </div>
-
-  <h2>FM Station Pairs · Target ${targetAircraftFrequency} MHz</h2>
-  <table>
-    <tr><th>Risk</th><th>Station 1</th><th>Station 2</th><th>Formula</th><th>Distance</th></tr>
-    ${riskAssessments
-      .slice(0, 100)
-      .map(
-        (r) => `
-    <tr>
-      <td><span class="risk-badge risk-${r.riskLevel.toLowerCase()}">${r.riskLevel}</span></td>
-      <td>${r.pair.station1.name} (${r.pair.station1.frequency} MHz)</td>
-      <td>${r.pair.station2.name} (${r.pair.station2.frequency} MHz)</td>
-      <td>${r.pair.aviationProducts[0]?.type || '-'}</td>
-      <td>${formatDistance(r.pair.distance)}</td>
-    </tr>`
-      )
-      .join('')}
-  </table>
-  ${riskAssessments.length > 100 ? `<p style="font-size:11px;color:#5c6c75;"><em>Showing first 100 of ${riskAssessments.length} results</em></p>` : ''}
-
-  <div class="footer">
-    <p>FM Station Intermodulation Calculator · NBTC Thailand · field-ops dashboard</p>
-  </div>
-</body></html>`;
-    printWindow.document.write(htmlContent);
-    printWindow.document.close();
-    printWindow.print();
-  }, [calculationResult, riskAssessments, summary, totalStationsCount, targetAircraftFrequency]);
-
   return (
     <div
       className="fo-light"
@@ -636,18 +558,6 @@ export default function IntermodCalculator({
               Interference pairs
             </div>
           </div>
-          {calculationResult && riskAssessments.length > 0 && (
-            <button
-              type="button"
-              onClick={handleExportPDF}
-              className="fo-pill"
-            >
-              <svg width={14} height={14} fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-              </svg>
-              EXPORT PDF
-            </button>
-          )}
         </div>
 
         {!calculationResult ? (

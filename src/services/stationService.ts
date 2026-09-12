@@ -31,18 +31,6 @@ export function convertToFMStation(row: fm_station): FMStation {
   };
 }
 
-export async function fetchFMStations(): Promise<FMStation[]> {
-  try {
-    const data = await prisma.fm_station.findMany({
-      orderBy: { name: 'asc' },
-    });
-    return data.map(convertToFMStation);
-  } catch (error) {
-    console.error('Service error fetching FM stations:', error);
-    throw error;
-  }
-}
-
 export async function fetchFMStationById(id: number): Promise<FMStation | null> {
   try {
     const data = await prisma.fm_station.findUnique({
@@ -53,36 +41,5 @@ export async function fetchFMStationById(id: number): Promise<FMStation | null> 
   } catch (error) {
     console.error('Service error fetching FM station:', error);
     return null;
-  }
-}
-
-// Group stations by identical coordinates
-export function groupStationsByCoordinates(stations: FMStation[]): Map<string, FMStation[]> {
-  const groupedStations = new Map<string, FMStation[]>();
-
-  stations.forEach(station => {
-    const coordKey = `${station.latitude},${station.longitude}`;
-
-    if (groupedStations.has(coordKey)) {
-      groupedStations.get(coordKey)!.push(station);
-    } else {
-      groupedStations.set(coordKey, [station]);
-    }
-  });
-
-  return groupedStations;
-}
-
-// Update station data in the database
-export async function updateFMStation(stationId: number, updates: Partial<fm_station>): Promise<FMStation> {
-  try {
-    const data = await prisma.fm_station.update({
-      where: { id_fm: stationId },
-      data: updates,
-    });
-    return convertToFMStation(data);
-  } catch (error) {
-    console.error('Service error updating FM station:', error);
-    throw error;
   }
 }

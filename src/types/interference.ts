@@ -35,26 +35,3 @@ export interface InterferenceSite {
   updatedAt: Date;
 }
 
-export interface InterferenceFilter {
-  changwat?: string;
-  ranking?: string;
-  mcZone?: string;
-  nbtcArea?: string;
-  hasSource?: boolean;
-  search?: string;
-  status?: string;
-  noiseMin?: number;
-  noiseMax?: number;
-  directionMatch?: 'match' | 'mismatch';
-  lawPaperSent?: 'sent' | 'not_sent';
-}
-
-export interface BearingValidation {
-  calculatedBearing: number;       // 0-360 degrees
-  storedDirection: number;         // from site.direction (normalized)
-  angularDifference: number;       // 0-180 degrees
-  compassDirection: string;        // e.g., "NE (42°)"
-  isMatch: boolean;               // within tolerance
-  toleranceDeg: number;           // tolerance used
-}
-

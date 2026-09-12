@@ -14,7 +14,6 @@ interface NavItem {
 const NAV_ITEMS: NavItem[] = [
   { id: "field-ops", label: "FIELD OPS", icon: "⚑" },
   { id: "intermod", label: "INTERMOD", icon: "Σ" },
-  { id: "analytics", label: "ANALYTICS", icon: "▦" },
 ];
 
 export function FieldOpsDrawer({

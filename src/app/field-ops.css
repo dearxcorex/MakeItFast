@@ -91,6 +91,14 @@
   font-family: var(--fo-body);
 }
 
+/* Dark basemap without a tile-provider API key. Only .leaflet-tile-pane is
+   filtered: markers, cluster rings, popups and the location dot live in
+   sibling panes, so they keep their real colours. */
+.field-ops-root[data-theme="dark"] .leaflet-tile-pane,
+.field-ops-root:not([data-theme]) .leaflet-tile-pane {
+  filter: invert(1) hue-rotate(180deg) brightness(0.92) contrast(0.9) saturate(0.65);
+}
+
 /* ─── Theme-aware surface tokens (semantic, theme-flipping) ─── */
 /* Defaults for dark theme (the shell colors stay as in the legacy palette) */
 .field-ops-root {
@@ -158,7 +166,7 @@
   background: transparent !important;
 }
 
-/* ─── Pane surface — used by Analytics dashboard + Intermod calculator
+/* ─── Pane surface — used by the Intermod calculator
  *    (named `fo-light` for legacy reasons but theme-responsive when nested
  *    inside .field-ops-root[data-theme="..."]).
  */
@@ -266,15 +274,6 @@
   background: rgba(0, 104, 74, 0.06);
   color: var(--fo-accent-2);
 }
-.fo-light .fo-pill.is-solid {
-  background: var(--fo-accent-2);
-  border-color: var(--fo-accent-2);
-  color: #ffffff;
-}
-.fo-light .fo-pill.is-solid:hover {
-  background: var(--fo-ink);
-  border-color: var(--fo-ink);
-}
 
 .fo-light .fo-input,
 .fo-light .fo-select {
@@ -376,7 +375,7 @@
   display: inline-block;
 }
 
-/* Dark variant of the pane (Analytics + Intermod) — applies when the outer
+/* Dark variant of the pane (Intermod) — applies when the outer
  * field-ops-root is in dark theme. Token names stay the same; values flip.
  * `--fo-ink` is reused as the primary TEXT color for these panes (white in
  * dark, ink in light), so existing components keep working unchanged.
