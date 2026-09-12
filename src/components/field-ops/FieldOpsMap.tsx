@@ -10,9 +10,15 @@ import "leaflet.markercluster/dist/MarkerCluster.Default.css";
 import type { FMStation, UserLocation } from "@/types/station";
 import type { InterferenceSite } from "@/types/interference";
 import { makeClusterIcon } from "@/utils/clusterIcon";
-import type { PinBucket } from "@/utils/pinBucket";
-import { bucketForStation, bucketForSite } from "@/utils/pinBucket";
+import type { InspectedBadgeGates, PinBucket } from "@/utils/pinBucket";
 import {
+  bucketForStation,
+  bucketForSite,
+  showsInspectedBadge,
+  NO_INSPECTED_BADGES,
+} from "@/utils/pinBucket";
+import {
+  BADGE_INSPECTED,
   BADGE_LAW,
   BADGE_MAIN,
   PIN_COLORS,
@@ -46,11 +52,17 @@ function isMainStation(s: FMStation): boolean {
  * *is*, not what state it is in:
  *  - MAIN STATION (สถานีหลัก): gold star, upper-right
  *  - STACKED (multiple stations at the same coords): "+N", upper-left
+ *  - ALREADY INSPECTED: green check, lower-right. Only ever appears on pins
+ *    whose bucket outranks `inspected` (revoked, off air) and only while the
+ *    matching filter chip is on — see `showsInspectedBadge`. All three badges
+ *    can appear at once; they are three independent facts, and suppressing one
+ *    to save room would make the pin lie.
  */
 function fmIcon(
   station: FMStation,
   selected: boolean,
-  stackCount: number
+  stackCount: number,
+  inspectedBadge: boolean
 ) {
   const bucket = bucketForStation(station);
   const main = isMainStation(station);
@@ -86,6 +98,15 @@ function fmIcon(
          </g>`
       : "";
 
+  // Lower-right: the only free corner (star owns upper-right, "+N" upper-left).
+  // White keyline so the dark green disc survives the red revoked body.
+  const inspectedBadgeMark = inspectedBadge
+    ? `<g transform="translate(16, 13)">
+         <circle cx="6" cy="6" r="6" fill="${BADGE_INSPECTED}" stroke="${PIN_STROKE}" stroke-width="1.2"/>
+         <path d="M3.2 6.2 l2 2 l3.6 -3.8" stroke="${PIN_STROKE}" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+       </g>`
+    : "";
+
   const html = `<div style="position:relative;width:${wrapW}px;height:${wrapH}px;transition:all 120ms ease;">
     <svg width="${wrapW}" height="${wrapH}" viewBox="-7 -3 ${24 + 14} ${32 + 6}" style="position:absolute;left:0;top:0;overflow:visible;">
       ${haloRing}
@@ -93,11 +114,12 @@ function fmIcon(
       ${innerGlyph}
       ${starBadge}
       ${stackBadge}
+      ${inspectedBadgeMark}
     </svg>
   </div>`;
 
   return L.divIcon({
-    className: `fo-marker fo-marker--fm fo-bucket--${bucket} ${main ? "is-main" : ""} ${selected ? "is-selected" : ""}`,
+    className: `fo-marker fo-marker--fm fo-bucket--${bucket} ${main ? "is-main" : ""} ${selected ? "is-selected" : ""} ${inspectedBadge ? "is-inspected-badge" : ""}`,
     html,
     iconSize: [wrapW, wrapH],
     iconAnchor: [wrapW / 2, wrapH - 3],
@@ -347,6 +369,7 @@ export function FieldOpsMap({
   onMarkSource,
   onCancelMarkSource,
   userLocation,
+  inspectedBadges = NO_INSPECTED_BADGES,
 }: {
   stations: FMStation[];
   interference: InterferenceSite[];
@@ -357,6 +380,12 @@ export function FieldOpsMap({
   onMarkSource?: (siteId: number, lat: number, lng: number) => void;
   onCancelMarkSource?: () => void;
   userLocation?: UserLocation;
+  /**
+   * Which FM buckets currently show the "already inspected" badge. Derived
+   * from the filter chips by `FieldOpsClient` — the map stays ignorant of the
+   * filter model and only receives the two booleans it draws with.
+   */
+  inspectedBadges?: InspectedBadgeGates;
 }) {
   const isMarking = markingSourceForId !== null;
   const sourcedSites = useMemo(
@@ -530,9 +559,16 @@ export function FieldOpsMap({
         const head = group[0];
         const stackCount = group.length;
         const isSelected = selection?.kind === "fm" && group.some((s) => s.id === selection.id);
-        const cacheKey = `${head.id}-${isSelected}-${head.inspection69}-${head.onAir}-${head.revoked ? "R" : "x"}-${isMainStation(head) ? "M" : "x"}-${stackCount}`;
+        // `inspectedBadge` belongs in the key: it depends on the filter chips
+        // and on siblings, neither of which appears anywhere else in it, so
+        // without it a cached pin survives a REVOKED toggle and renders stale.
+        const inspectedBadge = showsInspectedBadge(group, inspectedBadges);
+        const cacheKey = `${head.id}-${isSelected}-${head.inspection69}-${head.onAir}-${head.revoked ? "R" : "x"}-${isMainStation(head) ? "M" : "x"}-${stackCount}-${inspectedBadge ? "I" : "x"}`;
         if (!fmIconCache.current.has(cacheKey)) {
-          fmIconCache.current.set(cacheKey, fmIcon(head, isSelected, stackCount));
+          fmIconCache.current.set(
+            cacheKey,
+            fmIcon(head, isSelected, stackCount, inspectedBadge)
+          );
         }
         return (
           <Marker

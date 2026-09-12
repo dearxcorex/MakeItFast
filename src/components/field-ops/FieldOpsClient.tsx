@@ -514,6 +514,10 @@ export default function FieldOpsClient({
                     onMarkSource={handleMarkSource}
                     onCancelMarkSource={() => setMarkingSourceForId(null)}
                     userLocation={userLocation}
+                    inspectedBadges={{
+                      revoked: filters.revoked,
+                      offAir: filters.offAir,
+                    }}
                   />
                 </div>
 

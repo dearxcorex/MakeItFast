@@ -2,8 +2,14 @@ import { describe, it, expect, vi } from "vitest";
 import { render } from "@testing-library/react";
 import type { ReactNode } from "react";
 import { FieldOpsMap } from "@/components/field-ops/FieldOpsMap";
-import { PIN_COLORS, BADGE_MAIN, BADGE_LAW, PIN_SELECTION } from "@/utils/pinTokens";
-import type { PinBucket } from "@/utils/pinBucket";
+import {
+  PIN_COLORS,
+  BADGE_MAIN,
+  BADGE_LAW,
+  BADGE_INSPECTED,
+  PIN_SELECTION,
+} from "@/utils/pinTokens";
+import type { InspectedBadgeGates, PinBucket } from "@/utils/pinBucket";
 import type { FMStation } from "@/types/station";
 import type { InterferenceSite } from "@/types/interference";
 
@@ -77,7 +83,11 @@ function makeINT(o: Partial<InterferenceSite> = {}): InterferenceSite {
   } as unknown as InterferenceSite;
 }
 
-function draw(stations: FMStation[], sites: InterferenceSite[] = []) {
+function draw(
+  stations: FMStation[],
+  sites: InterferenceSite[] = [],
+  inspectedBadges?: InspectedBadgeGates
+) {
   captured.length = 0;
   render(
     <FieldOpsMap
@@ -86,6 +96,7 @@ function draw(stations: FMStation[], sites: InterferenceSite[] = []) {
       selection={null}
       onSelect={() => {}}
       flyTarget={null}
+      inspectedBadges={inspectedBadges}
     />
   );
   return captured;
@@ -162,6 +173,52 @@ describe("pin tokens — badges stay orthogonal to state", () => {
 
     const [unsent] = draw([], [makeINT({ lawPaperSent: false })]);
     expect(unsent.html).not.toContain(BADGE_LAW);
+  });
+});
+
+describe("pin tokens — the inspected badge is gated by its own filter chip", () => {
+  const REVOKED_ON: InspectedBadgeGates = { revoked: true, offAir: false };
+  const OFFAIR_ON: InspectedBadgeGates = { revoked: false, offAir: true };
+
+  it("an inspected revoked pin keeps the red body and gains a green check", () => {
+    const station = makeFM({ revoked: true, inspection69: "ตรวจแล้ว" });
+    const [pin] = draw([station], [], REVOKED_ON);
+    expect(bucketOf(pin.className)).toBe("critical");
+    expect(bodyFill(pin.html)).toBe(PIN_COLORS.critical);
+    expect(pin.html).toContain(BADGE_INSPECTED);
+    expect(pin.className).toContain("is-inspected-badge");
+  });
+
+  it("the same pin wears no badge while the chip is off", () => {
+    const station = makeFM({ revoked: true, inspection69: "ตรวจแล้ว" });
+    const [off] = draw([station], [], OFFAIR_ON);
+    expect(off.html).not.toContain(BADGE_INSPECTED);
+
+    const [none] = draw([station]);
+    expect(none.html).not.toContain(BADGE_INSPECTED);
+  });
+
+  it("an inspected off-air pin badges under the OFF AIR chip", () => {
+    const station = makeFM({ onAir: false, inspection69: "ตรวจแล้ว" });
+    const [pin] = draw([station], [], OFFAIR_ON);
+    expect(bodyFill(pin.html)).toBe(PIN_COLORS.offair);
+    expect(pin.html).toContain(BADGE_INSPECTED);
+  });
+
+  it("an uninspected revoked pin never badges, chip or no chip", () => {
+    const [pin] = draw([makeFM({ revoked: true })], [], REVOKED_ON);
+    expect(pin.html).not.toContain(BADGE_INSPECTED);
+  });
+
+  it("the badge coexists with the main-station star", () => {
+    const station = makeFM({
+      revoked: true,
+      inspection69: "ตรวจแล้ว",
+      type: "สถานีหลัก",
+    } as Partial<FMStation>);
+    const [pin] = draw([station], [], REVOKED_ON);
+    expect(pin.html).toContain(BADGE_MAIN);
+    expect(pin.html).toContain(BADGE_INSPECTED);
   });
 });
 

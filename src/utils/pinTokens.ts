@@ -79,3 +79,11 @@ export const BADGE_MAIN = "#ffd24a";
  * meanings on the same map is unreadable. This is a pale document instead.
  */
 export const BADGE_LAW = "#e6ecf0";
+
+/**
+ * Badge: already inspected, worn by pins whose bucket outranks `inspected`
+ * (revoked, off air). Deliberately the *same* green as the inspected bucket —
+ * reusing it keeps "green = inspected" true everywhere on the map, where a new
+ * hue would invent a fourth state nobody has a legend for.
+ */
+export const BADGE_INSPECTED = PIN_COLORS.inspected;
