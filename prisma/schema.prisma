@@ -25,10 +25,15 @@ model fm_station {
   revoked          Boolean? @default(false)
   revoked_note     String?
   permit           String?
+  nbtc_code        String?
+  source           String?
+  created_at       DateTime?
 
   inspections   station_inspection[]
 
   @@index([revoked])
+  @@index([nbtc_code])
+  @@index([source])
   @@index([inspection_69])
   @@index([on_air])
   @@index([submit_a_request])

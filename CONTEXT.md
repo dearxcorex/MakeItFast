@@ -11,6 +11,29 @@ coverage area is not tracked at all — it is absent, not hidden: there is no no
 out-of-area record in this system. **บุรีรัมย์** (Buriram) was in the coverage area until
 2026-09-12 and is no longer.
 
+### NBTC OPER register
+The authoritative national record of licensed stations, held by NBTC and consulted through
+an officer's own portal account. This project's station list is a **working copy** of the
+register for the coverage area; the two drift apart as licences are issued, reassigned and
+revoked, and a **harvest** is the act of reading the register to measure that drift.
+
+### Harvest
+Reading register data through the portal as the officer who holds the account, at human
+pace. The register exposes no API and grants no bulk export of station data, so a harvest
+is always a reading of pages a person is entitled to open.
+
+### Inspection record
+One inspection event recorded against a station **in the register**. A station may have
+many, or none at all. Distinct from **inspection status**, which is this project's own
+per-year flag. The consequence matters: anything derived from inspection records silently
+omits stations that have never been inspected.
+
+### Station identity
+A station carries two codes that look interchangeable and are not. The **register station
+code** (`RFXL…` style) is shown in search results and belongs to its own code system. The
+**NBTC station ID** is the same number as this project's `id_fm`. Only the station ID
+identifies a station across both systems; matching on anything else is inference.
+
 ### Inspector attribution
 Who performed an inspection: one **lead** inspector plus zero or more **helpers** who went
 with them, recorded per inspection with the date. Distinct from **inspection status**, which

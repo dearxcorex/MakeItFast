@@ -21,6 +21,8 @@ function makeDbRow(overrides: Record<string, unknown> = {}) {
     revoked: false,
     revoked_note: null,
     permit: null,
+    nbtc_code: null,
+    source: null,
     created_at: null,
     updated_at: null,
     ...overrides,
