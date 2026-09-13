@@ -38,13 +38,30 @@ export interface RingArc {
  *   rotated -90°).
  */
 export function computeRingArcs(buckets: BucketCounts): RingArc[] {
-  const count = (b: PinBucket) => buckets[b] ?? 0;
-  const total = PIN_BUCKET_ORDER.reduce((sum, b) => sum + count(b), 0);
+  return computeSegmentArcs(bucketSegments(buckets));
+}
+
+/** One coloured share of a cluster ring. */
+export interface RingSegment {
+  color: string;
+  count: number;
+}
+
+const bucketSegments = (buckets: BucketCounts): RingSegment[] =>
+  PIN_BUCKET_ORDER.map((b) => ({ color: PIN_COLORS[b], count: buckets[b] ?? 0 }));
+
+/**
+ * Pure: the ring-arc rule of `computeRingArcs` for any coloured segments, so
+ * a ring can summarise something other than pin buckets (the Cell Sites map
+ * splits it by operator). Arcs follow the order segments are given in.
+ */
+export function computeSegmentArcs(segments: RingSegment[]): RingArc[] {
+  const present = segments.filter((s) => s.count > 0);
+  const total = present.reduce((sum, s) => sum + s.count, 0);
   if (total === 0) return [];
 
-  const present = PIN_BUCKET_ORDER.filter((b) => count(b) > 0);
   if (present.length === 1) {
-    return [{ color: PIN_COLORS[present[0]], startDeg: 0, sweepDeg: 360 }];
+    return [{ color: present[0].color, startDeg: 0, sweepDeg: 360 }];
   }
 
   const floorTotal = present.length * MIN_SWEEP_DEG;
@@ -52,9 +69,9 @@ export function computeRingArcs(buckets: BucketCounts): RingArc[] {
 
   let cursor = 0;
   const out: RingArc[] = [];
-  for (const b of present) {
-    const sweep = MIN_SWEEP_DEG + (count(b) / total) * remaining;
-    out.push({ color: PIN_COLORS[b], startDeg: cursor, sweepDeg: sweep });
+  for (const s of present) {
+    const sweep = MIN_SWEEP_DEG + (s.count / total) * remaining;
+    out.push({ color: s.color, startDeg: cursor, sweepDeg: sweep });
     cursor += sweep;
   }
   return out;
@@ -68,6 +85,14 @@ export function makeClusterIcon(
   count: number,
   buckets: BucketCounts
 ): L.DivIcon {
+  return makeSegmentClusterIcon(count, bucketSegments(buckets));
+}
+
+/** `makeClusterIcon` with the ring split by arbitrary coloured segments. */
+export function makeSegmentClusterIcon(
+  count: number,
+  segments: RingSegment[]
+): L.DivIcon {
   const size = sizeForCount(count);
   const ringStroke = 5;
   const r = (size - ringStroke) / 2;
@@ -76,7 +101,7 @@ export function makeClusterIcon(
   const circumference = 2 * Math.PI * r;
   const fontSize = count > 999 ? 12 : count > 99 ? 13 : 14;
 
-  const arcs = computeRingArcs(buckets);
+  const arcs = computeSegmentArcs(segments);
   const ringSvg = arcs
     .map((a) => {
       const arcLen = (a.sweepDeg / 360) * circumference;

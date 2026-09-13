@@ -15,6 +15,7 @@ import { FieldOpsCurrentFM, FieldOpsCurrentINT } from "./FieldOpsCurrent";
 import { FieldOpsBottomSheet } from "./FieldOpsBottomSheet";
 import { FieldOpsDrawer } from "./FieldOpsDrawer";
 import { MobileFilterBar } from "./MobileFilterBar";
+import { CellSitesTab } from "./CellSitesTab";
 import { computeKpis } from "@/utils/fieldOpsKpi";
 import type { FieldSelection } from "./FieldOpsMap";
 
@@ -632,6 +633,10 @@ export default function FieldOpsClient({
                 />
               )}
             </>
+          )}
+
+          {tab === "cell-sites" && (
+            <CellSitesTab isMobile={isMobile} userLocation={userLocation} />
           )}
 
           {tab === "intermod" && (

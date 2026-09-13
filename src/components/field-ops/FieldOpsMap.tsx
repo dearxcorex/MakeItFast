@@ -230,7 +230,7 @@ function intIcon(
   });
 }
 
-function FlyTo({ target }: { target: [number, number] | null }) {
+export function FlyTo({ target }: { target: [number, number] | null }) {
   const map = useMap();
   useEffect(() => {
     if (target) {
@@ -246,7 +246,7 @@ function FlyTo({ target }: { target: [number, number] | null }) {
 // real-estate appeared. ResizeObserver → invalidateSize() keeps Leaflet in
 // sync with whatever size the parent layout gives us. Optional-chains guard
 // against incomplete useMap mocks in unit tests.
-function InvalidateOnResize() {
+export function InvalidateOnResize() {
   const map = useMap();
   useEffect(() => {
     const container = map.getContainer?.();
@@ -316,7 +316,7 @@ function ClickToMark({
   return null;
 }
 
-function InitialLocationPan({ location }: { location: UserLocation | undefined }) {
+export function InitialLocationPan({ location }: { location: UserLocation | undefined }) {
   const map = useMap();
   const didPanRef = useRef(false);
   useEffect(() => {
@@ -328,7 +328,7 @@ function InitialLocationPan({ location }: { location: UserLocation | undefined }
   return null;
 }
 
-function RecenterButton({ location }: { location: UserLocation }) {
+export function RecenterButton({ location }: { location: UserLocation }) {
   const map = useMap();
   return (
     <button

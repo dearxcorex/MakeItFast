@@ -29,3 +29,31 @@ export function haversineDistanceKm(
   const c = 2 * Math.asin(Math.min(1, Math.sqrt(h)));
   return EARTH_RADIUS_KM * c;
 }
+
+/**
+ * Pure initial great-circle bearing from A to B, degrees clockwise from true
+ * north in [0, 360). Returns NaN if any input is NaN — caller filters.
+ */
+export function initialBearingDeg(
+  latA: number,
+  lonA: number,
+  latB: number,
+  lonB: number
+): number {
+  if (
+    !Number.isFinite(latA) ||
+    !Number.isFinite(lonA) ||
+    !Number.isFinite(latB) ||
+    !Number.isFinite(lonB)
+  ) {
+    return NaN;
+  }
+  const toRad = (d: number) => (d * Math.PI) / 180;
+  const lat1 = toRad(latA);
+  const lat2 = toRad(latB);
+  const dLon = toRad(lonB - lonA);
+  const y = Math.sin(dLon) * Math.cos(lat2);
+  const x = Math.cos(lat1) * Math.sin(lat2) - Math.sin(lat1) * Math.cos(lat2) * Math.cos(dLon);
+  const deg = (Math.atan2(y, x) * 180) / Math.PI;
+  return (deg + 360) % 360;
+}

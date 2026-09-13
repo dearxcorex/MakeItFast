@@ -12,6 +12,11 @@ const securityHeaders = [
 ];
 
 const nextConfig: NextConfig = {
+  // /api/cell-sites reads this CSV at runtime; make sure the serverless bundle
+  // ships it rather than relying on tracing to spot the path.join.
+  outputFileTracingIncludes: {
+    "/api/cell-sites": ["./data/cell-sites/cell-sites-clean.csv"],
+  },
   async headers() {
     return [{ source: "/(.*)", headers: securityHeaders }];
   },

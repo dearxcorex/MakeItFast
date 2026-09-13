@@ -87,3 +87,17 @@ export const BADGE_LAW = "#e6ecf0";
  * hue would invent a fourth state nobody has a legend for.
  */
 export const BADGE_INSPECTED = PIN_COLORS.inspected;
+
+/**
+ * Cell Sites map: pin, cluster-ring and chip colour per operator. A separate
+ * tab from Field Ops, so these never share a map with the bucket colours
+ * above — green here is AWN, not "inspected".
+ */
+export const CELL_OPERATOR_COLORS = {
+  AWN: "#1faa4b",
+  NT: "#ff8a00",
+  TUC: "#e5202e",
+} as const;
+
+/** Cell Sites map: a location shared by several visible operators. */
+export const CELL_SHARED_COLOR = PIN_INK;

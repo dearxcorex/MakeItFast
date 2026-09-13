@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { haversineDistanceKm } from '@/utils/distance';
+import { haversineDistanceKm, initialBearingDeg } from '@/utils/distance';
 
 describe('haversineDistanceKm', () => {
   it('returns 0 km for the same point', () => {
@@ -29,5 +29,25 @@ describe('haversineDistanceKm', () => {
     expect(haversineDistanceKm(0, NaN, 0, 0)).toBeNaN();
     expect(haversineDistanceKm(0, 0, NaN, 0)).toBeNaN();
     expect(haversineDistanceKm(0, 0, 0, NaN)).toBeNaN();
+  });
+});
+
+describe('initialBearingDeg', () => {
+  it('points due north, east, south and west along the axes', () => {
+    expect(initialBearingDeg(14, 102, 15, 102)).toBeCloseTo(0, 3);
+    expect(initialBearingDeg(0, 102, 0, 103)).toBeCloseTo(90, 3);
+    expect(initialBearingDeg(15, 102, 14, 102)).toBeCloseTo(180, 3);
+    expect(initialBearingDeg(0, 103, 0, 102)).toBeCloseTo(270, 3);
+  });
+
+  it('always lands in [0, 360)', () => {
+    const b = initialBearingDeg(14.97, 102.1, 14.9, 102.0);
+    expect(b).toBeGreaterThanOrEqual(0);
+    expect(b).toBeLessThan(360);
+    expect(b).toBeGreaterThan(180);
+  });
+
+  it('returns NaN on non-finite input', () => {
+    expect(initialBearingDeg(NaN, 102, 15, 102)).toBeNaN();
   });
 });

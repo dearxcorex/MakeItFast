@@ -1,5 +1,11 @@
 import { describe, it, expect } from "vitest";
-import { computeRingArcs, sizeForCount, makeClusterIcon } from "@/utils/clusterIcon";
+import {
+  computeRingArcs,
+  computeSegmentArcs,
+  sizeForCount,
+  makeClusterIcon,
+  makeSegmentClusterIcon,
+} from "@/utils/clusterIcon";
 import { PIN_COLORS } from "@/utils/pinTokens";
 
 describe("sizeForCount", () => {
@@ -93,5 +99,42 @@ describe("makeClusterIcon", () => {
     const html = String(icon.options.html);
     const circleMatches = html.match(/<circle\s[^>]*stroke="#(ff5b4a|ffb800|00684a)"/g) ?? [];
     expect(circleMatches.length).toBe(3);
+  });
+});
+
+describe("computeSegmentArcs", () => {
+  it("draws arcs for arbitrary coloured segments, skipping empty ones, in the order given", () => {
+    const arcs = computeSegmentArcs([
+      { color: "#111111", count: 3 },
+      { color: "#222222", count: 0 },
+      { color: "#333333", count: 1 },
+    ]);
+    expect(arcs.map((a) => a.color)).toEqual(["#111111", "#333333"]);
+    expect(arcs.reduce((s, a) => s + a.sweepDeg, 0)).toBeCloseTo(360, 6);
+  });
+
+  it("gives computeRingArcs the same result for the same counts", () => {
+    const buckets = { critical: 2, pending: 5, inspected: 9 };
+    expect(computeRingArcs(buckets)).toEqual(
+      computeSegmentArcs([
+        { color: PIN_COLORS.critical, count: 2 },
+        { color: PIN_COLORS.pending, count: 5 },
+        { color: PIN_COLORS.offair, count: 0 },
+        { color: PIN_COLORS.inspected, count: 9 },
+      ])
+    );
+  });
+});
+
+describe("makeSegmentClusterIcon", () => {
+  it("draws one ring arc per non-empty segment around the count", () => {
+    const icon = makeSegmentClusterIcon(12, [
+      { color: "#aa0000", count: 7 },
+      { color: "#00aa00", count: 5 },
+    ]);
+    const html = String(icon.options.html);
+    expect(html).toContain(">12<");
+    expect(html).toContain('stroke="#aa0000"');
+    expect(html).toContain('stroke="#00aa00"');
   });
 });

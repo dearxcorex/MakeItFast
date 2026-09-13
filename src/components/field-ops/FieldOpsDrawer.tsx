@@ -13,6 +13,7 @@ interface NavItem {
 
 const NAV_ITEMS: NavItem[] = [
   { id: "field-ops", label: "FIELD OPS", icon: "⚑" },
+  { id: "cell-sites", label: "CELL SITES", icon: "▲" },
   { id: "intermod", label: "INTERMOD", icon: "Σ" },
 ];
 
