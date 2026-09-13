@@ -16,7 +16,7 @@ vi.mock("next/headers", () => ({
 }));
 
 import prisma from "@/lib/prisma";
-import { requireUser, requireAdmin, AuthError } from "@/lib/auth";
+import { requireUser, requireAdmin } from "@/lib/auth";
 import { mintCookie, mintAdminCookie } from "./helpers/session";
 import { COOKIE_NAME } from "@/lib/session";
 

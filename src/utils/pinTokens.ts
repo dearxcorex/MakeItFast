@@ -34,14 +34,6 @@ export const PIN_BUCKET_ORDER: PinBucket[] = [
   "inspected",
 ];
 
-/** Legend copy. English for now; the Thai pass rewrites these in place. */
-export const PIN_LABELS: Record<PinBucket, string> = {
-  critical: "Revoked / critical",
-  pending: "Not yet inspected",
-  offair: "Off air",
-  inspected: "Inspected",
-};
-
 /**
  * Inner glyph per bucket, so colour is never the only channel carrying state
  * (red and amber are the classic red-green-blind confusion pair).

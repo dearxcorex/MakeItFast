@@ -31,9 +31,9 @@ function addConnectionTimeout(url: string | undefined): string | undefined {
   if (/-pooler\./.test(url) && !/[?&]connection_limit=/.test(url)) {
     // Lets parallel Promise.all queries actually run in parallel rather than
     // serialise behind one connection and trip pool_timeout under cold-start
-    // latency. Sized for the old analytics dashboard (18+ concurrent queries),
-    // which is gone — now simply headroom. PgBouncer in
-    // transaction mode handles 5 client connections per Prisma instance fine.
+    // latency (FieldOpsFetcher fans its station and site reads out together).
+    // PgBouncer in transaction mode handles 5 client connections per Prisma
+    // instance fine.
     params.push('connection_limit=5');
   }
   if (params.length === 0) return url;

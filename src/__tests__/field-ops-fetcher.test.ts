@@ -53,7 +53,6 @@ describe("FieldOpsFetcher", () => {
     const result = await FieldOpsFetcher();
     // The returned JSX is a React element of FieldOpsClient — its `props` carry
     // the initial* arrays we want to assert against.
-    // @ts-expect-error — vitest jsx escape hatch
     const props = result.props;
 
     expect(mockedFm.findMany).toHaveBeenCalledTimes(1);

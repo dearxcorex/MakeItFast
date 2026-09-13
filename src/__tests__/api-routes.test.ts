@@ -517,28 +517,3 @@ describe('/api/interference/[id]', () => {
     expect(res.status).toBe(400);
   });
 });
-
-// ==================
-
-// ==================
-// /api/seed
-// ==================
-describe('POST /api/seed', () => {
-  it('seeds data successfully', async () => {
-    vi.mocked(prisma.fm_station.deleteMany).mockResolvedValue({ count: 0 } as never);
-    vi.mocked(prisma.fm_station.createMany).mockResolvedValue({ count: 3 } as never);
-    const { POST } = await import('@/app/api/admin/seed/route');
-    const res = await POST();
-    const data = await res.json();
-    expect(res.status).toBe(200);
-    expect(data.success).toBe(true);
-    expect(data.message).toContain('3');
-  });
-
-  it('returns 500 on error', async () => {
-    vi.mocked(prisma.fm_station.deleteMany).mockRejectedValue(new Error('fail'));
-    const { POST } = await import('@/app/api/admin/seed/route');
-    const res = await POST();
-    expect(res.status).toBe(500);
-  });
-});

@@ -153,7 +153,8 @@ describe('GET /api/users/inspectors', () => {
     ] as never);
 
     const c = await mintCookie(IFF);
-    const r = await listInspectors(await req('http://t/api/users/inspectors', { cookie: c.header }));
+    await req('http://t/api/users/inspectors', { cookie: c.header });
+    const r = await listInspectors();
     expect(r.status).toBe(200);
     const json = await r.json();
     expect(json.users.map((u: { username: string }) => u.username)).toEqual([

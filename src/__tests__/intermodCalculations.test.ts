@@ -260,7 +260,6 @@ describe('assessInterferenceRisk', () => {
   });
 
   it('factors in aircraft data', () => {
-    const risksNoAircraft = assessInterferenceRisk([pair]);
     const risksWithAircraft = assessInterferenceRisk([pair], {
       frequency: 111.0,
       altitude: 10000,

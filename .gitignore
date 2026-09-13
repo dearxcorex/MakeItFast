@@ -106,6 +106,12 @@ data_interference/
 /backup/
 *.sql
 *.dump
+# ...but schema migrations are source, not dumps
+!prisma/migrations/**/*.sql
+
+# NBTC register diff reports — contain licence-holder names, never commit
+reports/nbtc-register-diff-*.csv
+reports/register-by-type-*.csv
 
 # DB snapshots from audit scripts (machine-local rollback aids)
 reports/revoke-snapshot-*.json

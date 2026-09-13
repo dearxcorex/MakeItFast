@@ -187,14 +187,14 @@ describe('createInspection — additional validation', () => {
     const txStationUpdate = vi.fn().mockResolvedValue({ id_fm: 1 });
     const txMemberCreateMany = vi.fn().mockResolvedValue({ count: 1 });
 
-    vi.mocked(prisma.$transaction).mockImplementationOnce(async (cb: never) => {
+    vi.mocked(prisma.$transaction).mockImplementationOnce((async (cb: unknown) => {
       const tx = {
         station_inspection: { create: txCreate, aggregate: txAggregate, count: txCount },
         station_inspection_member: { createMany: txMemberCreateMany },
         fm_station: { update: txStationUpdate },
       };
       return (cb as unknown as (t: typeof tx) => Promise<number>)(tx);
-    });
+    }) as never);
 
     vi.mocked(prisma.station_inspection.findUnique).mockResolvedValue({
       id: 100,

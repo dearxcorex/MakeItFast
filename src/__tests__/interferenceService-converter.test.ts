@@ -32,10 +32,11 @@ function makeDbRow(overrides: Record<string, unknown> = {}) {
     camera_model_1: 'Cam1',
     camera_model_2: 'Cam2',
     notes: 'Test notes',
+    law_paper_sent: false,
     created_at: new Date('2024-01-01'),
     updated_at: new Date('2024-06-01'),
     ...overrides,
-  } as Parameters<typeof convertToInterferenceSite>[0];
+  } as unknown as Parameters<typeof convertToInterferenceSite>[0];
 }
 
 describe('convertToInterferenceSite', () => {

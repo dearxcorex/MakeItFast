@@ -22,7 +22,7 @@ export async function GET() {
     console.error('Health check error:', error);
     return NextResponse.json({
       status: 'error',
-      message: error instanceof Error ? error.message : 'Unknown error'
+      message: 'Database unavailable'
     }, { status: 500 });
   }
 }

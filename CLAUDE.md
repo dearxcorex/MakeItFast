@@ -19,26 +19,27 @@ A persistent wiki lives at `wiki/`. At session start, read `wiki/index.md` and `
 
 ## Architecture Overview
 
-FM radio station tracker for NBTC (Thailand), built with Next.js 15, TypeScript, Tailwind CSS 4, and Prisma + PostgreSQL. Two tabs: Field Ops (unified FM + interference map) and Intermod Calculator.
+FM radio station tracker for NBTC (Thailand), built with Next.js 15, TypeScript, Tailwind CSS 4, and Prisma + PostgreSQL. Three tabs: Field Ops (unified FM + interference map), Cell Sites (mobile base-station licences) and Intermod Calculator.
 
 ### Data Flow
 1. **`src/app/page.tsx`** renders **`FieldOpsFetcher`** — this is the only app screen
 2. **`FieldOpsFetcher`** (server component) reads `fm_station` and `interference_site` straight from Prisma, converts rows via `convertToFMStation` / `convertToInterferenceSite`, and passes them to **`FieldOpsClient`**
 3. **`FieldOpsClient`** (client component) owns all client state: active tab, filters, selection, theme, and the `isMobile` breakpoint (`window.innerWidth < 900`)
 4. **`FieldOpsMap`** uses `react-leaflet` with dynamic import (`ssr: false`) — Leaflet cannot run server-side
-5. API routes under `src/app/api/` handle mutations (inspection toggles, PATCH station/site) and inspection-history reads. Initial page data does **not** go through them
+5. API routes under `src/app/api/` handle mutations (inspection toggles, PATCH station/site) and inspection-history reads. Initial Field Ops data does **not** go through them; the Cell Sites tab is the exception — it lazy-loads `data/cell-sites/cell-sites-clean.csv` through `/api/cell-sites` on first open
 
 ### Key Patterns
 - **Database → UI conversion**: `stationService.ts:convertToFMStation()` and `interferenceService.ts:convertToInterferenceSite()` map Prisma snake_case rows to camelCase interfaces. Field names differ significantly (e.g., `id_fm` → `id`, `freq` → `frequency`, `district` → `city`, `province` → `state`)
-- **Marker clustering**: `react-leaflet-cluster` in `FieldOpsMap`. Cluster bubbles draw a segmented ring whose arcs are proportional to the child mix (`utils/clusterIcon.ts`), and children are bucketed by `utils/pinBucket.ts` (`critical` / `pending` / `inspected`)
-- **Two tabs**: Field Ops, Intermod — controlled by `FieldOpsTab` in `field-ops/FieldOpsNav.tsx`
+- **Marker clustering**: `react-leaflet-cluster` in `FieldOpsMap`. Cluster bubbles draw a segmented ring whose arcs are proportional to the child mix (`utils/clusterIcon.ts`), and children are bucketed by `utils/pinBucket.ts` (`critical` / `pending` / `offair` / `inspected`). Every map colour comes from `utils/pinTokens.ts`
+- **Three tabs**: Field Ops, Cell Sites, Intermod — controlled by `FieldOpsTab` in `field-ops/FieldOpsNav.tsx`
 - **Coverage area**: This office tracks **นครราชสีมา** and **ชัยภูมิ** only. บุรีรัมย์ was removed on 2026-09-12 (`scripts/delete-buriram.ts`) and dropped from `TARGET_PROVINCES` so an Excel re-import cannot resurrect it
 - **Thai language**: Inspection statuses use Thai strings (`'ตรวจแล้ว'`/`'ยังไม่ตรวจ'`, `'ยื่น'`/`'ไม่ยื่น'`, `'สถานีหลัก'`). These are **comparison values in logic**, not display strings — a translation pass must not rewrite them
 - **Optimistic updates**: `FieldOpsClient` updates local state immediately, then PATCHes the server and reconciles
 
 ### Database
 - PostgreSQL via Prisma ORM, schema in `prisma/schema.prisma`
-- Two models: `fm_station`, `interference_site`
+- Station and site models: `fm_station`, `interference_site`; auth and inspection history: `user`, `station_inspection(_member)`, `interference_inspection(_member)`
+- Migrations are hand-written SQL under `prisma/migrations/<date>-<name>/migration.sql`; apply them to the Neon DB before deploying code that reads new columns (Prisma selects every scalar by default)
 - Connection configured via `DATABASE_URL` env var
 - Prisma client singleton in `src/lib/prisma.ts` with global caching for dev
 
@@ -49,6 +50,7 @@ FM radio station tracker for NBTC (Thailand), built with Next.js 15, TypeScript,
 - `src/contexts/ThemeContext.tsx` - Theme provider mounted in `layout.tsx`. Note Field Ops keeps its own theme state in `localStorage` under `fo-theme`
 - `src/utils/mapHelpers.ts` - `createLocationIcon` only (the user-location marker)
 - `src/utils/clusterIcon.ts`, `src/utils/pinBucket.ts` - Cluster ring rendering and pin bucketing
+- `src/utils/cellSites.ts`, `src/utils/cellSiteFilters.ts` - Cell Sites CSV parsing and filtering (data built by `scripts/clean-cell-sites.ts`)
 - `src/utils/intermodCalculations.ts` - Third-order intermod products, aviation band analysis, path loss
 
 ### Responsive Design
@@ -59,7 +61,7 @@ FM radio station tracker for NBTC (Thailand), built with Next.js 15, TypeScript,
 ## Testing
 
 - Vitest with jsdom environment, `@testing-library/react` for components
-- Tests in `src/__tests__/`, 506 tests across 69 files
+- Tests in `src/__tests__/`, 582 tests across 70 files
 - Leaflet requires mocking: `vi.mock('leaflet')` and `vi.mock('react-leaflet')` with divIcon/icon stubs
 - CSS stub at `src/__tests__/css-stub.js` handles `leaflet/dist/leaflet.css` imports (aliased in `vitest.config.ts`)
 - API route tests mock Prisma via `vi.mock('@/lib/prisma')` with method stubs (findMany, findFirst, etc.)

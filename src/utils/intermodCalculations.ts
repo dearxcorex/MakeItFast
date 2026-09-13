@@ -104,14 +104,14 @@ export function getAffectedService(frequency: number): AviationService | undefin
  * No per-station height is stored in the DB, so this single value is used for
  * every tower's radio-horizon calculation. See docs/adr/0001.
  */
-export const DEFAULT_TOWER_HEIGHT_M = 60;
+const DEFAULT_TOWER_HEIGHT_M = 60;
 
 /**
  * Assumed transmit power (watts) when a station's transmitterPower is missing
  * or zero. Used only for signal-strength scoring, never for the displayed
  * combinedPower. See docs/adr/0001.
  */
-export const DEFAULT_TX_POWER_W = 500;
+const DEFAULT_TX_POWER_W = 500;
 
 /** Feet → meters */
 const FEET_TO_METERS = 0.3048;
@@ -144,7 +144,7 @@ export function calculateLineOfSight(
  * @param frequencyMHz Tower frequency in MHz
  * @returns Received power in dBm
  */
-export function receivedPowerDbm(
+function receivedPowerDbm(
   transmitterPower: number | undefined,
   distanceKm: number,
   frequencyMHz: number

@@ -1,5 +1,5 @@
-import { describe, it, expect, vi, beforeEach, beforeAll, afterEach } from 'vitest';
-import { render, screen, fireEvent, cleanup, act, waitFor } from '@testing-library/react';
+import { describe, it, expect, vi, afterEach } from 'vitest';
+import { render, fireEvent, cleanup, act } from '@testing-library/react';
 import React from 'react';
 
 // Mock intermod calculation utilities
@@ -25,8 +25,8 @@ vi.mock('@/utils/intermodCalculations', () => ({
   formatDistance: (d: number) => mockFormatDistance(d),
   getRiskLevelColor: (l: string) => mockGetRiskLevelColor(l),
   getRiskLevelBgColor: (l: string) => mockGetRiskLevelBgColor(l),
-  summarizeByService: (...args: unknown[]) => mockSummarizeByService(...args),
-  filterRiskAssessments: (...args: unknown[]) => mockFilterRiskAssessments(...args),
+  summarizeByService: () => mockSummarizeByService(),
+  filterRiskAssessments: (assessments: unknown[]) => mockFilterRiskAssessments(assessments),
 }));
 
 import IntermodCalculator from '@/components/IntermodCalculator';
