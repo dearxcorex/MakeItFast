@@ -18,7 +18,7 @@ const COMMANDS = [
   {
     name: 'stat',
     type: 1, // CHAT_INPUT
-    description: 'สรุปการตรวจสถานี FM ตามสีหมุดบนแผนที่ และสถานีที่ตรวจวันนี้',
+    description: 'สรุปการตรวจสถานี FM ตามสีหมุดบนแผนที่',
     contexts: [0], // guild only, never DMs
     integration_types: [0], // installed to the server, not to users
   },

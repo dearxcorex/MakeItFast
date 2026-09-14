@@ -10,12 +10,7 @@ import {
 } from '@/lib/discord';
 import { bangkokToday } from '@/utils/bangkokDate';
 import { bucketForStation } from '@/utils/pinBucket';
-import {
-  buildStatMessage,
-  emptyBuckets,
-  type ProvinceStat,
-  type TodayStation,
-} from '@/utils/fmStat';
+import { buildStatMessage, emptyBuckets, type ProvinceStat } from '@/utils/fmStat';
 
 // Discord posts every slash-command use here. There is no session: the Ed25519
 // signature is the auth, and only commands from DISCORD_GUILD_ID are served.
@@ -78,11 +73,9 @@ function ephemeral(content: string) {
 }
 
 async function answerStat(applicationId: string, token: string): Promise<void> {
-  const date = bangkokToday();
   let body: object;
   try {
-    const [provinces, today] = await Promise.all([loadProvinceStats(), loadToday(date)]);
-    body = buildStatMessage(provinces, today, date, process.env.SITE_URL);
+    body = buildStatMessage(await loadProvinceStats(), bangkokToday(), process.env.SITE_URL);
   } catch (error) {
     console.error('/stat query failed:', error);
     body = { content: 'ดึงข้อมูลไม่สำเร็จ ลองใหม่อีกครั้ง', allowed_mentions: { parse: [] } };
@@ -120,32 +113,4 @@ async function loadProvinceStats(): Promise<ProvinceStat[]> {
     byProvince.set(province, p);
   }
   return [...byProvince.values()].sort((a, b) => b.total - a.total);
-}
-
-async function loadToday(date: string): Promise<TodayStation[]> {
-  const rows = await prisma.station_inspection.findMany({
-    where: { inspected_on: new Date(`${date}T00:00:00Z`) },
-    select: {
-      station_id: true,
-      station: {
-        select: {
-          name: true,
-          freq: true,
-          district: true,
-          province: true,
-          on_air: true,
-          revoked: true,
-          inspection_69: true,
-        },
-      },
-    },
-  });
-  return rows.map((r) => ({
-    stationId: r.station_id,
-    name: r.station.name,
-    freq: r.station.freq,
-    district: r.station.district,
-    province: r.station.province,
-    bucket: stationBucket(r.station),
-  }));
 }

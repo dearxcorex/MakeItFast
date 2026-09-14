@@ -14,7 +14,6 @@ vi.mock('next/server', async (importOriginal) => ({
 
 vi.mock('@/lib/prisma', () => ({
   default: {
-    station_inspection: { findMany: vi.fn() },
     fm_station: { groupBy: vi.fn() },
   },
 }));
@@ -60,19 +59,6 @@ const groups = [
   { province: 'ชัยภูมิ', inspection_69: false, revoked: false, on_air: true, _count: { _all: 10 } },
 ];
 
-const inspectionRow = {
-  station_id: 5520014,
-  station: {
-    name: 'สถานีวิทยุชุมชนปากช่อง',
-    freq: 98.5,
-    district: 'ปากช่อง',
-    province: 'นครราชสีมา',
-    on_air: false,
-    revoked: false,
-    inspection_69: true,
-  },
-};
-
 async function runAfter() {
   const jobs = pending.splice(0);
   for (const job of jobs) await job();
@@ -88,7 +74,6 @@ beforeEach(() => {
   vi.stubGlobal('fetch', fetchMock);
   fetchMock.mockResolvedValue(new Response('{}', { status: 200 }));
   vi.mocked(prisma.fm_station.groupBy).mockResolvedValue(groups as never);
-  vi.mocked(prisma.station_inspection.findMany).mockResolvedValue([inspectionRow] as never);
   vi.spyOn(console, 'error').mockImplementation(() => {});
 });
 
@@ -151,18 +136,14 @@ describe('POST /api/discord/interactions — /stat', () => {
     expect(description).toContain('🟢 ตรวจแล้ว 58 · 🟡 ยังไม่ตรวจ 70 · ⚫ ไม่ออกอากาศ 10 · 🔴 เพิกถอน 6');
     expect(description).toContain('ความคืบหน้า ตรวจแล้ว 64/144 (44%)');
     expect(description).toContain('รวม 154 — 🟢 58 · 🟡 80 · ⚫ 10 · 🔴 6');
-    // inspected today but off air → grey dot, same as its map pin
-    expect(description).toContain('⚫ 98.50 สถานีวิทยุชุมชนปากช่อง — ปากช่อง (นครราชสีมา)');
+    expect(description).not.toContain('วันนี้');
   });
 
-  it("reads today's inspections by the Bangkok date, not UTC", async () => {
+  it('dates the title by Bangkok time, not UTC', async () => {
     vi.useFakeTimers({ toFake: ['Date'] });
     vi.setSystemTime(new Date('2026-09-13T23:30:00Z'));
     await POST(signedReq(statCommand));
     await runAfter();
-    expect(vi.mocked(prisma.station_inspection.findMany).mock.calls[0][0]).toMatchObject({
-      where: { inspected_on: new Date('2026-09-14T00:00:00Z') },
-    });
     expect(JSON.parse(fetchMock.mock.calls[0][1].body).embeds[0].title).toContain('14 ก.ย. 2569');
   });
 
