@@ -2,14 +2,12 @@ import { NextRequest, NextResponse } from "next/server";
 import { COOKIE_NAME, readSessionFromCookie } from "@/lib/session";
 import { safeNextPath } from "@/lib/safeRedirect";
 
-const PUBLIC_PATHS = ["/login", "/api/auth/login", "/api/health"];
+// Discord has no session; the interactions route checks its Ed25519 signature.
+const PUBLIC_PATHS = ["/login", "/api/auth/login", "/api/health", "/api/discord/interactions"];
 const ASSET_PREFIXES = ["/_next", "/favicon", "/tiles", "/icons"];
-// Vercel Cron has no session; each cron route checks CRON_SECRET itself.
-const CRON_PREFIX = "/api/cron/";
 
 function isPublic(pathname: string): boolean {
   if (PUBLIC_PATHS.includes(pathname)) return true;
-  if (pathname.startsWith(CRON_PREFIX)) return true;
   if (ASSET_PREFIXES.some((p) => pathname.startsWith(p))) return true;
   // Static files (anything with a dot, e.g. /robots.txt)
   if (/\.[a-zA-Z0-9]+$/.test(pathname)) return true;

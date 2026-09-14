@@ -17,7 +17,9 @@ export type PinBucket = "critical" | "pending" | "offair" | "inspected";
  * -risk signal regardless of inspection or on-air metadata; off-air outranks
  * inspected so a silent transmitter stays visible as an anomaly.
  */
-export function bucketForStation(s: FMStation): PinBucket {
+export function bucketForStation(
+  s: Pick<FMStation, "revoked" | "onAir" | "inspection69">
+): PinBucket {
   if (s.revoked === true) return "critical";
   if (!s.onAir) return "offair";
   if (s.inspection69 === "ตรวจแล้ว") return "inspected";

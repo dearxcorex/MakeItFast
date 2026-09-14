@@ -69,13 +69,13 @@ describe("middleware", () => {
     expect(res.status).not.toBe(307);
   });
 
-  it("lets /api/cron/* through without a session (the route checks CRON_SECRET)", async () => {
-    const res = await middleware(reqWithCookie("/api/cron/inspection-digest"));
+  it("lets the Discord interactions endpoint through without a session (the route checks the signature)", async () => {
+    const res = await middleware(reqWithCookie("/api/discord/interactions"));
     expect(res.status).toBe(200);
   });
 
-  it("does not open other /api paths that merely start with /api/cron", async () => {
-    const res = await middleware(reqWithCookie("/api/cronjobs"));
+  it("does not open other /api/discord paths", async () => {
+    const res = await middleware(reqWithCookie("/api/discord/other"));
     expect(res.status).toBe(401);
   });
 
