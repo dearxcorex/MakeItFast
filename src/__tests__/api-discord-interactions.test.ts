@@ -27,6 +27,7 @@ const { publicKey, privateKey } = generateKeyPairSync('ed25519');
 const PUBLIC_KEY_HEX = publicKey.export({ format: 'der', type: 'spki' }).subarray(12).toString('hex');
 const GUILD = '111111111111111111';
 const APP = '222222222222222222';
+const CHANNEL = '333333333333333333';
 const fetchMock = vi.fn();
 
 function signedReq(body: object, { tamper = false, signature }: { tamper?: boolean; signature?: string | null } = {}) {
@@ -43,7 +44,13 @@ function signedReq(body: object, { tamper = false, signature }: { tamper?: boole
   });
 }
 
-const statCommand = { type: 2, token: 'interaction-token', guild_id: GUILD, data: { name: 'stat' } };
+const statCommand = {
+  type: 2,
+  token: 'interaction-token',
+  guild_id: GUILD,
+  channel_id: CHANNEL,
+  data: { name: 'stat' },
+};
 
 const groups = [
   // 58 on air, inspected → green
@@ -70,6 +77,7 @@ beforeEach(() => {
   process.env.DISCORD_PUBLIC_KEY = PUBLIC_KEY_HEX;
   process.env.DISCORD_GUILD_ID = GUILD;
   process.env.DISCORD_APPLICATION_ID = APP;
+  process.env.DISCORD_CHANNEL_ID = CHANNEL;
   process.env.SITE_URL = 'https://fm.example.com';
   vi.stubGlobal('fetch', fetchMock);
   fetchMock.mockResolvedValue(new Response('{}', { status: 200 }));
@@ -83,6 +91,7 @@ afterEach(() => {
   delete process.env.DISCORD_PUBLIC_KEY;
   delete process.env.DISCORD_GUILD_ID;
   delete process.env.DISCORD_APPLICATION_ID;
+  delete process.env.DISCORD_CHANNEL_ID;
   delete process.env.SITE_URL;
 });
 
@@ -175,6 +184,19 @@ describe('POST /api/discord/interactions — /stat', () => {
     const res = await POST(signedReq({ ...statCommand, guild_id: undefined }));
     expect((await res.json()).data.flags).toBe(64);
     expect(pending).toHaveLength(0);
+  });
+
+  it('points to the bot channel when used in another channel', async () => {
+    const res = await POST(signedReq({ ...statCommand, channel_id: '444' }));
+    const json = await res.json();
+    expect(json.data).toMatchObject({ content: `ใช้คำสั่งนี้ได้ในช่อง <#${CHANNEL}> เท่านั้น`, flags: 64 });
+    expect(pending).toHaveLength(0);
+  });
+
+  it('answers in any channel when DISCORD_CHANNEL_ID is not set', async () => {
+    delete process.env.DISCORD_CHANNEL_ID;
+    const res = await POST(signedReq({ ...statCommand, channel_id: '444' }));
+    expect(await res.json()).toEqual({ type: 5 });
   });
 
   it('answers an unknown command privately', async () => {

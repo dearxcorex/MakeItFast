@@ -15,6 +15,7 @@ export interface Interaction {
   type: number;
   token: string;
   guild_id?: string;
+  channel_id?: string;
   data?: { name: string };
 }
 

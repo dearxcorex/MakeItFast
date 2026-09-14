@@ -49,6 +49,13 @@ export async function POST(request: NextRequest) {
     return ephemeral('คำสั่งนี้ใช้ได้เฉพาะในเซิร์ฟเวอร์ของสำนักงานเท่านั้น');
   }
 
+  // Optional: when set, /stat answers only in that channel, so the public
+  // summary does not land in general chat.
+  const channelId = process.env.DISCORD_CHANNEL_ID;
+  if (channelId && interaction.channel_id !== channelId) {
+    return ephemeral(`ใช้คำสั่งนี้ได้ในช่อง <#${channelId}> เท่านั้น`);
+  }
+
   if (interaction.data?.name !== 'stat') {
     return ephemeral('ไม่รู้จักคำสั่งนี้');
   }

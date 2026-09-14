@@ -12,6 +12,8 @@
  *   npx tsx --env-file=.env scripts/register-discord-commands.ts
  */
 
+export {}; // a module, so its names do not clash with the other scripts
+
 const DISCORD_API = 'https://discord.com/api/v10';
 
 const COMMANDS = [
