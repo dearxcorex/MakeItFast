@@ -260,6 +260,36 @@ describe('PATCH /api/stations/[id]', () => {
     createInspectionSpy.mockRestore();
   });
 
+  it('stamps an early-morning inspection with the Bangkok date, not the UTC date', async () => {
+    vi.useFakeTimers({ toFake: ['Date'] });
+    vi.setSystemTime(new Date('2026-09-12T23:30:00Z')); // 06:30 on 13 Sep in Bangkok
+    vi.mocked(prisma.fm_station.update).mockResolvedValue({ id_fm: 1 } as never);
+    const inspectionService = await import('@/services/inspectionService');
+    const createInspectionSpy = vi
+      .spyOn(inspectionService, 'createInspection')
+      .mockResolvedValue({} as never);
+    const sessionLib = await import('@/lib/session');
+    const getSessionSpy = vi.spyOn(sessionLib, 'getSession').mockResolvedValue({
+      userId: 42, username: 'tester', displayName: 'Test User', role: 'inspector', issuedAt: Date.now(),
+    } as never);
+    const { PATCH } = await import('@/app/api/stations/[id]/route');
+    const req = new Request('http://localhost', {
+      method: 'PATCH',
+      body: JSON.stringify({ inspection69: 'ตรวจแล้ว' }),
+    });
+    await PATCH(req as never, { params: Promise.resolve({ id: '1' }) });
+
+    expect(prisma.fm_station.update).toHaveBeenCalledWith(
+      expect.objectContaining({ data: expect.objectContaining({ date_inspected: '2026-09-13' }) })
+    );
+    expect(createInspectionSpy).toHaveBeenCalledWith(
+      expect.objectContaining({ inspectedOn: '2026-09-13' })
+    );
+    createInspectionSpy.mockRestore();
+    getSessionSpy.mockRestore();
+    vi.useRealTimers();
+  });
+
   it('PATCH forwards helperUserIds to the inspection-history sidecar', async () => {
     const inspectionService = await import('@/services/inspectionService');
     const createSpy = vi
@@ -373,6 +403,35 @@ describe('PATCH /api/stations/[id]', () => {
 
     recomputeSpy.mockRestore();
     getSessionSpy.mockRestore();
+  });
+
+  it('toggling OFF early in the morning undoes the Bangkok-dated row', async () => {
+    vi.useFakeTimers({ toFake: ['Date'] });
+    vi.setSystemTime(new Date('2026-09-12T23:30:00Z')); // 06:30 on 13 Sep in Bangkok
+    vi.mocked(prisma.fm_station.update).mockResolvedValue({ id_fm: 1 } as never);
+    vi.mocked(prisma.station_inspection.deleteMany).mockResolvedValue({ count: 1 } as never);
+    const inspectionService = await import('@/services/inspectionService');
+    const recomputeSpy = vi
+      .spyOn(inspectionService, 'recomputeStationInspectionState')
+      .mockResolvedValue(undefined as never);
+    const sessionLib = await import('@/lib/session');
+    const getSessionSpy = vi.spyOn(sessionLib, 'getSession').mockResolvedValue({
+      userId: 3, username: 'iff', displayName: 'iff', role: 'inspector', issuedAt: Date.now(),
+    } as never);
+
+    const { PATCH } = await import('@/app/api/stations/[id]/route');
+    const req = new Request('http://localhost', {
+      method: 'PATCH',
+      body: JSON.stringify({ inspection69: false }),
+    });
+    await PATCH(req as never, { params: Promise.resolve({ id: '1' }) });
+
+    expect(prisma.station_inspection.deleteMany).toHaveBeenCalledWith({
+      where: { station_id: 1, lead_user_id: 3, inspected_on: new Date('2026-09-13T00:00:00Z') },
+    });
+    recomputeSpy.mockRestore();
+    getSessionSpy.mockRestore();
+    vi.useRealTimers();
   });
 
   it('does NOT fail when toggling OFF with no matching history row', async () => {

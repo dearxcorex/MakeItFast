@@ -70,10 +70,28 @@ describe('listInspectionsForStation', () => {
 
 describe('createInspection', () => {
   it('rejects future dates', async () => {
-    const future = new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString().slice(0, 10);
+    // Two days out: one day ahead in UTC can already be today in Bangkok
+    const future = new Date(Date.now() + 2 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10);
     await expect(createInspection({
       stationId: 1, inspectedOn: future, leadUserId: 3, helperUserIds: [],
     })).rejects.toThrow(/future/i);
+  });
+
+  it('accepts today in Bangkok even when UTC is still on yesterday', async () => {
+    vi.useFakeTimers({ toFake: ['Date'] });
+    vi.setSystemTime(new Date('2026-09-12T23:30:00Z')); // 06:30 on 13 Sep in Bangkok
+    vi.mocked(prisma.fm_station.findUnique).mockResolvedValue(null);
+    try {
+      // Gets past the date check and fails later on the missing station
+      await expect(createInspection({
+        stationId: 1, inspectedOn: '2026-09-13', leadUserId: 3, helperUserIds: [],
+      })).rejects.toThrow(/station not found/i);
+      await expect(createInspection({
+        stationId: 1, inspectedOn: '2026-09-14', leadUserId: 3, helperUserIds: [],
+      })).rejects.toThrow(/future/i);
+    } finally {
+      vi.useRealTimers();
+    }
   });
 
   it('rejects malformed dates', async () => {

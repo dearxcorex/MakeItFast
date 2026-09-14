@@ -1,6 +1,7 @@
 // src/services/inspectionService.ts
 import { Prisma } from '@prisma/client';
 import prisma from '@/lib/prisma';
+import { bangkokToday } from '@/utils/bangkokDate';
 import type {
   CreateInspectionInput,
   InspectionMember,
@@ -21,12 +22,8 @@ function parseInspectedOn(input: string): Date {
   if (!DATE_RE.test(input)) throw new Error('inspectedOn must use YYYY-MM-DD format');
   const d = new Date(`${input}T00:00:00Z`);
   if (Number.isNaN(d.getTime())) throw new Error('inspectedOn is not a real date');
-  const todayMs = Date.UTC(
-    new Date().getUTCFullYear(),
-    new Date().getUTCMonth(),
-    new Date().getUTCDate(),
-  );
-  if (d.getTime() > todayMs) throw new Error('inspectedOn cannot be in the future');
+  // YYYY-MM-DD strings compare correctly as text
+  if (input > bangkokToday()) throw new Error('inspectedOn cannot be in the future');
   return d;
 }
 

@@ -69,6 +69,16 @@ describe("middleware", () => {
     expect(res.status).not.toBe(307);
   });
 
+  it("lets /api/cron/* through without a session (the route checks CRON_SECRET)", async () => {
+    const res = await middleware(reqWithCookie("/api/cron/inspection-digest"));
+    expect(res.status).toBe(200);
+  });
+
+  it("does not open other /api paths that merely start with /api/cron", async () => {
+    const res = await middleware(reqWithCookie("/api/cronjobs"));
+    expect(res.status).toBe(401);
+  });
+
   it("redirects unauthenticated requests to /login with ?next", async () => {
     const res = await middleware(reqWithCookie("/"));
     expect(res.status).toBe(307);

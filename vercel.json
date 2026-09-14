@@ -3,5 +3,8 @@
   "outputDirectory": ".next",
   "cleanUrls": true,
   "trailingSlash": false,
-  "regions": ["sin1"]
+  "regions": ["sin1"],
+  "crons": [
+    { "path": "/api/cron/inspection-digest", "schedule": "0 11 * * *" }
+  ]
 }

@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import prisma from '@/lib/prisma';
 import { createInspection, recomputeStationInspectionState } from '@/services/inspectionService';
 import { getSession } from '@/lib/session';
+import { bangkokToday } from '@/utils/bangkokDate';
 
 export async function PATCH(
   request: NextRequest,
@@ -43,7 +44,7 @@ export async function PATCH(
     if (inspection69 !== undefined) {
       const truthy = inspection69 === 'ตรวจแล้ว' || inspection69 === true;
       updates.inspection_69 = truthy;
-      updates.date_inspected = truthy ? new Date().toISOString().split('T')[0] : null;
+      updates.date_inspected = truthy ? bangkokToday() : null;
     }
 
     if (Object.keys(updates).length === 0) {
@@ -65,7 +66,7 @@ export async function PATCH(
         if (session.userId) {
           await createInspection({
             stationId,
-            inspectedOn: new Date().toISOString().split('T')[0],
+            inspectedOn: bangkokToday(),
             leadUserId: session.userId,
             helperUserIds: Array.isArray(helperUserIds)
               ? helperUserIds.filter((x: unknown): x is number => typeof x === 'number' && Number.isInteger(x))
@@ -91,7 +92,7 @@ export async function PATCH(
       try {
         const session = await getSession();
         if (session.userId) {
-          const today = new Date().toISOString().split('T')[0];
+          const today = bangkokToday();
           await prisma.station_inspection.deleteMany({
             where: {
               station_id: stationId,
