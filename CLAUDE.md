@@ -34,6 +34,7 @@ FM radio station tracker for NBTC (Thailand), built with Next.js 15, TypeScript,
 - **Three tabs**: Field Ops, Cell Sites, Intermod — controlled by `FieldOpsTab` in `field-ops/FieldOpsNav.tsx`
 - **Coverage area**: This office tracks **นครราชสีมา** and **ชัยภูมิ** only. บุรีรัมย์ was removed on 2026-09-12 (`scripts/delete-buriram.ts`) and dropped from `TARGET_PROVINCES` so an Excel re-import cannot resurrect it
 - **Thai language**: Inspection statuses use Thai strings (`'ตรวจแล้ว'`/`'ยังไม่ตรวจ'`, `'ยื่น'`/`'ไม่ยื่น'`, `'สถานีหลัก'`). These are **comparison values in logic**, not display strings — a translation pass must not rewrite them
+- **Discord inspection notices**: turning an inspect toggle ON posts a silent embed via `DISCORD_INSPECTION_WEBHOOK_URL` (`services/inspectionNotifier.ts`, sent in `after()`); the message id is stored in `discord_message_id` on the inspection row, and turning it OFF deletes that message
 - **Optimistic updates**: `FieldOpsClient` updates local state immediately, then PATCHes the server and reconciles
 
 ### Database
@@ -61,7 +62,7 @@ FM radio station tracker for NBTC (Thailand), built with Next.js 15, TypeScript,
 ## Testing
 
 - Vitest with jsdom environment, `@testing-library/react` for components
-- Tests in `src/__tests__/`, 614 tests across 73 files
+- Tests in `src/__tests__/`, 632 tests across 75 files
 - Leaflet requires mocking: `vi.mock('leaflet')` and `vi.mock('react-leaflet')` with divIcon/icon stubs
 - CSS stub at `src/__tests__/css-stub.js` handles `leaflet/dist/leaflet.css` imports (aliased in `vitest.config.ts`)
 - API route tests mock Prisma via `vi.mock('@/lib/prisma')` with method stubs (findMany, findFirst, etc.)

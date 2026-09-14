@@ -3,6 +3,7 @@ import prisma from '@/lib/prisma';
 import { createInspection, recomputeStationInspectionState } from '@/services/inspectionService';
 import { getSession } from '@/lib/session';
 import { bangkokToday } from '@/utils/bangkokDate';
+import { queueInspectionNotice, queueNoticeRetraction } from '@/services/inspectionNotifier';
 
 export async function PATCH(
   request: NextRequest,
@@ -64,7 +65,7 @@ export async function PATCH(
       try {
         const session = await getSession();
         if (session.userId) {
-          await createInspection({
+          const inspection = await createInspection({
             stationId,
             inspectedOn: bangkokToday(),
             leadUserId: session.userId,
@@ -72,6 +73,7 @@ export async function PATCH(
               ? helperUserIds.filter((x: unknown): x is number => typeof x === 'number' && Number.isInteger(x))
               : [],
           });
+          queueInspectionNotice('fm', inspection.id);
         }
       } catch (err) {
         // Don't fail the PATCH if the history insert fails — the boolean
@@ -93,14 +95,18 @@ export async function PATCH(
         const session = await getSession();
         if (session.userId) {
           const today = bangkokToday();
-          await prisma.station_inspection.deleteMany({
-            where: {
-              station_id: stationId,
-              lead_user_id: session.userId,
-              inspected_on: new Date(`${today}T00:00:00Z`),
-            },
+          const where = {
+            station_id: stationId,
+            lead_user_id: session.userId,
+            inspected_on: new Date(`${today}T00:00:00Z`),
+          };
+          const undone = await prisma.station_inspection.findFirst({
+            where,
+            select: { discord_message_id: true },
           });
+          await prisma.station_inspection.deleteMany({ where });
           await recomputeStationInspectionState(stationId);
+          queueNoticeRetraction(undone?.discord_message_id);
         }
       } catch (err) {
         console.warn(`Failed to delete inspection history for station ${stationId}:`, err);

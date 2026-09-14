@@ -113,6 +113,8 @@ model station_inspection {
   lead_user_id  Int
   notes         String?
   source        String    @default("app")
+  // Webhook message announcing this inspection in Discord; deleted on undo
+  discord_message_id String?
   created_at    DateTime  @default(now())
   updated_at    DateTime  @updatedAt
 
@@ -144,6 +146,8 @@ model interference_inspection {
   lead_user_id      Int
   notes             String?
   source            String    @default("app")
+  // Webhook message announcing this inspection in Discord; deleted on undo
+  discord_message_id String?
   created_at        DateTime  @default(now())
   updated_at        DateTime  @updatedAt
 

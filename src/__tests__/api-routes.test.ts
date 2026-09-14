@@ -25,6 +25,7 @@ vi.mock('@/lib/prisma', () => ({
       groupBy: vi.fn(),
     },
     station_inspection: {
+      findFirst: vi.fn(),
       deleteMany: vi.fn(),
     },
     $transaction: vi.fn(),
@@ -37,7 +38,13 @@ vi.mock('@/services/interferenceService', () => ({
   convertToInterferenceSite: vi.fn(),
 }));
 
+vi.mock('@/services/inspectionNotifier', () => ({
+  queueInspectionNotice: vi.fn(),
+  queueNoticeRetraction: vi.fn(),
+}));
+
 import prisma from '@/lib/prisma';
+import { queueInspectionNotice, queueNoticeRetraction } from '@/services/inspectionNotifier';
 
 beforeAll(() => {
   process.env.SESSION_PASSWORD =
@@ -367,6 +374,81 @@ describe('PATCH /api/stations/[id]', () => {
     }));
 
     createSpy.mockRestore();
+    getSessionSpy.mockRestore();
+  });
+
+  it('queues a Discord notice for the recorded inspection when toggling on', async () => {
+    vi.mocked(prisma.fm_station.update).mockResolvedValue({ id_fm: 1 } as never);
+    const inspectionService = await import('@/services/inspectionService');
+    const createSpy = vi
+      .spyOn(inspectionService, 'createInspection')
+      .mockResolvedValue({ id: 77 } as never);
+    const sessionLib = await import('@/lib/session');
+    const getSessionSpy = vi.spyOn(sessionLib, 'getSession').mockResolvedValue({
+      userId: 42, username: 'tester', displayName: 'Test User', role: 'inspector', issuedAt: Date.now(),
+    } as never);
+    const { PATCH } = await import('@/app/api/stations/[id]/route');
+    const req = new Request('http://localhost', {
+      method: 'PATCH',
+      body: JSON.stringify({ inspection69: 'ตรวจแล้ว' }),
+    });
+    await PATCH(req as never, { params: Promise.resolve({ id: '1' }) });
+
+    expect(queueInspectionNotice).toHaveBeenCalledWith('fm', 77);
+    createSpy.mockRestore();
+    getSessionSpy.mockRestore();
+  });
+
+  it('does not queue a notice when the inspection history insert fails', async () => {
+    vi.mocked(prisma.fm_station.update).mockResolvedValue({ id_fm: 1 } as never);
+    const inspectionService = await import('@/services/inspectionService');
+    const createSpy = vi
+      .spyOn(inspectionService, 'createInspection')
+      .mockRejectedValue(new Error('connection refused') as never);
+    const sessionLib = await import('@/lib/session');
+    const getSessionSpy = vi.spyOn(sessionLib, 'getSession').mockResolvedValue({
+      userId: 42, username: 'tester', displayName: 'Test User', role: 'inspector', issuedAt: Date.now(),
+    } as never);
+    const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
+    const { PATCH } = await import('@/app/api/stations/[id]/route');
+    const req = new Request('http://localhost', {
+      method: 'PATCH',
+      body: JSON.stringify({ inspection69: 'ตรวจแล้ว' }),
+    });
+    const res = await PATCH(req as never, { params: Promise.resolve({ id: '1' }) });
+
+    expect(res.status).toBe(200);
+    expect(queueInspectionNotice).not.toHaveBeenCalled();
+    createSpy.mockRestore();
+    getSessionSpy.mockRestore();
+    warnSpy.mockRestore();
+  });
+
+  it('retracts the Discord notice of the row it undoes when toggling OFF', async () => {
+    vi.mocked(prisma.fm_station.update).mockResolvedValue({ id_fm: 1 } as never);
+    vi.mocked(prisma.station_inspection.findFirst).mockResolvedValue({ discord_message_id: '555' } as never);
+    vi.mocked(prisma.station_inspection.deleteMany).mockResolvedValue({ count: 1 } as never);
+    const inspectionService = await import('@/services/inspectionService');
+    const recomputeSpy = vi
+      .spyOn(inspectionService, 'recomputeStationInspectionState')
+      .mockResolvedValue(undefined as never);
+    const sessionLib = await import('@/lib/session');
+    const getSessionSpy = vi.spyOn(sessionLib, 'getSession').mockResolvedValue({
+      userId: 3, username: 'iff', displayName: 'iff', role: 'inspector', issuedAt: Date.now(),
+    } as never);
+    const { PATCH } = await import('@/app/api/stations/[id]/route');
+    const req = new Request('http://localhost', {
+      method: 'PATCH',
+      body: JSON.stringify({ inspection69: false }),
+    });
+    await PATCH(req as never, { params: Promise.resolve({ id: '1' }) });
+
+    expect(prisma.station_inspection.findFirst).toHaveBeenCalledWith({
+      where: { station_id: 1, lead_user_id: 3, inspected_on: expect.any(Date) },
+      select: { discord_message_id: true },
+    });
+    expect(queueNoticeRetraction).toHaveBeenCalledWith('555');
+    recomputeSpy.mockRestore();
     getSessionSpy.mockRestore();
   });
 

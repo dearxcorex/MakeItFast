@@ -6,6 +6,7 @@ import {
   createInterferenceInspection,
   recomputeInterferenceInspectionState,
 } from '@/services/interferenceInspectionService';
+import { queueInspectionNotice, queueNoticeRetraction } from '@/services/inspectionNotifier';
 
 export async function GET(
   _request: NextRequest,
@@ -111,7 +112,7 @@ export async function PATCH(
       try {
         const session = await getSession();
         if (session.userId) {
-          await createInterferenceInspection({
+          const inspection = await createInterferenceInspection({
             interferenceId: numId,
             inspectedOn: new Date().toISOString().split('T')[0],
             leadUserId: session.userId,
@@ -120,6 +121,7 @@ export async function PATCH(
                   typeof x === 'number' && Number.isInteger(x))
               : [],
           });
+          queueInspectionNotice('int', inspection.id);
         }
       } catch (err) {
         console.warn(`Failed to record interference inspection history for site ${numId}:`, err);
@@ -134,14 +136,18 @@ export async function PATCH(
         const session = await getSession();
         if (session.userId) {
           const today = new Date().toISOString().split('T')[0];
-          await prisma.interference_inspection.deleteMany({
-            where: {
-              interference_id: numId,
-              lead_user_id: session.userId,
-              inspected_on: new Date(`${today}T00:00:00Z`),
-            },
+          const where = {
+            interference_id: numId,
+            lead_user_id: session.userId,
+            inspected_on: new Date(`${today}T00:00:00Z`),
+          };
+          const undone = await prisma.interference_inspection.findFirst({
+            where,
+            select: { discord_message_id: true },
           });
+          await prisma.interference_inspection.deleteMany({ where });
           await recomputeInterferenceInspectionState(numId);
+          queueNoticeRetraction(undone?.discord_message_id);
         }
       } catch (err) {
         console.warn(`Failed to delete interference inspection history for site ${numId}:`, err);

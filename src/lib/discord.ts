@@ -10,6 +10,8 @@ export const InteractionResponseType = {
   DEFERRED_CHANNEL_MESSAGE_WITH_SOURCE: 5,
 } as const;
 export const EPHEMERAL = 1 << 6;
+// Posts without pushing a notification to members' phones.
+export const SUPPRESS_NOTIFICATIONS = 1 << 12;
 
 export interface Interaction {
   type: number;
@@ -62,5 +64,32 @@ export async function editOriginalResponse(
   );
   if (!res.ok) {
     throw new Error(`Discord edit returned ${res.status}: ${await res.text()}`);
+  }
+}
+
+/** Post through a channel webhook and return the new message's id. */
+export async function executeWebhook(webhookUrl: string, body: object): Promise<string> {
+  const url = new URL(webhookUrl);
+  // Without wait=true Discord answers 204 and never says which message it made.
+  url.searchParams.set('wait', 'true');
+  const res = await fetch(url, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(body),
+  });
+  if (!res.ok) {
+    throw new Error(`Discord webhook returned ${res.status}: ${await res.text()}`);
+  }
+  const message = (await res.json()) as { id: string };
+  return message.id;
+}
+
+/** Delete a message the webhook posted. Already gone (404) counts as done. */
+export async function deleteWebhookMessage(webhookUrl: string, messageId: string): Promise<void> {
+  const url = new URL(webhookUrl);
+  url.pathname = `${url.pathname.replace(/\/$/, '')}/messages/${messageId}`;
+  const res = await fetch(url, { method: 'DELETE' });
+  if (!res.ok && res.status !== 404) {
+    throw new Error(`Discord webhook delete returned ${res.status}: ${await res.text()}`);
   }
 }

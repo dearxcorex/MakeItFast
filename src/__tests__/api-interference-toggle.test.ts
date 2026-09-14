@@ -6,7 +6,7 @@ import { mintCookie } from './helpers/session';
 vi.mock('@/lib/prisma', () => ({
   default: {
     interference_site: { update: vi.fn(), findUnique: vi.fn() },
-    interference_inspection: { deleteMany: vi.fn() },
+    interference_inspection: { findFirst: vi.fn(), deleteMany: vi.fn() },
   },
 }));
 
@@ -14,7 +14,13 @@ vi.mock('@/services/interferenceService', () => ({
   fetchInterferenceSiteById: vi.fn(),
 }));
 
+vi.mock('@/services/inspectionNotifier', () => ({
+  queueInspectionNotice: vi.fn(),
+  queueNoticeRetraction: vi.fn(),
+}));
+
 import prisma from '@/lib/prisma';
+import { queueInspectionNotice, queueNoticeRetraction } from '@/services/inspectionNotifier';
 
 beforeEach(() => {
   process.env.SESSION_PASSWORD =
@@ -87,6 +93,50 @@ describe('PATCH /api/interference/[id] — toggle ON sidecar', () => {
 
     warnSpy.mockRestore();
     createSpy.mockRestore();
+    getSessionSpy.mockRestore();
+  });
+});
+
+describe('PATCH /api/interference/[id] — Discord notice', () => {
+  it('queues a notice for the recorded inspection when toggling ON', async () => {
+    vi.mocked(prisma.interference_site.update).mockResolvedValue({ id: 42 } as never);
+    const service = await import('@/services/interferenceInspectionService');
+    const createSpy = vi
+      .spyOn(service, 'createInterferenceInspection')
+      .mockResolvedValue({ id: 9 } as never);
+    const sessionLib = await import('@/lib/session');
+    const getSessionSpy = vi.spyOn(sessionLib, 'getSession').mockResolvedValue({
+      userId: 3, username: 'iff', displayName: 'iff', role: 'inspector', issuedAt: Date.now(),
+    } as never);
+
+    const c = await mintCookie({ userId: 3, username: 'iff', displayName: 'iff', role: 'inspector' });
+    const { PATCH } = await import('@/app/api/interference/[id]/route');
+    await PATCH(await makeReq({ status: 'ตรวจแล้ว' }, c.header), { params: Promise.resolve({ id: '42' }) });
+
+    expect(queueInspectionNotice).toHaveBeenCalledWith('int', 9);
+    createSpy.mockRestore();
+    getSessionSpy.mockRestore();
+  });
+
+  it('retracts the notice of the row it undoes when toggling OFF', async () => {
+    vi.mocked(prisma.interference_site.update).mockResolvedValue({ id: 42 } as never);
+    vi.mocked(prisma.interference_inspection.findFirst).mockResolvedValue({ discord_message_id: '888' } as never);
+    vi.mocked(prisma.interference_inspection.deleteMany).mockResolvedValue({ count: 1 } as never);
+    const service = await import('@/services/interferenceInspectionService');
+    const recomputeSpy = vi
+      .spyOn(service, 'recomputeInterferenceInspectionState')
+      .mockResolvedValue(undefined as never);
+    const sessionLib = await import('@/lib/session');
+    const getSessionSpy = vi.spyOn(sessionLib, 'getSession').mockResolvedValue({
+      userId: 3, username: 'iff', displayName: 'iff', role: 'inspector', issuedAt: Date.now(),
+    } as never);
+
+    const c = await mintCookie({ userId: 3, username: 'iff', displayName: 'iff', role: 'inspector' });
+    const { PATCH } = await import('@/app/api/interference/[id]/route');
+    await PATCH(await makeReq({ status: 'ยังไม่ตรวจ' }, c.header), { params: Promise.resolve({ id: '42' }) });
+
+    expect(queueNoticeRetraction).toHaveBeenCalledWith('888');
+    recomputeSpy.mockRestore();
     getSessionSpy.mockRestore();
   });
 });

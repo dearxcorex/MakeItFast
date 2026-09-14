@@ -44,7 +44,7 @@ export function formatThaiDate(isoDate: string): string {
   return `${d} ${THAI_MONTHS[m - 1]} ${y + 543}`;
 }
 
-function escapeMarkdown(s: string): string {
+export function escapeMarkdown(s: string): string {
   return s.replace(/([\\*_~`|>])/g, '\\$1');
 }
 
