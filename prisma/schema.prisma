@@ -29,7 +29,6 @@ model fm_station {
   revoked          Boolean? @default(false)
   revoked_note     String?
   permit           String?
-  created_at       DateTime?
 
   inspections   station_inspection[]
 
@@ -116,7 +115,6 @@ model station_inspection {
 model station_inspection_member {
   inspection_id Int
   user_id       Int
-  role          String  @default("helper")
 
   inspection station_inspection @relation(fields: [inspection_id], references: [id], onDelete: Cascade)
   member     user               @relation(fields: [user_id], references: [id])
@@ -149,7 +147,6 @@ model interference_inspection {
 model interference_inspection_member {
   inspection_id Int
   user_id       Int
-  role          String  @default("helper")
 
   inspection interference_inspection @relation(fields: [inspection_id], references: [id], onDelete: Cascade)
   member     user                     @relation("int_inspection_member", fields: [user_id], references: [id])

@@ -139,7 +139,7 @@ export async function createInterferenceInspection(
     if (input.helperUserIds.length > 0) {
       await tx.interference_inspection_member.createMany({
         data: input.helperUserIds.map((uid) => ({
-          inspection_id: ins.id, user_id: uid, role: 'helper',
+          inspection_id: ins.id, user_id: uid,
         })),
       });
     }

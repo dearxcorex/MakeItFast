@@ -113,7 +113,6 @@ async function main() {
     inspection_69: false,
     submit_a_request: false,
     revoked: false,
-    created_at: new Date(),
   };
 
   console.log(JSON.stringify(data, null, 2));

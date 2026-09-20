@@ -25,8 +25,6 @@ export function convertToFMStation(row: fm_station): FMStation {
     submitRequest: row.submit_a_request ? 'ยื่น' : 'ไม่ยื่น',
     revoked: row.revoked === true,
     revokedNote: row.revoked_note ?? undefined,
-    createdAt: undefined,
-    updatedAt: undefined,
   };
 }
 

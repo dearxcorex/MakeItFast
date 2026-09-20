@@ -199,7 +199,6 @@ async function main(): Promise<void> {
       // No StationID on a results-table row: register_station_id stays NULL and
       // id_fm carries the NBTC code, which is what the UI prints as ID.
       id_fm: s.nbtcCode,
-      created_at: new Date(),
     };
   });
   console.log('\nINSERT:');

@@ -46,7 +46,7 @@ describe('listInspectionsForStation', () => {
         updated_at: new Date('2026-04-03T00:00:00Z'),
         lead: { id: 3, username: 'iff', display_name: 'iff' },
         members: [
-          { user_id: 6, role: 'helper', member: { id: 6, username: 'daf', display_name: 'daf' } },
+          { user_id: 6, member: { id: 6, username: 'daf', display_name: 'daf' } },
         ],
       },
     ] as never);
@@ -234,7 +234,7 @@ describe('createInspection — additional validation', () => {
       data: expect.objectContaining({ station_id: 1, lead_user_id: 3 }),
     }));
     expect(txMemberCreateMany).toHaveBeenCalledWith({
-      data: [{ inspection_id: 100, user_id: 6, role: 'helper' }],
+      data: [{ inspection_id: 100, user_id: 6 }],
     });
     expect(txStationUpdate).toHaveBeenCalledWith(expect.objectContaining({
       where: { id: 1 },

@@ -221,7 +221,7 @@ async function main() {
       if (row.helperUserIds.length > 0) {
         await tx.station_inspection_member.createMany({
           data: row.helperUserIds.map((uid) => ({
-            inspection_id: ins.id, user_id: uid, role: 'helper',
+            inspection_id: ins.id, user_id: uid,
           })),
         });
       }

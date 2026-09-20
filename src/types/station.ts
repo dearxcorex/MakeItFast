@@ -21,8 +21,6 @@ export interface FMStation {
   submitRequest?: string;
   revoked?: boolean;
   revokedNote?: string;
-  createdAt?: string;
-  updatedAt?: string;
 }
 
 export interface UserLocation {

@@ -156,7 +156,6 @@ async function main(): Promise<void> {
   // register_station_id is left NULL: these stations are inserted from the results
   // table, which carries no StationID. id_fm takes the NBTC code instead, so the row
   // still has the identifier the UI prints.
-  const now = new Date();
   const data = toInsert.map((r) => ({
     name: r.siteName,
     freq: r.siteFreq,
@@ -178,7 +177,6 @@ async function main(): Promise<void> {
     // The NBTC code is the identifier the UI prints; there is no separate
     // nbtc_code column since 2026-09-20-drop-nbtc-code-and-source.
     id_fm: r.nbtcCode,
-    created_at: now,
   }));
 
   console.log(`\n--apply: inserting ${data.length} station(s)`);
