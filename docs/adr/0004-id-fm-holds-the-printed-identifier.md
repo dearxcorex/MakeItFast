@@ -44,8 +44,9 @@ unique index survives the merge.
 
 - **`FMStation.idFm` is a `string`.** `stationLabel` prints it as-is when it is a code and as
   `FM-<n>` when it is all digits, so nothing changes on screen for a station without a code.
-  `nbtcCode` stays on the interface as the fallback for a row written before the code reached
-  `id_fm`.
+  `nbtcCode` stayed on the interface at first as the fallback for a row written before the code
+  reached `id_fm`; it was removed with the `nbtc_code` column on 2026-09-20
+  (`2026-09-20-drop-nbtc-code-and-source`) once every code was verified to be in `id_fm`.
 - **Register scripts join on `register_station_id`.** `sync-register`, `import-nbtc-stations`,
   `compare-register-by-type`, `audit-offair`, `import-inspections-xlsx`,
   `backfill-permit-from-xlsx` and `import-revoked-missing` all moved. The decoupled
@@ -54,7 +55,7 @@ unique index survives the merge.
 - **Every writer keeps the invariant.** A station inserted with an NBTC code gets it in `id_fm`
   too (`sync-register`, `import-nbtc-stations`, `add-station`); one inserted with only a
   StationID gets its digits. `add-station`'s flag is now `--station-id` (`--id-fm` still
-  accepted) and it writes both columns.
+  accepted). It wrote both `id_fm` and `nbtc_code` until the latter was dropped.
 - **The migration is backward-incompatible in both directions.** It is a type change on a column
   the deployed Prisma client selects on every page load: an `Int` client reading text throws,
   and so does a `String` client reading an integer. Unlike a widening or a narrowing migration

@@ -85,8 +85,8 @@ async function main() {
     if (clash) fail(`StationID ${idFm} already belongs to "${clash.name}" (id ${clash.id})`);
   }
   if (nbtcCode) {
-    const clash = await prisma.fm_station.findFirst({ where: { nbtc_code: nbtcCode } });
-    if (clash) fail(`nbtc_code ${nbtcCode} already belongs to "${clash.name}" (id ${clash.id})`);
+    const clash = await prisma.fm_station.findUnique({ where: { id_fm: nbtcCode } });
+    if (clash) fail(`NBTC code ${nbtcCode} already belongs to "${clash.name}" (id ${clash.id})`);
   }
 
   const sameSlot = await prisma.fm_station.findFirst({
@@ -107,14 +107,12 @@ async function main() {
     district,
     province,
     type,
-    nbtc_code: nbtcCode,
     // Newly licensed and not yet inspected: the pending bucket, not a confirmed
     // OFF AIR pin. Matches what sync-register does for its inserts.
     on_air: true,
     inspection_69: false,
     submit_a_request: false,
     revoked: false,
-    source: 'add-station-script',
     created_at: new Date(),
   };
 

@@ -33,7 +33,6 @@ import { TARGET_PROVINCES } from '../src/utils/offairAudit';
 
 const JSON_PATH = process.argv.slice(2).find((a) => !a.startsWith('--'));
 const APPLY = process.argv.includes('--apply');
-const SOURCE_TAG = 'nbtc_oper_2569_09';
 const REPORT_DIR = path.join(process.cwd(), 'reports');
 
 const prisma = new PrismaClient();
@@ -175,18 +174,19 @@ async function main(): Promise<void> {
     // than we know. submit_a_request stays at its default and means "unknown", not "no".
     on_air: true,
     revoked: false,
-    inspection_68: false,
     inspection_69: false,
-    nbtc_code: r.nbtcCode,
+    // The NBTC code is the identifier the UI prints; there is no separate
+    // nbtc_code column since 2026-09-20-drop-nbtc-code-and-source.
     id_fm: r.nbtcCode,
-    source: SOURCE_TAG,
     created_at: now,
   }));
 
-  console.log(`\n--apply: inserting ${data.length} station(s) tagged source='${SOURCE_TAG}'`);
-  const res = await prisma.fm_station.createMany({ data });
-  console.log(`inserted: ${res.count}`);
-  console.log(`undo: DELETE FROM fm_station WHERE source = '${SOURCE_TAG}';`);
+  console.log(`\n--apply: inserting ${data.length} station(s)`);
+  const created = await prisma.fm_station.createManyAndReturn({ data, select: { id: true } });
+  console.log(`inserted: ${created.length}`);
+  // An id list is an exact undo. The old `source` tag was shared by every run,
+  // so undoing one import took the previous one with it.
+  console.log(`undo: DELETE FROM fm_station WHERE id IN (${created.map((s) => s.id).join(', ')});`);
 
   await prisma.$disconnect();
 }

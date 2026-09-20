@@ -6,8 +6,8 @@
  *   --types=other     every other type, licence not expired, FM band only, compared with
  *                     the DB rows the business rows do not already claim
  *
- *   - Same station in the DB  -> overwrite name / freq / lat / long / district / nbtc_code / id_fm
- *   - Not in the DB           -> insert, tagged source=SOURCE_TAG, so it plots as a pending pin
+ *   - Same station in the DB  -> overwrite name / freq / lat / long / district / id_fm
+ *   - Not in the DB           -> insert as on-air/uninspected, so it plots as a pending pin
  *
  * A freq+district hit on a *revoked* DB row is a new licensee on the old slot, not the
  * same station: every such row carries "<org> เป็นผู้รับใบอนุญาต…รายใหม่" in permit, and
@@ -34,7 +34,6 @@ const APPLY = process.argv.includes('--apply');
 const TYPES = process.argv.find((a) => a.startsWith('--types='))?.slice('--types='.length);
 const BUSINESS = 'ประเภทกิจการทางธุรกิจ ระดับท้องถิ่น';
 const MAIN = 'สถานีวิทยุหลัก';
-const SOURCE_TAG = 'nbtc_oper_2569_09';
 const RAW_DIR = path.join(process.cwd(), 'data', 'nbtc-raw');
 const FILES = ['stations-ชัยภูมิ.json', 'stations-นครราชสีมา.json'];
 const TODAY = new Date().toISOString().slice(0, 10);
@@ -163,8 +162,7 @@ async function main(): Promise<void> {
       ...(isOrgName(s.name) ? {} : { name: s.name }),
       freq: s.freq,
       district: stripThaiGeoPrefix(s.district),
-      nbtc_code: s.nbtcCode,
-      // The code is also the identifier the UI prints, so it lands in id_fm too;
+      // The NBTC code is the identifier the UI prints, so it lands in id_fm;
       // a row without one keeps the StationID digits it already has.
       ...(s.nbtcCode ? { id_fm: s.nbtcCode } : {}),
       ...(s.lat !== null && s.lng !== null ? { lat: s.lat, long: s.lng } : {}),
@@ -172,14 +170,14 @@ async function main(): Promise<void> {
     const before = db.find((d) => d.register_station_id === r.idFm)!;
     const diff = Object.entries(data).filter(([k, v]) => {
       const old = (before as unknown as Record<string, unknown>)[k];
-      return k === 'nbtc_code' || k === 'id_fm' ? true : old !== v;
+      return k === 'id_fm' ? true : old !== v;
     });
     return { idFm: r.idFm!, data, before, diff, record: r };
   });
 
   console.log('UPDATE (fields that change):');
   for (const c of changes) {
-    const shown = c.diff.filter(([k]) => k !== 'nbtc_code' && k !== 'id_fm' && k !== 'long')
+    const shown = c.diff.filter(([k]) => k !== 'id_fm' && k !== 'long')
       .map(([k, v]) => (k === 'lat' ? `coords ${Math.round(c.record.distanceM ?? 0)}m` : `${k} ${(c.before as unknown as Record<string, unknown>)[k]} → ${v}`));
     console.log(`  ${String(c.idFm).padEnd(8)} ${c.before.name}${c.before.revoked ? ' [revoked]' : ''}  ${shown.join('; ') || '(code only)'}`);
   }
@@ -197,13 +195,10 @@ async function main(): Promise<void> {
       // Newly licensed and not yet inspected: the pending bucket, not a confirmed OFF AIR pin.
       on_air: true,
       revoked: false,
-      inspection_68: false,
       inspection_69: false,
-      nbtc_code: s.nbtcCode,
       // No StationID on a results-table row: register_station_id stays NULL and
       // id_fm carries the NBTC code, which is what the UI prints as ID.
       id_fm: s.nbtcCode,
-      source: SOURCE_TAG,
       created_at: new Date(),
     };
   });
@@ -226,11 +221,15 @@ async function main(): Promise<void> {
   console.log(`\nsnapshot of ${snapshot.length} rows: ${snapshotPath}`);
 
   const [inserted, ...updated] = await prisma.$transaction([
-    prisma.fm_station.createMany({ data: insertData }),
+    prisma.fm_station.createManyAndReturn({ data: insertData, select: { id: true } }),
     ...changes.map((c) => prisma.fm_station.update({ where: { register_station_id: c.idFm }, data: c.data })),
   ]);
-  console.log(`updated ${updated.length}, inserted ${(inserted as { count: number }).count}`);
+  const insertedIds = (inserted as { id: number }[]).map((s) => s.id);
+  console.log(`updated ${updated.length}, inserted ${insertedIds.length}`);
   console.log(`undo updates: restore from ${path.basename(snapshotPath)}`);
+  if (insertedIds.length) {
+    console.log(`undo inserts: DELETE FROM fm_station WHERE id IN (${insertedIds.join(', ')});`);
+  }
 }
 
 main()

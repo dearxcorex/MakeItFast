@@ -10,16 +10,8 @@ describe('stationLabel', () => {
     expect(stationLabel({ idFm: '5520003' })).toBe('FM-5520003');
   });
 
-  it('falls back to nbtcCode when id_fm has not caught up', () => {
-    expect(stationLabel({ nbtcCode: 'RFY217640017' })).toBe('RFY217640017');
-  });
-
-  it('prefers id_fm over nbtcCode', () => {
-    expect(stationLabel({ idFm: 'RFXL680654', nbtcCode: 'RFXL999999' })).toBe('RFXL680654');
-  });
-
-  it('renders an em dash when the station has neither', () => {
+  it('renders an em dash when the station has no identifier', () => {
     expect(stationLabel({})).toBe('—');
-    expect(stationLabel({ idFm: '  ', nbtcCode: '' })).toBe('—');
+    expect(stationLabel({ idFm: '  ' })).toBe('—');
   });
 });

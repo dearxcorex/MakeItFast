@@ -53,7 +53,7 @@ export function fmStationMatchesFilter(s: FMStation, filters: FieldFilters): boo
   if (filters.revoked && s.revoked !== true) return false;
   if (filters.search) {
     const q = filters.search.toLowerCase();
-    const hay = `${s.name} ${s.frequency} ${s.city} ${s.state} ${s.idFm ?? ""} ${s.nbtcCode ?? ""}`.toLowerCase();
+    const hay = `${s.name} ${s.frequency} ${s.city} ${s.state} ${s.idFm ?? ""}`.toLowerCase();
     if (!hay.includes(q)) return false;
   }
   return true;

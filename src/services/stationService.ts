@@ -19,7 +19,6 @@ export function convertToFMStation(row: fm_station): FMStation {
     website: undefined,
     transmitterPower: undefined,
     permit: row.permit ?? undefined,
-    nbtcCode: row.nbtc_code?.trim() || undefined,
     inspection69: row.inspection_69 ? 'ตรวจแล้ว' : 'ยังไม่ตรวจ',
     dateInspected: row.date_inspected || undefined,
     onAir: row.on_air || false,

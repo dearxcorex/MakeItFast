@@ -93,7 +93,6 @@ async function main(): Promise<void> {
       district: m.xlsxDistrict,
       province: m.xlsxProvince,
       type: p?.type || null,
-      inspection_68: false,
       inspection_69: false,
       on_air: false,
       submit_a_request: false,

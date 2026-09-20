@@ -21,8 +21,6 @@ function makeDbRow(overrides: Record<string, unknown> = {}) {
     revoked: false,
     revoked_note: null,
     permit: null,
-    nbtc_code: null,
-    source: null,
     created_at: null,
     updated_at: null,
     ...overrides,
@@ -125,11 +123,6 @@ describe('convertToFMStation', () => {
     expect(result.permit).toBeUndefined();
   });
 
-  it('maps row.nbtc_code to FMStation.nbtcCode', () => {
-    const result = convertToFMStation(makeDbRow({ nbtc_code: 'RFY217640017' }));
-    expect(result.nbtcCode).toBe('RFY217640017');
-  });
-
   it('maps an id_fm holding an NBTC code straight through', () => {
     expect(convertToFMStation(makeDbRow({ id_fm: 'RFXL680654' })).idFm).toBe('RFXL680654');
   });
@@ -139,13 +132,4 @@ describe('convertToFMStation', () => {
     expect(convertToFMStation(makeDbRow({ id_fm: '   ' })).idFm).toBeUndefined();
   });
 
-  it('trims nbtc_code', () => {
-    const result = convertToFMStation(makeDbRow({ nbtc_code: ' RFXL650009 ' }));
-    expect(result.nbtcCode).toBe('RFXL650009');
-  });
-
-  it('returns undefined nbtcCode when row.nbtc_code is null or blank', () => {
-    expect(convertToFMStation(makeDbRow({ nbtc_code: null })).nbtcCode).toBeUndefined();
-    expect(convertToFMStation(makeDbRow({ nbtc_code: '' })).nbtcCode).toBeUndefined();
-  });
 });

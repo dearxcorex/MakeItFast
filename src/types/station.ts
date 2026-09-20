@@ -15,7 +15,6 @@ export interface FMStation {
   website?: string;
   transmitterPower?: number; // in watts
   permit?: string;
-  nbtcCode?: string; // fm_station.nbtc_code — the official NBTC code, shown as the station ID
   inspection69?: string;
   dateInspected?: string; // Date when the station was inspected
   onAir?: boolean;
