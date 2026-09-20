@@ -53,7 +53,7 @@ export function fmStationMatchesFilter(s: FMStation, filters: FieldFilters): boo
   if (filters.revoked && s.revoked !== true) return false;
   if (filters.search) {
     const q = filters.search.toLowerCase();
-    const hay = `${s.name} ${s.frequency} ${s.city} ${s.state} ${s.id}`.toLowerCase();
+    const hay = `${s.name} ${s.frequency} ${s.city} ${s.state} ${s.idFm ?? ""} ${s.nbtcCode ?? ""}`.toLowerCase();
     if (!hay.includes(q)) return false;
   }
   return true;
@@ -162,20 +162,24 @@ export default function FieldOpsClient({
     setHelperUserIds([]);
   }, [selectedTargetKey]);
 
+  // Depend on the primitives, not the `selection` object, so re-selecting the
+  // same target doesn't refetch its inspection history.
+  const selectionKind = selection?.kind;
+  const selectionId = selection?.id;
   useEffect(() => {
     setLastInspection(null);
-    if (!selection) return;
+    if (!selectionKind) return;
 
     const isInspected =
-      (selection.kind === 'fm' && selectedStation?.inspection69 === 'ตรวจแล้ว') ||
-      (selection.kind === 'int' && selectedSite?.status === 'ตรวจแล้ว');
+      (selectionKind === 'fm' && selectedStation?.inspection69 === 'ตรวจแล้ว') ||
+      (selectionKind === 'int' && selectedSite?.status === 'ตรวจแล้ว');
     if (!isInspected) return;
 
     let cancelled = false;
     const url =
-      selection.kind === 'fm'
-        ? `/api/stations/${selection.id}/inspections`
-        : `/api/interference/${selection.id}/inspections`;
+      selectionKind === 'fm'
+        ? `/api/stations/${selectionId}/inspections`
+        : `/api/interference/${selectionId}/inspections`;
 
     fetch(url)
       .then((r) => (r.ok ? r.json() : null))
@@ -190,7 +194,7 @@ export default function FieldOpsClient({
       })
       .catch(() => {});
     return () => { cancelled = true; };
-  }, [selectedTargetKey, selectedStation?.inspection69, selectedSite?.status]);
+  }, [selectionKind, selectionId, selectedStation?.inspection69, selectedSite?.status]);
 
   // Auto-dismiss the selection (and its details panel / bottom sheet) when
   // the current filter no longer includes the selected item — e.g. switching

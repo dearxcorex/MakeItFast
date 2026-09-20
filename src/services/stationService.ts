@@ -5,7 +5,8 @@ import type { fm_station } from '@prisma/client';
 // Convert database row to FMStation interface
 export function convertToFMStation(row: fm_station): FMStation {
   return {
-    id: row.id_fm,
+    id: row.id,
+    idFm: row.id_fm ?? undefined,
     name: row.name || '',
     frequency: row.freq || 0,
     latitude: row.lat ?? NaN,
@@ -18,10 +19,9 @@ export function convertToFMStation(row: fm_station): FMStation {
     website: undefined,
     transmitterPower: undefined,
     permit: row.permit ?? undefined,
-    inspection68: row.inspection_68 ? 'ตรวจแล้ว' : 'ยังไม่ตรวจ',
+    nbtcCode: row.nbtc_code?.trim() || undefined,
     inspection69: row.inspection_69 ? 'ตรวจแล้ว' : 'ยังไม่ตรวจ',
     dateInspected: row.date_inspected || undefined,
-    details: row.note || undefined,
     onAir: row.on_air || false,
     submitRequest: row.submit_a_request ? 'ยื่น' : 'ไม่ยื่น',
     revoked: row.revoked === true,
@@ -34,7 +34,7 @@ export function convertToFMStation(row: fm_station): FMStation {
 export async function fetchFMStationById(id: number): Promise<FMStation | null> {
   try {
     const data = await prisma.fm_station.findUnique({
-      where: { id_fm: id },
+      where: { id },
     });
     if (!data) return null;
     return convertToFMStation(data);

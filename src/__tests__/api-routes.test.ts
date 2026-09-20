@@ -158,16 +158,15 @@ describe('PATCH /api/stations/[id]', () => {
     expect(res.status).toBe(400);
   });
 
-  it('updates details field', async () => {
-    vi.mocked(prisma.fm_station.update).mockResolvedValue({ id_fm: 1 } as never);
+  it('rejects a details field, which no longer has a column behind it', async () => {
     const { PATCH } = await import('@/app/api/stations/[id]/route');
     const req = new Request('http://localhost', {
       method: 'PATCH',
       body: JSON.stringify({ details: 'new note' }),
     });
     const res = await PATCH(req as never, { params: Promise.resolve({ id: '1' }) });
-    expect(res.status).toBe(200);
-    expect(prisma.fm_station.update).toHaveBeenCalledWith(
+    expect(res.status).toBe(400);
+    expect(prisma.fm_station.update).not.toHaveBeenCalledWith(
       expect.objectContaining({
         data: expect.objectContaining({ note: 'new note' }),
       })
@@ -187,7 +186,7 @@ describe('PATCH /api/stations/[id]', () => {
 
   it('allows onAir=true with request', async () => {
     vi.mocked(prisma.fm_station.findUnique).mockResolvedValue({ submit_a_request: true } as never);
-    vi.mocked(prisma.fm_station.update).mockResolvedValue({ id_fm: 1 } as never);
+    vi.mocked(prisma.fm_station.update).mockResolvedValue({ id: 1 } as never);
     const { PATCH } = await import('@/app/api/stations/[id]/route');
     const req = new Request('http://localhost', {
       method: 'PATCH',
@@ -198,7 +197,7 @@ describe('PATCH /api/stations/[id]', () => {
   });
 
   it('sets date_inspected when inspection69 is true', async () => {
-    vi.mocked(prisma.fm_station.update).mockResolvedValue({ id_fm: 1 } as never);
+    vi.mocked(prisma.fm_station.update).mockResolvedValue({ id: 1 } as never);
     const { PATCH } = await import('@/app/api/stations/[id]/route');
     const req = new Request('http://localhost', {
       method: 'PATCH',
@@ -217,7 +216,7 @@ describe('PATCH /api/stations/[id]', () => {
   });
 
   it('clears date_inspected when inspection69 is false', async () => {
-    vi.mocked(prisma.fm_station.update).mockResolvedValue({ id_fm: 1 } as never);
+    vi.mocked(prisma.fm_station.update).mockResolvedValue({ id: 1 } as never);
     const { PATCH } = await import('@/app/api/stations/[id]/route');
     const req = new Request('http://localhost', {
       method: 'PATCH',
@@ -236,7 +235,7 @@ describe('PATCH /api/stations/[id]', () => {
   });
 
   it('records a station_inspection row via createInspection when toggling on', async () => {
-    vi.mocked(prisma.fm_station.update).mockResolvedValue({ id_fm: 1 } as never);
+    vi.mocked(prisma.fm_station.update).mockResolvedValue({ id: 1 } as never);
     const inspectionService = await import('@/services/inspectionService');
     const createInspectionSpy = vi
       .spyOn(inspectionService, 'createInspection')
@@ -270,7 +269,7 @@ describe('PATCH /api/stations/[id]', () => {
   it('stamps an early-morning inspection with the Bangkok date, not the UTC date', async () => {
     vi.useFakeTimers({ toFake: ['Date'] });
     vi.setSystemTime(new Date('2026-09-12T23:30:00Z')); // 06:30 on 13 Sep in Bangkok
-    vi.mocked(prisma.fm_station.update).mockResolvedValue({ id_fm: 1 } as never);
+    vi.mocked(prisma.fm_station.update).mockResolvedValue({ id: 1 } as never);
     const inspectionService = await import('@/services/inspectionService');
     const createInspectionSpy = vi
       .spyOn(inspectionService, 'createInspection')
@@ -313,7 +312,7 @@ describe('PATCH /api/stations/[id]', () => {
         issuedAt: Date.now(),
       } as never);
 
-    vi.mocked(prisma.fm_station.update).mockResolvedValue({ id_fm: 1 } as never);
+    vi.mocked(prisma.fm_station.update).mockResolvedValue({ id: 1 } as never);
 
     const c = await mintCookie({ userId: 3, username: 'iff', displayName: 'iff', role: 'inspector' });
     const headers = new Headers();
@@ -354,7 +353,7 @@ describe('PATCH /api/stations/[id]', () => {
         issuedAt: Date.now(),
       } as never);
 
-    vi.mocked(prisma.fm_station.update).mockResolvedValue({ id_fm: 1 } as never);
+    vi.mocked(prisma.fm_station.update).mockResolvedValue({ id: 1 } as never);
 
     const c = await mintCookie({ userId: 3, username: 'iff', displayName: 'iff', role: 'inspector' });
     const headers = new Headers();
@@ -378,7 +377,7 @@ describe('PATCH /api/stations/[id]', () => {
   });
 
   it('queues a Discord notice for the recorded inspection when toggling on', async () => {
-    vi.mocked(prisma.fm_station.update).mockResolvedValue({ id_fm: 1 } as never);
+    vi.mocked(prisma.fm_station.update).mockResolvedValue({ id: 1 } as never);
     const inspectionService = await import('@/services/inspectionService');
     const createSpy = vi
       .spyOn(inspectionService, 'createInspection')
@@ -400,7 +399,7 @@ describe('PATCH /api/stations/[id]', () => {
   });
 
   it('does not queue a notice when the inspection history insert fails', async () => {
-    vi.mocked(prisma.fm_station.update).mockResolvedValue({ id_fm: 1 } as never);
+    vi.mocked(prisma.fm_station.update).mockResolvedValue({ id: 1 } as never);
     const inspectionService = await import('@/services/inspectionService');
     const createSpy = vi
       .spyOn(inspectionService, 'createInspection')
@@ -425,7 +424,7 @@ describe('PATCH /api/stations/[id]', () => {
   });
 
   it('retracts the Discord notice of the row it undoes when toggling OFF', async () => {
-    vi.mocked(prisma.fm_station.update).mockResolvedValue({ id_fm: 1 } as never);
+    vi.mocked(prisma.fm_station.update).mockResolvedValue({ id: 1 } as never);
     vi.mocked(prisma.station_inspection.findFirst).mockResolvedValue({ discord_message_id: '555' } as never);
     vi.mocked(prisma.station_inspection.deleteMany).mockResolvedValue({ count: 1 } as never);
     const inspectionService = await import('@/services/inspectionService');
@@ -453,7 +452,7 @@ describe('PATCH /api/stations/[id]', () => {
   });
 
   it('deletes today\'s caller-owned station_inspection row when toggling OFF', async () => {
-    vi.mocked(prisma.fm_station.update).mockResolvedValue({ id_fm: 1 } as never);
+    vi.mocked(prisma.fm_station.update).mockResolvedValue({ id: 1 } as never);
     vi.mocked(prisma.station_inspection.deleteMany).mockResolvedValue({ count: 1 } as never);
 
     const inspectionService = await import('@/services/inspectionService');
@@ -490,7 +489,7 @@ describe('PATCH /api/stations/[id]', () => {
   it('toggling OFF early in the morning undoes the Bangkok-dated row', async () => {
     vi.useFakeTimers({ toFake: ['Date'] });
     vi.setSystemTime(new Date('2026-09-12T23:30:00Z')); // 06:30 on 13 Sep in Bangkok
-    vi.mocked(prisma.fm_station.update).mockResolvedValue({ id_fm: 1 } as never);
+    vi.mocked(prisma.fm_station.update).mockResolvedValue({ id: 1 } as never);
     vi.mocked(prisma.station_inspection.deleteMany).mockResolvedValue({ count: 1 } as never);
     const inspectionService = await import('@/services/inspectionService');
     const recomputeSpy = vi
@@ -517,7 +516,7 @@ describe('PATCH /api/stations/[id]', () => {
   });
 
   it('does NOT fail when toggling OFF with no matching history row', async () => {
-    vi.mocked(prisma.fm_station.update).mockResolvedValue({ id_fm: 1 } as never);
+    vi.mocked(prisma.fm_station.update).mockResolvedValue({ id: 1 } as never);
     vi.mocked(prisma.station_inspection.deleteMany).mockResolvedValue({ count: 0 } as never);
 
     const inspectionService = await import('@/services/inspectionService');
@@ -546,7 +545,7 @@ describe('PATCH /api/stations/[id]', () => {
   });
 
   it('toggle OFF still succeeds when deleteMany throws (best-effort sidecar)', async () => {
-    vi.mocked(prisma.fm_station.update).mockResolvedValue({ id_fm: 1 } as never);
+    vi.mocked(prisma.fm_station.update).mockResolvedValue({ id: 1 } as never);
     vi.mocked(prisma.station_inspection.deleteMany).mockRejectedValue(new Error('connection refused') as never);
 
     const inspectionService = await import('@/services/inspectionService');
@@ -626,13 +625,13 @@ describe('/api/interference/[id]', () => {
     const { PATCH } = await import('@/app/api/interference/[id]/route');
     const req = new Request('http://localhost', {
       method: 'PATCH',
-      body: JSON.stringify({ notes: 'updated', ranking: 'Major', status: 'ตรวจแล้ว' }),
+      body: JSON.stringify({ ranking: 'Major', status: 'ตรวจแล้ว' }),
     });
     const res = await PATCH(req as never, { params: Promise.resolve({ id: '1' }) });
     expect(res.status).toBe(200);
     expect(prisma.interference_site.update).toHaveBeenCalledWith({
       where: { id: 1 },
-      data: { notes: 'updated', ranking: 'Major', status: 'ตรวจแล้ว' },
+      data: { ranking: 'Major', status: 'ตรวจแล้ว' },
     });
   });
 

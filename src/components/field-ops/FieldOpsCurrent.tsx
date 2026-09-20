@@ -7,6 +7,7 @@ import { parseLatLngInput } from "@/utils/parseLatLng";
 import TeammatePicker, { type InspectorOption } from "./TeammatePicker";
 import InspectionTeamChips from './InspectionTeamChips';
 import type { InspectionMember } from '@/types/inspection';
+import { stationLabel } from "@/utils/stationLabel";
 
 interface CommonAction {
   label: string;
@@ -121,6 +122,7 @@ export function FieldOpsCurrentFM({
       </div>
 
       <div style={{ display: "flex", gap: 18, flexWrap: "wrap", paddingTop: 4 }}>
+        <Meter label="ID" value={stationLabel(station)} />
         <Meter label="FREQ" value={`${station.frequency.toFixed(2)} MHz`} />
         <Meter label="PERMIT" value={station.permit || "—"} />
         {station.transmitterPower !== undefined && (

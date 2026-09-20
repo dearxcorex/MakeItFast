@@ -110,7 +110,7 @@ describe('createInspection', () => {
   });
 
   it('returns existing inspection (idempotent) when one matches station+date+lead', async () => {
-    vi.mocked(prisma.fm_station.findUnique).mockResolvedValue({ id_fm: 1 } as never);
+    vi.mocked(prisma.fm_station.findUnique).mockResolvedValue({ id: 1 } as never);
     vi.mocked(prisma.user.findMany).mockResolvedValue([
       { id: 3, username: 'iff', display_name: 'iff', active: true, role: 'inspector' },
     ] as never);
@@ -145,7 +145,7 @@ describe('recomputeStationInspectionState', () => {
     await recomputeStationInspectionState(5520014);
 
     expect(prisma.fm_station.update).toHaveBeenCalledWith({
-      where: { id_fm: 5520014 },
+      where: { id: 5520014 },
       data: { date_inspected: '2026-04-21', inspection_69: true },
     });
   });
@@ -159,7 +159,7 @@ describe('recomputeStationInspectionState', () => {
     await recomputeStationInspectionState(5520014);
 
     expect(prisma.fm_station.update).toHaveBeenCalledWith({
-      where: { id_fm: 5520014 },
+      where: { id: 5520014 },
       data: { date_inspected: null, inspection_69: false },
     });
   });
@@ -183,7 +183,7 @@ describe('createInspection — additional validation', () => {
   });
 
   it('rejects when a user is inactive, missing, or not an inspector', async () => {
-    vi.mocked(prisma.fm_station.findUnique).mockResolvedValue({ id_fm: 1 } as never);
+    vi.mocked(prisma.fm_station.findUnique).mockResolvedValue({ id: 1 } as never);
     vi.mocked(prisma.user.findMany).mockResolvedValue([] as never);
     await expect(createInspection({
       stationId: 1, inspectedOn: '2026-04-03', leadUserId: 3, helperUserIds: [],
@@ -192,7 +192,7 @@ describe('createInspection — additional validation', () => {
 
   it('writes inspection + members and runs recompute inside the transaction (happy path)', async () => {
     vi.mocked(prisma.fm_station.findUnique)
-      .mockResolvedValueOnce({ id_fm: 1 } as never);
+      .mockResolvedValueOnce({ id: 1 } as never);
     vi.mocked(prisma.user.findMany).mockResolvedValue([
       { id: 3, username: 'iff', display_name: 'iff', active: true, role: 'inspector' },
       { id: 6, username: 'daf', display_name: 'daf', active: true, role: 'inspector' },
@@ -202,7 +202,7 @@ describe('createInspection — additional validation', () => {
     const txCreate = vi.fn().mockResolvedValue({ id: 100 });
     const txAggregate = vi.fn().mockResolvedValue({ _max: { inspected_on: new Date('2026-04-03T00:00:00Z') } });
     const txCount = vi.fn().mockResolvedValue(1);
-    const txStationUpdate = vi.fn().mockResolvedValue({ id_fm: 1 });
+    const txStationUpdate = vi.fn().mockResolvedValue({ id: 1 });
     const txMemberCreateMany = vi.fn().mockResolvedValue({ count: 1 });
 
     vi.mocked(prisma.$transaction).mockImplementationOnce((async (cb: unknown) => {
@@ -237,7 +237,7 @@ describe('createInspection — additional validation', () => {
       data: [{ inspection_id: 100, user_id: 6, role: 'helper' }],
     });
     expect(txStationUpdate).toHaveBeenCalledWith(expect.objectContaining({
-      where: { id_fm: 1 },
+      where: { id: 1 },
       data: { date_inspected: '2026-04-03', inspection_69: true },
     }));
   });

@@ -155,9 +155,16 @@ async function main() {
   const ids = parsed.map((p) => p.stationId).filter((x): x is number => x !== null);
   const existingStations = await prisma.fm_station.findMany({
     where: { id_fm: { in: ids } },
-    select: { id_fm: true },
+    select: { id_fm: true, id: true },
   });
-  const existingStationIds = new Set(existingStations.map((r) => r.id_fm));
+  const existingStationIds = new Set(
+    existingStations.map((r) => r.id_fm).filter((x): x is number => x !== null),
+  );
+  // The xlsx column รหัสสถานี is the register StationID (id_fm). Inspections are
+  // keyed on fm_station.id, so every write below goes through this map.
+  const pkByIdFm = new Map(
+    existingStations.flatMap((r) => (r.id_fm === null ? [] : [[r.id_fm, r.id] as const])),
+  );
 
   const mappedUsernames = [...new Set(Object.values(INSPECTOR_MAP))];
   const users = await prisma.user.findMany({
@@ -196,7 +203,7 @@ async function main() {
   for (const row of v.rowsToInsert) {
     const existing = await prisma.station_inspection.findFirst({
       where: {
-        station_id: row.stationId,
+        station_id: pkByIdFm.get(row.stationId)!,
         inspected_on: new Date(`${row.inspectedOn}T00:00:00Z`),
         lead_user_id: row.leadUserId,
       },
@@ -205,7 +212,7 @@ async function main() {
     await prisma.$transaction(async (tx) => {
       const ins = await tx.station_inspection.create({
         data: {
-          station_id: row.stationId,
+          station_id: pkByIdFm.get(row.stationId)!,
           inspected_on: new Date(`${row.inspectedOn}T00:00:00Z`),
           lead_user_id: row.leadUserId,
           source: IMPORT_SOURCE,
@@ -220,7 +227,7 @@ async function main() {
       }
     });
     inserted++;
-    affectedStationIds.add(row.stationId);
+    affectedStationIds.add(pkByIdFm.get(row.stationId)!);
   }
 
   for (const stationId of affectedStationIds) {
@@ -230,7 +237,7 @@ async function main() {
     });
     const count = await prisma.station_inspection.count({ where: { station_id: stationId } });
     await prisma.fm_station.update({
-      where: { id_fm: stationId },
+      where: { id: stationId },
       data: {
         date_inspected: agg._max.inspected_on
           ? agg._max.inspected_on.toISOString().slice(0, 10)

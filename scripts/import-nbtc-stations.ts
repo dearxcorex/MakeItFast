@@ -110,13 +110,13 @@ async function main(): Promise<void> {
   // Compare only against the provinces actually present in the harvest, so a
   // single-province run does not report every other province as MISSING_ON_SITE.
   const provinces = [...new Set(registerRows.map((r) => stripThaiGeoPrefix(r.province)))];
-  const dbRows: DbStationRow[] = await prisma.fm_station.findMany({
-    where: { province: { in: provinces } },
+  const dbRows: DbStationRow[] = (await prisma.fm_station.findMany({
+    where: { province: { in: provinces }, id_fm: { not: null } },
     select: {
       id_fm: true, name: true, province: true, district: true,
       freq: true, lat: true, long: true, revoked: true,
     },
-  });
+  })).filter((r): r is DbStationRow => r.id_fm !== null);
   console.log(`db rows in ${provinces.join('/')}: ${dbRows.length}`);
 
   const records = buildDiff(registerRows, dbRows);

@@ -37,12 +37,12 @@ async function main(): Promise<void> {
 
   const present = await prisma.fm_station.findMany({
     where: { id_fm: { in: Array.from(permitByIdFm.keys()) } },
-    select: { id_fm: true, permit: true, name: true },
+    select: { id_fm: true, id: true, permit: true, name: true },
   });
   console.log(`db rows that exist: ${present.length}/${permitByIdFm.size}`);
 
   for (const s of present.slice(0, 10)) {
-    const newP = permitByIdFm.get(s.id_fm)!;
+    const newP = permitByIdFm.get(s.id_fm!)!;
     console.log(`  ${s.id_fm}  ${s.name}\n    OLD: ${s.permit ?? '(null)'}\n    NEW: ${newP}`);
   }
 
@@ -55,9 +55,9 @@ async function main(): Promise<void> {
   let written = 0;
   await prisma.$transaction(async (tx) => {
     for (const row of present) {
-      const newP = permitByIdFm.get(row.id_fm)!;
+      const newP = permitByIdFm.get(row.id_fm!)!;
       if (row.permit === newP) continue;
-      await tx.fm_station.update({ where: { id_fm: row.id_fm }, data: { permit: newP } });
+      await tx.fm_station.update({ where: { id: row.id }, data: { permit: newP } });
       written++;
     }
   });

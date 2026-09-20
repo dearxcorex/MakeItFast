@@ -40,7 +40,8 @@ beforeEach(() => {
 // ==========================================
 describe('stationService', () => {
   const mockDbRow = {
-    id_fm: 42,
+    id: 42,
+    id_fm: 5520042,
     name: 'Test Station',
     freq: 98.5,
     lat: 13.75,
@@ -48,10 +49,8 @@ describe('stationService', () => {
     district: 'Bangkok Noi',
     province: 'Bangkok',
     type: ' FM ',
-    inspection_68: true,
     inspection_69: false,
     date_inspected: '2026-01-15',
-    note: '#deviation',
     on_air: true,
     submit_a_request: true,
   };
@@ -67,17 +66,16 @@ describe('stationService', () => {
       expect(result.city).toBe('Bangkok Noi');
       expect(result.state).toBe('Bangkok');
       expect(result.genre).toBe('FM');
-      expect(result.inspection68).toBe('ตรวจแล้ว');
       expect(result.inspection69).toBe('ยังไม่ตรวจ');
       expect(result.onAir).toBe(true);
       expect(result.submitRequest).toBe('ยื่น');
-      expect(result.details).toBe('#deviation');
       expect(result.dateInspected).toBe('2026-01-15');
     });
 
     it('handles null/empty fields', () => {
       const row = {
-        id_fm: 1,
+        id: 1,
+        id_fm: 5520001,
         name: null,
         freq: null,
         lat: null,
@@ -85,10 +83,8 @@ describe('stationService', () => {
         district: null,
         province: null,
         type: null,
-        inspection_68: false,
         inspection_69: false,
         date_inspected: null,
-        note: null,
         on_air: false,
         submit_a_request: false,
       };
@@ -96,10 +92,8 @@ describe('stationService', () => {
       expect(result.name).toBe('');
       expect(result.frequency).toBe(0);
       expect(result.genre).toBe('');
-      expect(result.inspection68).toBe('ยังไม่ตรวจ');
       expect(result.submitRequest).toBe('ไม่ยื่น');
       expect(result.dateInspected).toBeUndefined();
-      expect(result.details).toBeUndefined();
     });
   });
 
@@ -161,7 +155,6 @@ describe('interferenceService', () => {
     source_location_2: 'Loc2',
     camera_model_1: 'Cam1',
     camera_model_2: 'Cam2',
-    notes: 'Test notes',
     created_at: new Date('2026-01-01'),
     updated_at: new Date('2026-01-02'),
   };
@@ -176,7 +169,6 @@ describe('interferenceService', () => {
       expect(result.long).toBe(100.5);
       expect(result.changwat).toBe('กรุงเทพ');
       expect(result.ranking).toBe('Critical');
-      expect(result.notes).toBe('Test notes');
     });
   });
 

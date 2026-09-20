@@ -4,7 +4,8 @@ import { convertToFMStation } from '@/services/stationService';
 // Mock Prisma row type
 function makeDbRow(overrides: Record<string, unknown> = {}) {
   return {
-    id_fm: 1,
+    id: 1,
+    id_fm: 5520001,
     name: 'Test FM',
     freq: 98.5,
     lat: 13.75,
@@ -12,10 +13,8 @@ function makeDbRow(overrides: Record<string, unknown> = {}) {
     district: 'Bangna',
     province: 'Bangkok',
     type: ' สถานีหลัก ',
-    note: 'Test note',
     on_air: true,
     submit_a_request: true,
-    inspection_68: true,
     inspection_69: false,
     date_inspected: '2024-01-01',
     revoked: false,
@@ -30,9 +29,16 @@ function makeDbRow(overrides: Record<string, unknown> = {}) {
 }
 
 describe('convertToFMStation', () => {
-  it('maps id_fm to id', () => {
-    const result = convertToFMStation(makeDbRow({ id_fm: 42 }));
+  it('maps the surrogate id to id, and id_fm to idFm', () => {
+    const result = convertToFMStation(makeDbRow({ id: 42, id_fm: 5520331 }));
     expect(result.id).toBe(42);
+    expect(result.idFm).toBe(5520331);
+  });
+
+  it('leaves idFm undefined for a station that is not in the register yet', () => {
+    const result = convertToFMStation(makeDbRow({ id_fm: null }));
+    expect(result.idFm).toBeUndefined();
+    expect(result.id).toBe(1);
   });
 
   it('maps freq to frequency', () => {
@@ -58,14 +64,9 @@ describe('convertToFMStation', () => {
     expect(result.type).toBe('สถานีหลัก');
   });
 
-  it('maps inspection booleans to Thai strings', () => {
-    const inspected = convertToFMStation(makeDbRow({ inspection_68: true, inspection_69: true }));
-    expect(inspected.inspection68).toBe('ตรวจแล้ว');
-    expect(inspected.inspection69).toBe('ตรวจแล้ว');
-
-    const notInspected = convertToFMStation(makeDbRow({ inspection_68: false, inspection_69: false }));
-    expect(notInspected.inspection68).toBe('ยังไม่ตรวจ');
-    expect(notInspected.inspection69).toBe('ยังไม่ตรวจ');
+  it('maps inspection_69 to Thai strings', () => {
+    expect(convertToFMStation(makeDbRow({ inspection_69: true })).inspection69).toBe('ตรวจแล้ว');
+    expect(convertToFMStation(makeDbRow({ inspection_69: false })).inspection69).toBe('ยังไม่ตรวจ');
   });
 
   it('maps submit_a_request to Thai strings', () => {
@@ -79,11 +80,6 @@ describe('convertToFMStation', () => {
   it('maps on_air correctly', () => {
     expect(convertToFMStation(makeDbRow({ on_air: true })).onAir).toBe(true);
     expect(convertToFMStation(makeDbRow({ on_air: false })).onAir).toBe(false);
-  });
-
-  it('maps note to details', () => {
-    const result = convertToFMStation(makeDbRow({ note: 'Some note' }));
-    expect(result.details).toBe('Some note');
   });
 
   it('handles null name', () => {
@@ -108,11 +104,6 @@ describe('convertToFMStation', () => {
     expect(result.type).toBe('');
   });
 
-  it('handles null note', () => {
-    const result = convertToFMStation(makeDbRow({ note: null }));
-    expect(result.details).toBeUndefined();
-  });
-
   it('handles null date_inspected', () => {
     const result = convertToFMStation(makeDbRow({ date_inspected: null }));
     expect(result.dateInspected).toBeUndefined();
@@ -131,5 +122,20 @@ describe('convertToFMStation', () => {
   it('returns undefined permit when row.permit is null', () => {
     const result = convertToFMStation(makeDbRow({ permit: null }));
     expect(result.permit).toBeUndefined();
+  });
+
+  it('maps row.nbtc_code to FMStation.nbtcCode', () => {
+    const result = convertToFMStation(makeDbRow({ nbtc_code: 'RFY217640017' }));
+    expect(result.nbtcCode).toBe('RFY217640017');
+  });
+
+  it('trims nbtc_code', () => {
+    const result = convertToFMStation(makeDbRow({ nbtc_code: ' RFXL650009 ' }));
+    expect(result.nbtcCode).toBe('RFXL650009');
+  });
+
+  it('returns undefined nbtcCode when row.nbtc_code is null or blank', () => {
+    expect(convertToFMStation(makeDbRow({ nbtc_code: null })).nbtcCode).toBeUndefined();
+    expect(convertToFMStation(makeDbRow({ nbtc_code: '' })).nbtcCode).toBeUndefined();
   });
 });

@@ -28,7 +28,9 @@ async function main() {
   const stations = await prisma.fm_station.findMany({ where: { province: PROVINCE } });
   const sites = await prisma.interference_site.findMany({ where: { changwat: PROVINCE } });
 
-  const stationIds = stations.map((s) => s.id_fm);
+  // station_inspection.station_id references fm_station.id (the surrogate key),
+  // not the register StationID -- see ADR 0003.
+  const stationIds = stations.map((s) => s.id);
   const siteIds = sites.map((s) => s.id);
 
   const stationInspections = stationIds.length
@@ -114,7 +116,7 @@ async function main() {
       await tx.interference_inspection.deleteMany({ where: { id: { in: intInspectionIds } } });
     }
     if (stationIds.length) {
-      await tx.fm_station.deleteMany({ where: { id_fm: { in: stationIds } } });
+      await tx.fm_station.deleteMany({ where: { id: { in: stationIds } } });
     }
     if (siteIds.length) {
       await tx.interference_site.deleteMany({ where: { id: { in: siteIds } } });

@@ -78,7 +78,7 @@ export async function recomputeStationInspectionState(
   const count = await db.station_inspection.count({ where: { station_id: stationId } });
   const date = agg._max.inspected_on ? toDateOnlyISO(agg._max.inspected_on) : null;
   await db.fm_station.update({
-    where: { id_fm: stationId },
+    where: { id: stationId },
     data: { date_inspected: date, inspection_69: count > 0 },
   });
 }
@@ -94,7 +94,7 @@ export async function createInspection(input: CreateInspectionInput): Promise<St
   }
   const inspectedDate = parseInspectedOn(input.inspectedOn);
 
-  const station = await prisma.fm_station.findUnique({ where: { id_fm: input.stationId } });
+  const station = await prisma.fm_station.findUnique({ where: { id: input.stationId } });
   if (!station) throw new Error('Station not found');
 
   const allUserIds = [input.leadUserId, ...input.helperUserIds];

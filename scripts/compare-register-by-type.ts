@@ -100,10 +100,10 @@ async function main(): Promise<void> {
     all.find((r) => r.name === rec.siteName && r.freq === rec.siteFreq && stripThaiGeoPrefix(r.district) === rec.siteDistrict)?.stnType ?? null;
 
   const provinces = [...new Set(all.map((r) => stripThaiGeoPrefix(r.province)))];
-  const db: DbStationRow[] = await prisma.fm_station.findMany({
-    where: { province: { in: provinces } },
+  const db: DbStationRow[] = (await prisma.fm_station.findMany({
+    where: { province: { in: provinces }, id_fm: { not: null } },
     select: { id_fm: true, name: true, province: true, district: true, freq: true, lat: true, long: true, revoked: true },
-  });
+  })).filter((r): r is DbStationRow => r.id_fm !== null);
   await prisma.$disconnect();
 
   const business = all.filter((r) => typeOf.get(r) === BUSINESS);

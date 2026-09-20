@@ -14,7 +14,7 @@ vi.mock('@/lib/prisma', () => ({
     },
     station_inspection_member: { createMany: vi.fn() },
     $transaction: vi.fn(async (cb) => cb({
-      fm_station: { update: vi.fn(async () => ({ id_fm: 1 })) },
+      fm_station: { update: vi.fn(async () => ({ id: 1 })) },
       station_inspection: {
         create: vi.fn(async () => ({ id: 100 })),
         aggregate: vi.fn(async () => ({ _max: { inspected_on: new Date('2026-05-13T00:00:00Z') } })),
@@ -83,7 +83,7 @@ describe('GET /api/stations/:id/inspections', () => {
 
 describe('POST /api/stations/:id/inspections', () => {
   it('creates an inspection with lead=session user and returns updated station', async () => {
-    vi.mocked(prisma.fm_station.findUnique).mockResolvedValue({ id_fm: 1 } as never);
+    vi.mocked(prisma.fm_station.findUnique).mockResolvedValue({ id: 1 } as never);
     vi.mocked(prisma.user.findMany).mockResolvedValue([
       { id: 3, username: 'iff', display_name: 'iff', active: true, role: 'inspector' },
       { id: 6, username: 'daf', display_name: 'daf', active: true, role: 'inspector' },
@@ -99,8 +99,8 @@ describe('POST /api/stations/:id/inspections', () => {
       members: [{ user_id: 6, member: { id: 6, username: 'daf', display_name: 'daf' } }],
     } as never);
     // Final fm_station read for the response payload.
-    vi.mocked(prisma.fm_station.findUnique).mockResolvedValueOnce({ id_fm: 1 } as never).mockResolvedValueOnce({
-      id_fm: 1, name: 'X', freq: 95.5, lat: 0, long: 0, district: 'A', province: 'B',
+    vi.mocked(prisma.fm_station.findUnique).mockResolvedValueOnce({ id: 1 } as never).mockResolvedValueOnce({
+      id: 1, id_fm: 5520001, name: 'X', freq: 95.5, lat: 0, long: 0, district: 'A', province: 'B',
       type: '', inspection_68: false, inspection_69: true, on_air: false,
       submit_a_request: true, date_inspected: '2026-05-13', note: null, revoked: false, revoked_note: null, permit: null,
     } as never);

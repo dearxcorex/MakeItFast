@@ -5,7 +5,7 @@ export async function GET() {
   try {
     // Test database connection
     await prisma.fm_station.findFirst({
-      select: { id_fm: true },
+      select: { id: true },
     });
 
     return NextResponse.json({

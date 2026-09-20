@@ -95,10 +95,10 @@ async function main(): Promise<void> {
   const all = loadRows();
   const business = all.filter((r) => r.stnType === BUSINESS);
   const provinces = [...new Set(all.map((r) => stripThaiGeoPrefix(r.province)))];
-  const db: DbStationRow[] = await prisma.fm_station.findMany({
-    where: { province: { in: provinces } },
+  const db: DbStationRow[] = (await prisma.fm_station.findMany({
+    where: { province: { in: provinces }, id_fm: { not: null } },
     select: { id_fm: true, name: true, province: true, district: true, freq: true, lat: true, long: true, revoked: true },
-  });
+  })).filter((r): r is DbStationRow => r.id_fm !== null);
 
   let register: TypedRow[];
   let pool: DbStationRow[];

@@ -17,7 +17,7 @@ export async function PATCH(
     }
 
     const body = await request.json();
-    const { onAir, inspection68, inspection69, details, helperUserIds } = body;
+    const { onAir, inspection69, helperUserIds } = body;
 
     // Build update object with only provided fields
     const updates: Record<string, boolean | string | null> = {};
@@ -26,7 +26,7 @@ export async function PATCH(
     if (onAir !== undefined) {
       if (onAir === true) {
         const station = await prisma.fm_station.findUnique({
-          where: { id_fm: stationId },
+          where: { id: stationId },
           select: { submit_a_request: true }
         });
 
@@ -37,10 +37,6 @@ export async function PATCH(
         }
       }
       updates.on_air = onAir;
-    }
-    if (details !== undefined) updates.note = details;
-    if (inspection68 !== undefined) {
-      updates.inspection_68 = inspection68 === 'ตรวจแล้ว' || inspection68 === true;
     }
     if (inspection69 !== undefined) {
       const truthy = inspection69 === 'ตรวจแล้ว' || inspection69 === true;
@@ -53,7 +49,7 @@ export async function PATCH(
     }
 
     const data = await prisma.fm_station.update({
-      where: { id_fm: stationId },
+      where: { id: stationId },
       data: updates,
     });
 
@@ -132,7 +128,7 @@ export async function GET(
     }
 
     const data = await prisma.fm_station.findUnique({
-      where: { id_fm: stationId },
+      where: { id: stationId },
     });
 
     if (!data) {

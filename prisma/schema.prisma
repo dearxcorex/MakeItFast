@@ -8,7 +8,10 @@ datasource db {
 }
 
 model fm_station {
-  id_fm            Int      @id @default(autoincrement())
+  id               Int      @id @default(autoincrement())
+  // The NBTC register's StationID (ADR 0002/0003). Still the register join key,
+  // no longer the primary key: NULL means "not in the register yet".
+  id_fm            Int?     @unique
   name             String?
   freq             Float?
   lat              Float?
@@ -16,12 +19,10 @@ model fm_station {
   district         String?
   province         String?
   type             String?
-  inspection_68    Boolean? @default(false)
   inspection_69    Boolean? @default(false)
   on_air           Boolean? @default(false)
   submit_a_request Boolean? @default(false)
   date_inspected   String?
-  note             String?
   revoked          Boolean? @default(false)
   revoked_note     String?
   permit           String?
@@ -46,39 +47,25 @@ model interference_site {
   site_name         String?
   lat               Float?
   long              Float?
-  mc_zone           String?
   changwat          String?
   cell_name         String?
   sector_name       String?
   direction         Float?
   avg_ni_carrier    Float?
-  day_time          Float?
-  night_time        Float?
   source_lat        Float?
   source_long       Float?
   estimate_distance Float?
   ranking           String?
   status            String?
-  nbtc_area         String?
-  awn_contact       String?
-  lot               String?
-  on_site_scan_by   String?
-  on_site_scan_date String?
-  check_realtime    String?
-  source_location_1 String?
-  source_location_2 String?
-  camera_model_1    String?
-  camera_model_2    String?
-  notes             String?
   law_paper_sent    Boolean? @default(false)
-  created_at        DateTime @default(now())
+  // Kept although never displayed: dedupeInterference sorts siblings newest-first
+  // on it to pick which duplicate row becomes the visible map pin.
   updated_at        DateTime @updatedAt
 
   inspections interference_inspection[]
 
   @@index([changwat])
   @@index([ranking])
-  @@index([nbtc_area])
   @@index([status])
 }
 
@@ -118,7 +105,7 @@ model station_inspection {
   created_at    DateTime  @default(now())
   updated_at    DateTime  @updatedAt
 
-  station fm_station @relation(fields: [station_id], references: [id_fm])
+  station fm_station @relation(fields: [station_id], references: [id])
   lead    user       @relation("inspection_lead", fields: [lead_user_id], references: [id])
   members station_inspection_member[]
 

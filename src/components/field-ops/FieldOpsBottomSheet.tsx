@@ -8,6 +8,7 @@ import { parseLatLngInput } from "@/utils/parseLatLng";
 import TeammatePicker, { type InspectorOption } from "./TeammatePicker";
 import InspectionTeamChips from './InspectionTeamChips';
 import type { InspectionMember } from '@/types/inspection';
+import { stationLabel } from "@/utils/stationLabel";
 
 function googleMapsUrl(lat: number, lng: number) {
   return `https://www.google.com/maps/dir/?api=1&destination=${lat},${lng}&travelmode=driving`;
@@ -182,7 +183,7 @@ export function FieldOpsBottomSheet({
 
   const isFM = selection.kind === "fm" && station;
   const isINT = selection.kind === "int" && site;
-  const id = isFM ? `FM-${station!.id}` : `INT-${site!.id}`;
+  const id = isFM ? stationLabel(station!) : `INT-${site!.id}`;
   const title = isFM ? station!.name : (site!.siteName || site!.siteCode || `Site #${site!.id}`);
   const province = isFM ? station!.state : site!.changwat || "";
   const district = isFM ? station!.city : (site!.cellName || "—");

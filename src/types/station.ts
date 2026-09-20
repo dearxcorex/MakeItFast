@@ -1,5 +1,8 @@
 export interface FMStation {
+  /** fm_station.id — the surrogate primary key. Internal: URLs and React keys. */
   id: string | number;
+  /** fm_station.id_fm — the NBTC register StationID. Undefined until the station is in the register. */
+  idFm?: number;
   name: string;
   frequency: number;
   latitude: number;
@@ -12,10 +15,9 @@ export interface FMStation {
   website?: string;
   transmitterPower?: number; // in watts
   permit?: string;
-  inspection68?: string;
+  nbtcCode?: string; // fm_station.nbtc_code — the official NBTC code, shown as the station ID
   inspection69?: string;
   dateInspected?: string; // Date when the station was inspected
-  details?: string; // Hashtags like #deviation, #intermod for station details
   onAir?: boolean;
   submitRequest?: string;
   revoked?: boolean;
