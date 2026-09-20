@@ -210,9 +210,17 @@ function ChipGroup<T extends string>({
             aria-pressed={active}
             className="fo-mono"
             style={{
-              flex: 1,
+              // flex-basis 0 + minWidth 0 keeps "Inspected" from pushing the
+              // row past the viewport — an overflowing chip lets the whole
+              // page scroll sideways on a phone.
+              flexGrow: 1,
+              flexShrink: 1,
+              flexBasis: 0,
+              minWidth: 0,
+              overflow: "hidden",
+              textOverflow: "ellipsis",
               minHeight: 44,
-              padding: "0 8px",
+              padding: "0 6px",
               border: "none",
               background: active ? "var(--fo-accent)" : "transparent",
               color: active ? "#001e2b" : "var(--fo-rail-text)",

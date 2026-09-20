@@ -31,6 +31,25 @@ describe("MobileFilterBar (redesigned)", () => {
     expect(text).not.toContain("REVOKED");
   });
 
+  it("chips can shrink so the row never pushes the page sideways", () => {
+    const { container } = render(
+      <MobileFilterBar
+        filters={baseFilters()}
+        onChange={vi.fn()}
+        provinces={["A"]}
+        resultCount={1}
+      />
+    );
+    const chip = Array.from(container.querySelectorAll("button")).find(
+      (b) => b.textContent?.trim() === "Inspected"
+    );
+    expect(chip).toBeDefined();
+    expect(chip!.style.minWidth).toBe("0px");
+    expect(chip!.style.flexBasis).toBe("0px");
+    expect(chip!.style.flexShrink).toBe("1");
+    expect(chip!.style.overflow).toBe("hidden");
+  });
+
   it("tapping FM chip calls onChange with type=FM and lawSent=false", () => {
     const onChange = vi.fn();
     const { container } = render(

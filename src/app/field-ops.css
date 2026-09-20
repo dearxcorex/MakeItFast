@@ -411,3 +411,15 @@
   border-color: #ffe082;
   color: #ffe082;
 }
+
+/* iOS Safari zooms the whole page when a focused field renders under 16px, and
+   it never zooms back out — the page is then left shifted and clipped on both
+   edges, which reads as "the layout broke". Touch-width viewports get 16px
+   fields; the desktop layout keeps its compact sizing. */
+@media (max-width: 899px) {
+  .field-ops-root input:not([type="checkbox"]):not([type="radio"]),
+  .field-ops-root select,
+  .field-ops-root textarea {
+    font-size: 16px !important;
+  }
+}
