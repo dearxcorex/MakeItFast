@@ -5,7 +5,8 @@ import { convertToFMStation } from '@/services/stationService';
 function makeDbRow(overrides: Record<string, unknown> = {}) {
   return {
     id: 1,
-    id_fm: 5520001,
+    id_fm: '5520001',
+    register_station_id: 5520001,
     name: 'Test FM',
     freq: 98.5,
     lat: 13.75,
@@ -30,9 +31,9 @@ function makeDbRow(overrides: Record<string, unknown> = {}) {
 
 describe('convertToFMStation', () => {
   it('maps the surrogate id to id, and id_fm to idFm', () => {
-    const result = convertToFMStation(makeDbRow({ id: 42, id_fm: 5520331 }));
+    const result = convertToFMStation(makeDbRow({ id: 42, id_fm: '5520331' }));
     expect(result.id).toBe(42);
-    expect(result.idFm).toBe(5520331);
+    expect(result.idFm).toBe('5520331');
   });
 
   it('leaves idFm undefined for a station that is not in the register yet', () => {
@@ -127,6 +128,15 @@ describe('convertToFMStation', () => {
   it('maps row.nbtc_code to FMStation.nbtcCode', () => {
     const result = convertToFMStation(makeDbRow({ nbtc_code: 'RFY217640017' }));
     expect(result.nbtcCode).toBe('RFY217640017');
+  });
+
+  it('maps an id_fm holding an NBTC code straight through', () => {
+    expect(convertToFMStation(makeDbRow({ id_fm: 'RFXL680654' })).idFm).toBe('RFXL680654');
+  });
+
+  it('trims id_fm and drops a blank one', () => {
+    expect(convertToFMStation(makeDbRow({ id_fm: ' RFXL680654 ' })).idFm).toBe('RFXL680654');
+    expect(convertToFMStation(makeDbRow({ id_fm: '   ' })).idFm).toBeUndefined();
   });
 
   it('trims nbtc_code', () => {

@@ -85,7 +85,7 @@ describe('GET /api/health', () => {
 describe('GET /api/stations', () => {
   it('returns stations', async () => {
     vi.mocked(prisma.fm_station.findMany).mockResolvedValue([
-      { id_fm: 1, name: 'Test' } as never,
+      { id_fm: 'RFXL680654', name: 'Test' } as never,
     ]);
     const { GET } = await import('@/app/api/stations/route');
     const res = await GET();
@@ -109,13 +109,13 @@ describe('GET /api/stations', () => {
 // ==================
 describe('GET /api/stations/[id]', () => {
   it('returns station by id', async () => {
-    vi.mocked(prisma.fm_station.findUnique).mockResolvedValue({ id_fm: 1, name: 'Test' } as never);
+    vi.mocked(prisma.fm_station.findUnique).mockResolvedValue({ id_fm: 'RFXL680654', name: 'Test' } as never);
     const { GET } = await import('@/app/api/stations/[id]/route');
     const req = new Request('http://localhost/api/stations/1');
     const res = await GET(req as never, { params: Promise.resolve({ id: '1' }) });
     const data = await res.json();
     expect(res.status).toBe(200);
-    expect(data.station.id_fm).toBe(1);
+    expect(data.station.id_fm).toBe('RFXL680654');
   });
 
   it('returns 400 for invalid id', async () => {

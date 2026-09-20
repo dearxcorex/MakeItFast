@@ -30,7 +30,7 @@ const site = (over: Partial<RegisterRow> = {}): RegisterRow => ({
 });
 
 const db = (over: Partial<DbStationRow> = {}): DbStationRow => ({
-  id_fm: 5550002,
+  register_station_id: 5550002,
   name: 'พัฒนาและส่งเสริมการเรียนรู้ชุมชนวังชมภู',
   province: 'ชัยภูมิ',
   district: 'หนองบัวแดง',
@@ -112,7 +112,7 @@ describe('buildDiff', () => {
 
   it('matches a register row whose station code is blank', () => {
     const [r] = buildDiff([site({ nbtcCode: null, name: 'ข้าวเหนียวเรดิโอ', freq: 90.5, district: 'อ.แก้งคร้อ' })],
-      [db({ id_fm: 5520469, name: 'ข้าวเหนียวเรดิโอ', freq: 90.5, district: 'แก้งคร้อ' })]);
+      [db({ register_station_id: 5520469, name: 'ข้าวเหนียวเรดิโอ', freq: 90.5, district: 'แก้งคร้อ' })]);
     expect(r.kind).toBe('MATCHED');
     expect(r.nbtcCode).toBeNull();
   });
@@ -164,7 +164,7 @@ describe('buildDiff — pass 0, the exact StationID join', () => {
     // pair these, and every one of them would have called it NEW + MISSING_ON_SITE.
     const recs = buildDiff(
       [site({ stationId: 5520331, freq: 88.5, district: 'อ.บ้านด่าน', name: 'ชื่ออื่น' })],
-      [db({ id_fm: 5520331, freq: 103, district: 'หนองบัวแดง' })],
+      [db({ register_station_id: 5520331, freq: 103, district: 'หนองบัวแดง' })],
     );
     expect(recs).toHaveLength(1);
     expect(recs[0].matchedOn).toBe('station-id');
@@ -175,7 +175,7 @@ describe('buildDiff — pass 0, the exact StationID join', () => {
   it('calls an id-matched frequency change FREQ_CHANGED, not NEW', () => {
     const recs = buildDiff(
       [site({ stationId: 5550002, freq: 106.75 })],
-      [db({ id_fm: 5550002, freq: 103 })],
+      [db({ register_station_id: 5550002, freq: 103 })],
     );
     expect(recs).toHaveLength(1);
     expect(recs[0].kind).toBe('FREQ_CHANGED');
@@ -186,7 +186,7 @@ describe('buildDiff — pass 0, the exact StationID join', () => {
   it('flags coordinate drift on an id-matched pair', () => {
     const recs = buildDiff(
       [site({ stationId: 5550002, lat: 16.2, lng: 101.7 })],
-      [db({ id_fm: 5550002 })],
+      [db({ register_station_id: 5550002 })],
     );
     expect(recs[0].kind).toBe('COORD_MOVED');
     expect(recs[0].matchedOn).toBe('station-id');
@@ -197,7 +197,7 @@ describe('buildDiff — pass 0, the exact StationID join', () => {
     // The decoy would win pass 1. Pass 0 must have consumed the real one first.
     const recs = buildDiff(
       [site({ stationId: 5550002 })],
-      [db({ id_fm: 5550099, name: 'สถานีอื่นที่ความถี่ชนกัน' }), db({ id_fm: 5550002 })],
+      [db({ register_station_id: 5550099, name: 'สถานีอื่นที่ความถี่ชนกัน' }), db({ register_station_id: 5550002 })],
     );
     const matched = recs.find((r) => r.matchedOn === 'station-id');
     expect(matched?.idFm).toBe(5550002);
@@ -208,7 +208,7 @@ describe('buildDiff — pass 0, the exact StationID join', () => {
   it('falls back to the heuristics when the id is not in the DB', () => {
     // A station harvested with an id we have never seen, but which is plainly
     // the row we already hold — the composite pass still has to catch it.
-    const recs = buildDiff([site({ stationId: 5559999 })], [db({ id_fm: 5550002 })]);
+    const recs = buildDiff([site({ stationId: 5559999 })], [db({ register_station_id: 5550002 })]);
     expect(recs).toHaveLength(1);
     expect(recs[0].kind).toBe('MATCHED');
     expect(recs[0].matchedOn).toBe('freq-district');
@@ -221,7 +221,7 @@ describe('buildDiff — pass 0, the exact StationID join', () => {
         stationId: 5559999, freq: 91.25, district: 'อ.เมืองชัยภูมิ', name: 'ใหม่',
         lat: 15.806, lng: 102.031,
       })],
-      [db({ id_fm: 5550002 })],
+      [db({ register_station_id: 5550002 })],
     );
     expect(recs.map((r) => [r.kind, r.matchedOn])).toEqual([
       ['NEW', null],
@@ -232,7 +232,7 @@ describe('buildDiff — pass 0, the exact StationID join', () => {
   it('does not let two register rows claim one DB row by id', () => {
     const recs = buildDiff(
       [site({ stationId: 5550002 }), site({ stationId: 5550002, name: 'ซ้ำ' })],
-      [db({ id_fm: 5550002 })],
+      [db({ register_station_id: 5550002 })],
     );
     expect(recs.filter((r) => r.matchedOn === 'station-id')).toHaveLength(1);
     expect(recs.filter((r) => r.kind === 'NEW')).toHaveLength(1);

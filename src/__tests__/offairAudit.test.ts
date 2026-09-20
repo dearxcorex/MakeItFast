@@ -83,8 +83,8 @@ describe('buildAuditRecords', () => {
   ]);
 
   const dbRows: DbStationRow[] = [
-    { id_fm: 5520117, name: 'เสียงชนเสรี',  province: 'นครราชสีมา', district: 'คง', freq: 106,    on_air: true  },
-    { id_fm: 5520154, name: 'วัดบ้านหมัน', province: 'นครราชสีมา', district: 'คง', freq: 88.25, on_air: false },
+    { register_station_id: 5520117, name: 'เสียงชนเสรี',  province: 'นครราชสีมา', district: 'คง', freq: 106,    on_air: true  },
+    { register_station_id: 5520154, name: 'วัดบ้านหมัน', province: 'นครราชสีมา', district: 'คง', freq: 88.25, on_air: false },
   ];
 
   const records = buildAuditRecords(xlsxRows, dbRows);
@@ -114,7 +114,7 @@ describe('buildAuditRecords', () => {
       { 'ลำดับ': 1, 'รหัสสถานี': '05520500', 'ชื่อสถานี': 'X', 'ประเภท': '', 'คลื่นความถี่เดิม': 95, 'จังหวัด': 'นครราชสีมา', 'เขต/อำเภอ': '', 'ผู้ทดลองออกอากาศเดิม': '', 'หมายเหตุ': '' },
     ]);
     const db: DbStationRow[] = [
-      { id_fm: 5520500, name: 'X', province: 'นครราชสีมา', district: '', freq: 95, on_air: null },
+      { register_station_id: 5520500, name: 'X', province: 'นครราชสีมา', district: '', freq: 95, on_air: null },
     ];
     const r = buildAuditRecords(xlsx, db)[0];
     expect(r.classification).toBe('ON_AIR_UNKNOWN');
@@ -126,12 +126,12 @@ describe('buildAuditRecords', () => {
     expect(records.map((r) => r.idFm)).toEqual([5520117, 5520154, 5520999]);
   });
 
-  it('warns when DB province/name disagrees with xlsx for the same id_fm', () => {
+  it('warns when DB province/name disagrees with xlsx for the same StationID', () => {
     const xlsx = parseXlsxRows([
       { 'ลำดับ': 1, 'รหัสสถานี': '05520117', 'ชื่อสถานี': 'A', 'ประเภท': '', 'คลื่นความถี่เดิม': 100, 'จังหวัด': 'นครราชสีมา', 'เขต/อำเภอ': '', 'ผู้ทดลองออกอากาศเดิม': '', 'หมายเหตุ': '' },
     ]);
     const db: DbStationRow[] = [
-      { id_fm: 5520117, name: 'B-DIFFERENT', province: 'ขอนแก่น', district: '', freq: 100, on_air: true },
+      { register_station_id: 5520117, name: 'B-DIFFERENT', province: 'ขอนแก่น', district: '', freq: 100, on_air: true },
     ];
     const r = buildAuditRecords(xlsx, db)[0];
     expect(r.warnings).toContain('province-mismatch');
@@ -149,9 +149,9 @@ describe('chooseApplyTargets', () => {
         { 'ลำดับ': 4, 'รหัสสถานี': '05520999', 'ชื่อสถานี': 'D', 'ประเภท': '', 'คลื่นความถี่เดิม': 100, 'จังหวัด': 'นครราชสีมา', 'เขต/อำเภอ': '', 'ผู้ทดลองออกอากาศเดิม': '', 'หมายเหตุ': '' },
       ]),
       [
-        { id_fm: 5520117, name: 'A', province: 'นครราชสีมา', district: '', freq: 100, on_air: true  },
-        { id_fm: 5520154, name: 'B', province: 'นครราชสีมา', district: '', freq: 100, on_air: false },
-        { id_fm: 5520500, name: 'C', province: 'นครราชสีมา', district: '', freq: 100, on_air: null  },
+        { register_station_id: 5520117, name: 'A', province: 'นครราชสีมา', district: '', freq: 100, on_air: true  },
+        { register_station_id: 5520154, name: 'B', province: 'นครราชสีมา', district: '', freq: 100, on_air: false },
+        { register_station_id: 5520500, name: 'C', province: 'นครราชสีมา', district: '', freq: 100, on_air: null  },
       ],
     );
     const t = chooseApplyTargets(records);
@@ -166,9 +166,9 @@ describe('chooseApplyTargets', () => {
         { 'ลำดับ': 3, 'รหัสสถานี': '05520500', 'ชื่อสถานี': 'C', 'ประเภท': '', 'คลื่นความถี่เดิม': 100, 'จังหวัด': 'นครราชสีมา', 'เขต/อำเภอ': '', 'ผู้ทดลองออกอากาศเดิม': '', 'หมายเหตุ': '' },
       ]),
       [
-        { id_fm: 5520117, name: 'A', province: 'นครราชสีมา', district: '', freq: 100, on_air: true  },
-        { id_fm: 5520154, name: 'B', province: 'นครราชสีมา', district: '', freq: 100, on_air: false },
-        { id_fm: 5520500, name: 'C', province: 'นครราชสีมา', district: '', freq: 100, on_air: null  },
+        { register_station_id: 5520117, name: 'A', province: 'นครราชสีมา', district: '', freq: 100, on_air: true  },
+        { register_station_id: 5520154, name: 'B', province: 'นครราชสีมา', district: '', freq: 100, on_air: false },
+        { register_station_id: 5520500, name: 'C', province: 'นครราชสีมา', district: '', freq: 100, on_air: null  },
       ],
     );
     const t = chooseApplyTargets(records);

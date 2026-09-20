@@ -9,9 +9,12 @@ datasource db {
 
 model fm_station {
   id               Int      @id @default(autoincrement())
-  // The NBTC register's StationID (ADR 0002/0003). Still the register join key,
-  // no longer the primary key: NULL means "not in the register yet".
-  id_fm            Int?     @unique
+  // The identifier printed on the licence and shown as "ID" in the UI: the NBTC
+  // code where the station has one, else its register StationID as digits.
+  id_fm            String?  @unique
+  // The NBTC register's StationID (ADR 0002/0003), kept as a number because the
+  // register diff joins on it exactly. NULL means "not in the register yet".
+  register_station_id Int?  @unique
   name             String?
   freq             Float?
   lat              Float?

@@ -30,7 +30,7 @@ export interface ParsedXlsxRow {
 
 /** Subset of fm_station fields the audit needs — keeps the function decoupled from PrismaClient typings. */
 export interface DbStationRow {
-  id_fm: number;
+  register_station_id: number;
   name: string | null;
   province: string | null;
   district: string | null;
@@ -42,7 +42,7 @@ export type Classification =
   | 'STILL_ON_AIR'      // on_air === true
   | 'ALREADY_OFF_AIR'   // on_air === false
   | 'ON_AIR_UNKNOWN'    // matched in DB but on_air is null — needs human review
-  | 'MISSING_IN_DB';    // no matching id_fm in DB
+  | 'MISSING_IN_DB';    // no matching StationID in DB
 
 export interface AuditRecord {
   idFm: number;
@@ -99,7 +99,7 @@ export function buildAuditRecords(
   dbRows: DbStationRow[],
 ): AuditRecord[] {
   const dbByIdFm = new Map<number, DbStationRow>();
-  for (const d of dbRows) dbByIdFm.set(d.id_fm, d);
+  for (const d of dbRows) dbByIdFm.set(d.register_station_id, d);
 
   return xlsxRows.map((x) => {
     const db = dbByIdFm.get(x.idFm);
@@ -133,7 +133,7 @@ export function buildAuditRecords(
 }
 
 export interface ApplyTargets {
-  /** Every id_fm that should get revoked=true (every audited row that exists in DB). */
+  /** Every StationID that should get revoked=true (every audited row that exists in DB). */
   revokeIds: number[];
   /** Subset of revokeIds that should also get on_air=false (only currently on_air=true rows). */
   offAirIds: number[];

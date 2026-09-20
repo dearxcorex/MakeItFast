@@ -6,7 +6,7 @@ import type { fm_station } from '@prisma/client';
 export function convertToFMStation(row: fm_station): FMStation {
   return {
     id: row.id,
-    idFm: row.id_fm ?? undefined,
+    idFm: row.id_fm?.trim() || undefined,
     name: row.name || '',
     frequency: row.freq || 0,
     latitude: row.lat ?? NaN,

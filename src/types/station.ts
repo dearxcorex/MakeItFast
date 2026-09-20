@@ -1,8 +1,8 @@
 export interface FMStation {
   /** fm_station.id — the surrogate primary key. Internal: URLs and React keys. */
   id: string | number;
-  /** fm_station.id_fm — the NBTC register StationID. Undefined until the station is in the register. */
-  idFm?: number;
+  /** fm_station.id_fm — the licence identifier shown as "ID": the NBTC code, else the register StationID as digits. */
+  idFm?: string;
   name: string;
   frequency: number;
   latitude: number;

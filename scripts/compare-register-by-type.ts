@@ -85,8 +85,8 @@ function show(title: string, records: DiffRecord[], kinds: string[]): void {
       const freq = (r.siteFreq ?? r.dbFreq ?? 0).toFixed(2).padStart(7);
       const district = (r.siteDistrict ?? r.dbDistrict ?? '').padEnd(16);
       const who = r.kind === 'MISSING_ON_SITE'
-        ? `id_fm ${r.idFm} ${r.dbName}${r.dbRevoked ? ' [revoked]' : ''}`
-        : `${r.siteName}${r.idFm ? ` ↔ id_fm ${r.idFm} ${r.dbName}` : ''}`;
+        ? `StationID ${r.idFm} ${r.dbName}${r.dbRevoked ? ' [revoked]' : ''}`
+        : `${r.siteName}${r.idFm ? ` ↔ StationID ${r.idFm} ${r.dbName}` : ''}`;
       console.log(`   ${freq}  ${district}  ${who}  ${r.notes.join('; ')}`);
     }
   }
@@ -101,9 +101,9 @@ async function main(): Promise<void> {
 
   const provinces = [...new Set(all.map((r) => stripThaiGeoPrefix(r.province)))];
   const db: DbStationRow[] = (await prisma.fm_station.findMany({
-    where: { province: { in: provinces }, id_fm: { not: null } },
-    select: { id_fm: true, name: true, province: true, district: true, freq: true, lat: true, long: true, revoked: true },
-  })).filter((r): r is DbStationRow => r.id_fm !== null);
+    where: { province: { in: provinces }, register_station_id: { not: null } },
+    select: { register_station_id: true, name: true, province: true, district: true, freq: true, lat: true, long: true, revoked: true },
+  })).filter((r): r is DbStationRow => r.register_station_id !== null);
   await prisma.$disconnect();
 
   const business = all.filter((r) => typeOf.get(r) === BUSINESS);
@@ -119,7 +119,7 @@ async function main(): Promise<void> {
 
   // Step 2 — the DB rows step 1 could not account for
   const leftoverIds = new Set(step1.filter((r) => r.kind === 'MISSING_ON_SITE').map((r) => r.idFm));
-  const leftoverDb = db.filter((d) => leftoverIds.has(d.id_fm));
+  const leftoverDb = db.filter((d) => leftoverIds.has(d.register_station_id));
   const step2 = buildDiff(others, leftoverDb);
   console.log(`\n=== STEP 2: other types vs the ${leftoverDb.length} DB rows step 1 left over ===`);
   const byType = others.reduce<Record<string, number>>((a, r) => ((a[r.stnType] = (a[r.stnType] ?? 0) + 1), a), {});

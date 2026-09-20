@@ -31,8 +31,13 @@ omits stations that have never been inspected.
 ### Station identity
 A station carries two codes that look interchangeable and are not. The **register station
 code** (`RFXL…` style) is shown in search results and belongs to its own code system. The
-**NBTC station ID** is the same number as this project's `id_fm`. Only the station ID
-identifies a station across both systems; matching on anything else is inference.
+**NBTC station ID** is a number, and it is the one this project's `register_station_id`
+holds. Only the station ID identifies a station across both systems; matching on anything
+else is inference.
+
+`id_fm` is neither of those two things any more — it is the **printed identifier**: the
+register station code where the station has one, the station ID's digits where it does not.
+It is what the UI shows as `ID` and what a search box matches. See ADR 0004.
 
 ### Inspector attribution
 Who performed an inspection: one **lead** inspector plus zero or more **helpers** who went

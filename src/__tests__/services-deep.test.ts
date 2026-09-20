@@ -41,7 +41,8 @@ beforeEach(() => {
 describe('stationService', () => {
   const mockDbRow = {
     id: 42,
-    id_fm: 5520042,
+    id_fm: '5520042',
+    register_station_id: 5520042,
     name: 'Test Station',
     freq: 98.5,
     lat: 13.75,
@@ -75,7 +76,8 @@ describe('stationService', () => {
     it('handles null/empty fields', () => {
       const row = {
         id: 1,
-        id_fm: 5520001,
+        id_fm: '5520001',
+        register_station_id: 5520001,
         name: null,
         freq: null,
         lat: null,

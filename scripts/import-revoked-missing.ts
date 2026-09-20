@@ -49,7 +49,7 @@ async function main(): Promise<void> {
   const prisma = new PrismaClient();
   const dbRows = await prisma.fm_station.findMany({
     where: { province: { in: [...TARGET_PROVINCES] } },
-    select: { id_fm: true, name: true, province: true, district: true, freq: true, on_air: true },
+    select: { register_station_id: true, name: true, province: true, district: true, freq: true, on_air: true },
   }) as DbStationRow[];
 
   const records = buildAuditRecords(filtered, dbRows);
@@ -83,7 +83,9 @@ async function main(): Promise<void> {
     const p = parsedById.get(m.idFm);
     const noteTrimmed = (p?.note ?? '').trim();
     return {
-      id_fm: m.idFm,
+      register_station_id: m.idFm,
+      // No NBTC code for these rows, so the StationID is what the UI shows as ID.
+      id_fm: String(m.idFm),
       name: p?.name || m.xlsxName,
       freq: m.xlsxFreq,
       lat: null,
@@ -103,7 +105,7 @@ async function main(): Promise<void> {
 
   const result = await prisma.fm_station.createMany({
     data,
-    skipDuplicates: true, // idempotent re-runs (no-op on existing id_fm)
+    skipDuplicates: true, // idempotent re-runs (no-op on an existing StationID)
   });
   console.log(`\ninserted: ${result.count} rows (skipped ${data.length - result.count} duplicates)`);
 

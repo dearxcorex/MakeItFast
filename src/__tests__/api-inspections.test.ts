@@ -100,7 +100,7 @@ describe('POST /api/stations/:id/inspections', () => {
     } as never);
     // Final fm_station read for the response payload.
     vi.mocked(prisma.fm_station.findUnique).mockResolvedValueOnce({ id: 1 } as never).mockResolvedValueOnce({
-      id: 1, id_fm: 5520001, name: 'X', freq: 95.5, lat: 0, long: 0, district: 'A', province: 'B',
+      id: 1, id_fm: '5520001', register_station_id: 5520001, name: 'X', freq: 95.5, lat: 0, long: 0, district: 'A', province: 'B',
       type: '', inspection_68: false, inspection_69: true, on_air: false,
       submit_a_request: true, date_inspected: '2026-05-13', note: null, revoked: false, revoked_note: null, permit: null,
     } as never);

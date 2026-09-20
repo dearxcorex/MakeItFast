@@ -6,7 +6,7 @@
  *   --types=other     every other type, licence not expired, FM band only, compared with
  *                     the DB rows the business rows do not already claim
  *
- *   - Same station in the DB  -> overwrite name / freq / lat / long / district / nbtc_code
+ *   - Same station in the DB  -> overwrite name / freq / lat / long / district / nbtc_code / id_fm
  *   - Not in the DB           -> insert, tagged source=SOURCE_TAG, so it plots as a pending pin
  *
  * A freq+district hit on a *revoked* DB row is a new licensee on the old slot, not the
@@ -96,9 +96,9 @@ async function main(): Promise<void> {
   const business = all.filter((r) => r.stnType === BUSINESS);
   const provinces = [...new Set(all.map((r) => stripThaiGeoPrefix(r.province)))];
   const db: DbStationRow[] = (await prisma.fm_station.findMany({
-    where: { province: { in: provinces }, id_fm: { not: null } },
-    select: { id_fm: true, name: true, province: true, district: true, freq: true, lat: true, long: true, revoked: true },
-  })).filter((r): r is DbStationRow => r.id_fm !== null);
+    where: { province: { in: provinces }, register_station_id: { not: null } },
+    select: { register_station_id: true, name: true, province: true, district: true, freq: true, lat: true, long: true, revoked: true },
+  })).filter((r): r is DbStationRow => r.register_station_id !== null);
 
   let register: TypedRow[];
   let pool: DbStationRow[];
@@ -136,7 +136,7 @@ async function main(): Promise<void> {
     const claimed = new Set(
       buildDiff(business, db).filter((r) => r.kind !== 'MISSING_ON_SITE' && r.idFm !== null).map((r) => r.idFm),
     );
-    pool = db.filter((d) => !claimed.has(d.id_fm));
+    pool = db.filter((d) => !claimed.has(d.register_station_id));
     console.log(`db rows: ${db.length}   not claimed by business rows: ${pool.length}\n`);
   }
 
@@ -152,7 +152,7 @@ async function main(): Promise<void> {
   const inserts = [...records.filter((r) => r.idFm === null || r.kind === 'LIKELY_SAME'), ...newLicensees];
 
   const dupes = updates.map((r) => r.idFm).filter((id, i, a) => a.indexOf(id) !== i);
-  if (dupes.length) throw new Error(`two register rows map onto id_fm ${dupes.join(', ')}`);
+  if (dupes.length) throw new Error(`two register rows map onto StationID ${dupes.join(', ')}`);
 
   console.log(`register rows: ${register.length}   db rows compared: ${pool.length}`);
   console.log(`update ${updates.length}   insert ${inserts.length} (${newLicensees.length} new licensees beside a revoked row)\n`);
@@ -164,19 +164,22 @@ async function main(): Promise<void> {
       freq: s.freq,
       district: stripThaiGeoPrefix(s.district),
       nbtc_code: s.nbtcCode,
+      // The code is also the identifier the UI prints, so it lands in id_fm too;
+      // a row without one keeps the StationID digits it already has.
+      ...(s.nbtcCode ? { id_fm: s.nbtcCode } : {}),
       ...(s.lat !== null && s.lng !== null ? { lat: s.lat, long: s.lng } : {}),
     };
-    const before = db.find((d) => d.id_fm === r.idFm)!;
+    const before = db.find((d) => d.register_station_id === r.idFm)!;
     const diff = Object.entries(data).filter(([k, v]) => {
       const old = (before as unknown as Record<string, unknown>)[k];
-      return k === 'nbtc_code' ? true : old !== v;
+      return k === 'nbtc_code' || k === 'id_fm' ? true : old !== v;
     });
     return { idFm: r.idFm!, data, before, diff, record: r };
   });
 
   console.log('UPDATE (fields that change):');
   for (const c of changes) {
-    const shown = c.diff.filter(([k]) => k !== 'nbtc_code' && k !== 'long')
+    const shown = c.diff.filter(([k]) => k !== 'nbtc_code' && k !== 'id_fm' && k !== 'long')
       .map(([k, v]) => (k === 'lat' ? `coords ${Math.round(c.record.distanceM ?? 0)}m` : `${k} ${(c.before as unknown as Record<string, unknown>)[k]} → ${v}`));
     console.log(`  ${String(c.idFm).padEnd(8)} ${c.before.name}${c.before.revoked ? ' [revoked]' : ''}  ${shown.join('; ') || '(code only)'}`);
   }
@@ -197,6 +200,9 @@ async function main(): Promise<void> {
       inspection_68: false,
       inspection_69: false,
       nbtc_code: s.nbtcCode,
+      // No StationID on a results-table row: register_station_id stays NULL and
+      // id_fm carries the NBTC code, which is what the UI prints as ID.
+      id_fm: s.nbtcCode,
       source: SOURCE_TAG,
       created_at: new Date(),
     };
@@ -204,7 +210,7 @@ async function main(): Promise<void> {
   console.log('\nINSERT:');
   for (const [i, d] of insertData.entries()) {
     const r = inserts[i];
-    const why = r.idFm ? `new licensee beside id_fm ${r.idFm} ${r.dbName} [revoked]` : 'not in db';
+    const why = r.idFm ? `new licensee beside StationID ${r.idFm} ${r.dbName} [revoked]` : 'not in db';
     console.log(`  ${d.freq.toFixed(2).padStart(6)}  ${d.province}/${d.district}  ${d.name}  [${d.type}]  (${why})${d.lat === null ? '  NO COORDS' : ''}`);
   }
 
@@ -215,13 +221,13 @@ async function main(): Promise<void> {
 
   const stamp = new Date().toISOString().replace(/[:.]/g, '-');
   const snapshotPath = path.join(RAW_DIR, `pre-sync-${TYPES}-snapshot-${stamp}.json`);
-  const snapshot = await prisma.fm_station.findMany({ where: { id_fm: { in: changes.map((c) => c.idFm) } } });
+  const snapshot = await prisma.fm_station.findMany({ where: { register_station_id: { in: changes.map((c) => c.idFm) } } });
   fs.writeFileSync(snapshotPath, JSON.stringify(snapshot, null, 2));
   console.log(`\nsnapshot of ${snapshot.length} rows: ${snapshotPath}`);
 
   const [inserted, ...updated] = await prisma.$transaction([
     prisma.fm_station.createMany({ data: insertData }),
-    ...changes.map((c) => prisma.fm_station.update({ where: { id_fm: c.idFm }, data: c.data })),
+    ...changes.map((c) => prisma.fm_station.update({ where: { register_station_id: c.idFm }, data: c.data })),
   ]);
   console.log(`updated ${updated.length}, inserted ${(inserted as { count: number }).count}`);
   console.log(`undo updates: restore from ${path.basename(snapshotPath)}`);

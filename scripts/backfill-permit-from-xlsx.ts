@@ -36,14 +36,14 @@ async function main(): Promise<void> {
   const prisma = new PrismaClient();
 
   const present = await prisma.fm_station.findMany({
-    where: { id_fm: { in: Array.from(permitByIdFm.keys()) } },
-    select: { id_fm: true, id: true, permit: true, name: true },
+    where: { register_station_id: { in: Array.from(permitByIdFm.keys()) } },
+    select: { register_station_id: true, id: true, permit: true, name: true },
   });
   console.log(`db rows that exist: ${present.length}/${permitByIdFm.size}`);
 
   for (const s of present.slice(0, 10)) {
-    const newP = permitByIdFm.get(s.id_fm!)!;
-    console.log(`  ${s.id_fm}  ${s.name}\n    OLD: ${s.permit ?? '(null)'}\n    NEW: ${newP}`);
+    const newP = permitByIdFm.get(s.register_station_id!)!;
+    console.log(`  ${s.register_station_id}  ${s.name}\n    OLD: ${s.permit ?? '(null)'}\n    NEW: ${newP}`);
   }
 
   if (!APPLY) {
@@ -55,7 +55,7 @@ async function main(): Promise<void> {
   let written = 0;
   await prisma.$transaction(async (tx) => {
     for (const row of present) {
-      const newP = permitByIdFm.get(row.id_fm!)!;
+      const newP = permitByIdFm.get(row.register_station_id!)!;
       if (row.permit === newP) continue;
       await tx.fm_station.update({ where: { id: row.id }, data: { permit: newP } });
       written++;

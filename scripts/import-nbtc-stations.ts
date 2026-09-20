@@ -7,7 +7,7 @@
  * is behind a Cloudflare managed challenge and an authenticated ASP.NET form, so the
  * fetching stays in that project and this script never touches the network.
  *
- * A detail-page harvest carries station_id (= id_fm), so most rows join exactly; see
+ * A detail-page harvest carries station_id (= register_station_id), so most rows join exactly; see
  * docs/adr/0002-station-id-is-the-register-join-key.md. Rows without it fall back to
  * the composite freq/name/coordinate passes.
  *
@@ -48,7 +48,7 @@ function parseRegisterJson(raw: unknown): RegisterRow[] {
     const lng = r.lng === null || r.lng === undefined ? null : Number(r.lng);
     const name = String(r.name ?? '').trim();
     if (!name && freq === null) continue; // nothing identifiable — skip
-    // '05520331' and 5520331 are the same id_fm; the register zero-pads it.
+    // '05520331' and 5520331 are the same StationID; the register zero-pads it.
     const stationId = Number(String(r.station_id ?? '').trim());
     out.push({
       stationId: Number.isSafeInteger(stationId) && stationId > 0 ? stationId : null,
@@ -111,12 +111,12 @@ async function main(): Promise<void> {
   // single-province run does not report every other province as MISSING_ON_SITE.
   const provinces = [...new Set(registerRows.map((r) => stripThaiGeoPrefix(r.province)))];
   const dbRows: DbStationRow[] = (await prisma.fm_station.findMany({
-    where: { province: { in: provinces }, id_fm: { not: null } },
+    where: { province: { in: provinces }, register_station_id: { not: null } },
     select: {
-      id_fm: true, name: true, province: true, district: true,
+      register_station_id: true, name: true, province: true, district: true,
       freq: true, lat: true, long: true, revoked: true,
     },
-  })).filter((r): r is DbStationRow => r.id_fm !== null);
+  })).filter((r): r is DbStationRow => r.register_station_id !== null);
   console.log(`db rows in ${provinces.join('/')}: ${dbRows.length}`);
 
   const records = buildDiff(registerRows, dbRows);
@@ -154,8 +154,9 @@ async function main(): Promise<void> {
     return;
   }
 
-  // id_fm is left to the sequence, which sits at 5550022 and so continues the 555
-  // block the recent stations already use.
+  // register_station_id is left NULL: these stations are inserted from the results
+  // table, which carries no StationID. id_fm takes the NBTC code instead, so the row
+  // still has the identifier the UI prints.
   const now = new Date();
   const data = toInsert.map((r) => ({
     name: r.siteName,
@@ -177,6 +178,7 @@ async function main(): Promise<void> {
     inspection_68: false,
     inspection_69: false,
     nbtc_code: r.nbtcCode,
+    id_fm: r.nbtcCode,
     source: SOURCE_TAG,
     created_at: now,
   }));

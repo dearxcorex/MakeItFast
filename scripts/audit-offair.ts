@@ -48,7 +48,7 @@ async function main(): Promise<void> {
   const prisma = new PrismaClient();
   const dbRows = await prisma.fm_station.findMany({
     where: { province: { in: [...TARGET_PROVINCES] } },
-    select: { id_fm: true, name: true, province: true, district: true, freq: true, on_air: true },
+    select: { register_station_id: true, name: true, province: true, district: true, freq: true, on_air: true },
   }) as DbStationRow[];
   console.log(`db rows in 3 provinces=${dbRows.length}`);
 
@@ -95,11 +95,11 @@ async function main(): Promise<void> {
     if (revokeIds.length > 0) {
       const [revokeRes, offairRes] = await prisma.$transaction([
         prisma.fm_station.updateMany({
-          where: { id_fm: { in: revokeIds } },
+          where: { register_station_id: { in: revokeIds } },
           data: { revoked: true, revoked_note: NOTE },
         }),
         prisma.fm_station.updateMany({
-          where: { id_fm: { in: offAirIds } },
+          where: { register_station_id: { in: offAirIds } },
           data: { on_air: false },
         }),
       ]);

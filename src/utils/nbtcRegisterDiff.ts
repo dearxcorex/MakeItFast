@@ -5,8 +5,9 @@ import { TARGET_PROVINCES } from './offairAudit';
  *
  * The register shows two codes, and only one of them identifies a station here.
  * The station code in the results table (RFXL680018) belongs to a different code
- * system than id_fm and is blank for some rows. But the inspection detail page
- * carries StationID -- '05520331' -- which IS id_fm 5520331, verified field by
+ * system than register_station_id and is blank for some rows. But the inspection
+ * detail page carries StationID -- '05520331' -- which IS register_station_id
+ * 5520331, verified field by
  * field against a live row. When a harvest supplies it, pass 0 joins on it exactly
  * and no inference is needed.
  *
@@ -23,7 +24,7 @@ import { TARGET_PROVINCES } from './offairAudit';
 
 /** One station as harvested from the NBTC add-inspection form. */
 export interface RegisterRow {
-  /** The detail page's StationID, which is id_fm. Null when harvested without it. */
+  /** The detail page's StationID, which is register_station_id. Null when harvested without it. */
   stationId: number | null;     // 5520331
   nbtcCode: string | null;      // 'RFXL680018' — blank for some register rows
   name: string;
@@ -40,7 +41,7 @@ export interface RegisterRow {
 
 /** Subset of fm_station the diff needs — keeps this decoupled from PrismaClient typings. */
 export interface DbStationRow {
-  id_fm: number;
+  register_station_id: number;
   name: string | null;
   province: string | null;
   district: string | null;
@@ -180,7 +181,7 @@ export function buildDiff(
     licenceNo: r?.licenceNo ?? null,
     org: r?.org ?? null,
     address: r?.address ?? null,
-    idFm: d?.id_fm ?? null,
+    idFm: d?.register_station_id ?? null,
     dbName: d?.name ?? null,
     dbFreq: d?.freq ?? null,
     dbDistrict: d?.district ?? null,
@@ -191,11 +192,11 @@ export function buildDiff(
     notes,
   });
 
-  // Pass 0 — StationID, which is id_fm. An exact key: when both sides carry it, a
+  // Pass 0 — StationID, which is register_station_id. An exact key: when both sides carry it, a
   // difference in frequency or position is a change to a known station, never a new
   // one, so this pass must run before any heuristic can guess otherwise.
   const dbById = new Map<number, DbStationRow>();
-  for (const d of unmatchedDb) dbById.set(d.id_fm, d);
+  for (const d of unmatchedDb) dbById.set(d.register_station_id, d);
   for (const r of [...unmatchedSite]) {
     if (r.stationId == null) continue;
     const d = dbById.get(r.stationId);

@@ -154,16 +154,16 @@ async function main() {
 
   const ids = parsed.map((p) => p.stationId).filter((x): x is number => x !== null);
   const existingStations = await prisma.fm_station.findMany({
-    where: { id_fm: { in: ids } },
-    select: { id_fm: true, id: true },
+    where: { register_station_id: { in: ids } },
+    select: { register_station_id: true, id: true },
   });
   const existingStationIds = new Set(
-    existingStations.map((r) => r.id_fm).filter((x): x is number => x !== null),
+    existingStations.map((r) => r.register_station_id).filter((x): x is number => x !== null),
   );
-  // The xlsx column รหัสสถานี is the register StationID (id_fm). Inspections are
-  // keyed on fm_station.id, so every write below goes through this map.
+  // The xlsx column รหัสสถานี is the register StationID (register_station_id).
+  // Inspections are keyed on fm_station.id, so every write below goes through this map.
   const pkByIdFm = new Map(
-    existingStations.flatMap((r) => (r.id_fm === null ? [] : [[r.id_fm, r.id] as const])),
+    existingStations.flatMap((r) => (r.register_station_id === null ? [] : [[r.register_station_id, r.id] as const])),
   );
 
   const mappedUsernames = [...new Set(Object.values(INSPECTOR_MAP))];

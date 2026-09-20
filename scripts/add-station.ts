@@ -2,10 +2,13 @@
 /**
  * Add a single fm_station row.
  *
- * fm_station.id_fm has no default since ADR 0003 -- it is the NBTC register's
- * StationID, not a number a sequence is allowed to invent. A station we are
- * tracking before it appears in the register simply has none, and is inserted
- * with id_fm NULL until a register sync fills it in.
+ * fm_station.register_station_id has no default since ADR 0003 -- it is the NBTC
+ * register's StationID, not a number a sequence is allowed to invent. A station
+ * we are tracking before it appears in the register simply has none, and is
+ * inserted with it NULL until a register sync fills it in.
+ *
+ * id_fm is the identifier the UI prints: the NBTC code when there is one, else
+ * the StationID as digits, else NULL.
  *
  * This is the supported way to create a station. Hand-written SQL is how the
  * eight สถานีหลัก rows ended up numbered 1-11.
@@ -13,7 +16,7 @@
  *   npx tsx scripts/add-station.ts --name "สถานีตัวอย่าง" --freq 95.5 \
  *     --province นครราชสีมา --district เมือง --type บริการธุรกิจ
  *
- *   ... --id-fm 5520999          # StationID, when the station is in the register
+ *   ... --station-id 5520999     # StationID, when the station is in the register
  *   ... --nbtc-code RFXL680018   # official NBTC code, when it has one
  *   ... --lat 14.97 --long 102.1
  *   ... --apply                  # without this it is a dry run
@@ -55,15 +58,15 @@ async function main() {
     fail(`--type must be one of ${STATION_TYPES.join(', ')} (these are compared in logic, not displayed)`);
   }
 
-  const idFmRaw = flag('id-fm');
+  const idFmRaw = flag('station-id') ?? flag('id-fm');
   let idFm: number | null = null;
   if (idFmRaw !== undefined) {
     idFm = Number(idFmRaw);
-    if (!Number.isInteger(idFm)) fail(`--id-fm ${idFmRaw} is not an integer`);
+    if (!Number.isInteger(idFm)) fail(`--station-id ${idFmRaw} is not an integer`);
     // Real StationIDs are seven digits. A small number here means someone is
     // hand-numbering again, which is the thing ADR 0003 exists to stop.
     if (idFm < 1_000_000) {
-      fail(`--id-fm ${idFm} is not a register StationID (they are 7 digits). Omit it instead -- NULL means "not in the register yet".`);
+      fail(`--station-id ${idFm} is not a register StationID (they are 7 digits). Omit it instead -- NULL means "not in the register yet".`);
     }
   }
 
@@ -78,8 +81,8 @@ async function main() {
   const prisma = new PrismaClient();
 
   if (idFm !== null) {
-    const clash = await prisma.fm_station.findUnique({ where: { id_fm: idFm } });
-    if (clash) fail(`id_fm ${idFm} already belongs to "${clash.name}" (id ${clash.id})`);
+    const clash = await prisma.fm_station.findUnique({ where: { register_station_id: idFm } });
+    if (clash) fail(`StationID ${idFm} already belongs to "${clash.name}" (id ${clash.id})`);
   }
   if (nbtcCode) {
     const clash = await prisma.fm_station.findFirst({ where: { nbtc_code: nbtcCode } });
@@ -94,7 +97,9 @@ async function main() {
   }
 
   const data = {
-    id_fm: idFm,
+    register_station_id: idFm,
+    // The NBTC code wins; the StationID is the fallback the UI prints as FM-<n>.
+    id_fm: nbtcCode ?? (idFm === null ? null : String(idFm)),
     name,
     freq,
     lat,
