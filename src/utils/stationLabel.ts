@@ -2,7 +2,7 @@ import type { FMStation } from '@/types/station';
 
 /**
  * The identifier a field inspector recognises. Since
- * 2026-09-20-id-fm-holds-nbtc-code that is whatever `id_fm` holds: the official
+ * 2026-09-20-3-id-fm-holds-nbtc-code that is whatever `id_fm` holds: the official
  * NBTC code where the station has one, else its register StationID.
  *
  * A StationID is printed as `FM-5520003`; an NBTC code stands on its own.

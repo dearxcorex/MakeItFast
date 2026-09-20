@@ -1,6 +1,6 @@
 -- Drop fm_station.nbtc_code and fm_station.source.
 --
--- nbtc_code is dead weight since 2026-09-20-id-fm-holds-nbtc-code: that
+-- nbtc_code is dead weight since 2026-09-20-3-id-fm-holds-nbtc-code: that
 -- migration copied every non-blank code into id_fm, and all 138 rows that had
 -- one still read id_fm = nbtc_code. Two columns holding the same string is one
 -- more than the number of places a code can be edited without drifting.

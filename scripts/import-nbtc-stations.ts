@@ -175,7 +175,7 @@ async function main(): Promise<void> {
     revoked: false,
     inspection_69: false,
     // The NBTC code is the identifier the UI prints; there is no separate
-    // nbtc_code column since 2026-09-20-drop-nbtc-code-and-source.
+    // nbtc_code column since 2026-09-20-4-drop-nbtc-code-and-source.
     id_fm: r.nbtcCode,
   }));
 

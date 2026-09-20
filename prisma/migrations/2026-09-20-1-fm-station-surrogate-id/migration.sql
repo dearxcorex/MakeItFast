@@ -17,23 +17,27 @@ ALTER TABLE "fm_station" ADD COLUMN "id" SERIAL;
 -- 2. Re-point the inspection FK from id_fm values onto the new id values.
 ALTER TABLE "station_inspection" DROP CONSTRAINT "station_inspection_station_id_fkey";
 
-UPDATE "station_inspection" si
-   SET "station_id" = f."id"
-  FROM "fm_station" f
- WHERE f."id_fm" = si."station_id";
-
--- Every inspection must have landed on a station. Abort if one did not.
+-- Every inspection must be re-pointed by the UPDATE below, so check the join that
+-- UPDATE makes -- on id_fm -- and check it BEFORE it runs. Checking afterwards on
+-- f."id" cannot work: a row the UPDATE missed keeps its old id_fm value, and the
+-- fake 1-11 StationIDs of step 5 sit inside the surrogate id range, so an orphan
+-- would find an "id" and pass the guard while attached to the wrong station.
 DO $$
 DECLARE orphans INT;
 BEGIN
   SELECT count(*) INTO orphans
     FROM "station_inspection" si
-    LEFT JOIN "fm_station" f ON f."id" = si."station_id"
-   WHERE f."id" IS NULL;
+    LEFT JOIN "fm_station" f ON f."id_fm" = si."station_id"
+   WHERE f."id_fm" IS NULL;
   IF orphans > 0 THEN
-    RAISE EXCEPTION 'station_inspection has % row(s) with no matching fm_station.id', orphans;
+    RAISE EXCEPTION 'station_inspection has % row(s) with no matching fm_station.id_fm', orphans;
   END IF;
 END $$;
+
+UPDATE "station_inspection" si
+   SET "station_id" = f."id"
+  FROM "fm_station" f
+ WHERE f."id_fm" = si."station_id";
 
 -- 3. Swap the primary key over.
 ALTER TABLE "fm_station" DROP CONSTRAINT "fm_station_pkey";

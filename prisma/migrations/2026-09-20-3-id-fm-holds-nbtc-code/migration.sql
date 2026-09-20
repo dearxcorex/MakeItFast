@@ -2,9 +2,10 @@
 -- station has one, its old register StationID where it does not.
 --
 -- This is the change ADR 0003 rejected ("Overwrite id_fm's values with
--- nbtc_code"). Two of the three objections died with 2026-09-20-fm-station-
--- surrogate-id: id_fm is no longer the primary key, and station_inspection
--- points at the surrogate id, so nothing is rewritten by this. The third one --
+-- nbtc_code"). Two of the three objections died with
+-- 2026-09-20-1-fm-station-surrogate-id: id_fm is no longer the primary key, and
+-- station_inspection points at the surrogate id, so nothing is rewritten by
+-- this. The third one --
 -- that overwriting destroys the StationID ADR 0002 joins the register on -- is
 -- answered here by moving that number to register_station_id first, so the
 -- register scripts keep an exact integer key to join on.

@@ -14,12 +14,12 @@ called `id_fm` held a number nobody on the team reads off a licence.
 So the choice moves into the data. `fm_station.id_fm` is now `String?` and holds **the NBTC
 code where the station has one, its old register StationID as digits where it does not**. The
 StationID itself is preserved, unchanged and still an integer, in the new
-`register_station_id` column. Migration: `2026-09-20-id-fm-holds-nbtc-code`.
+`register_station_id` column. Migration: `2026-09-20-3-id-fm-holds-nbtc-code`.
 
 ADR 0003 listed this as a rejected option — "Overwrite `id_fm`'s values with `nbtc_code`:
 it is a type change on the primary key, it rewrites 111 inspection rows, and it destroys the
 StationID that ADR 0002 depends on." The first two objections died with
-`2026-09-20-fm-station-surrogate-id`, which made `id` the primary key and re-pointed
+`2026-09-20-1-fm-station-surrogate-id`, which made `id` the primary key and re-pointed
 `station_inspection.station_id` at it; `id_fm` is now an ordinary column and no inspection row
 is touched. The third is answered by keeping the number rather than overwriting it.
 
@@ -46,7 +46,7 @@ unique index survives the merge.
   `FM-<n>` when it is all digits, so nothing changes on screen for a station without a code.
   `nbtcCode` stayed on the interface at first as the fallback for a row written before the code
   reached `id_fm`; it was removed with the `nbtc_code` column on 2026-09-20
-  (`2026-09-20-drop-nbtc-code-and-source`) once every code was verified to be in `id_fm`.
+  (`2026-09-20-4-drop-nbtc-code-and-source`) once every code was verified to be in `id_fm`.
 - **Register scripts join on `register_station_id`.** `sync-register`, `import-nbtc-stations`,
   `compare-register-by-type`, `audit-offair`, `import-inspections-xlsx`,
   `backfill-permit-from-xlsx` and `import-revoked-missing` all moved. The decoupled

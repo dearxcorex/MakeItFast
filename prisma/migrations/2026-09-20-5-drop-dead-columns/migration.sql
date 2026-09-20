@@ -2,7 +2,7 @@
 --
 -- ORDERING: narrowing, so DEPLOY FIRST, APPLY SECOND. The deployed Prisma
 -- client selects every scalar by name, so each of these breaks the running app
--- the moment it disappears. Same rule as 2026-09-20-drop-unused-columns:
+-- the moment it disappears. Same rule as 2026-09-20-2-drop-unused-columns:
 -- adding a column is database-first, dropping one is code-first. Local dev and
 -- Vercel prod share this Neon database.
 --
