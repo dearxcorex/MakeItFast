@@ -1,6 +1,6 @@
 "use client";
 
-export type FieldOpsTab = "field-ops" | "cell-sites" | "intermod";
+export type FieldOpsTab = "field-ops" | "cell-sites" | "intermod" | "data";
 
 const ITEMS: Array<{ id: FieldOpsTab; label: string; icon: string }> = [
   { id: "field-ops", label: "FIELD OPS", icon: "◉" },
@@ -8,13 +8,20 @@ const ITEMS: Array<{ id: FieldOpsTab; label: string; icon: string }> = [
   { id: "intermod", label: "INTERMOD", icon: "Σ" },
 ];
 
+// Admin-only: add / edit / delete fm_station rows. Desktop only, so it is not
+// in FieldOpsDrawer.
+const DATA_ITEM = { id: "data" as const, label: "DATA", icon: "▤" };
+
 export function FieldOpsNav({
   active,
   onChange,
+  showData = false,
 }: {
   active: FieldOpsTab;
   onChange: (id: FieldOpsTab) => void;
+  showData?: boolean;
 }) {
+  const items = showData ? [...ITEMS, DATA_ITEM] : ITEMS;
   return (
     <nav
       style={{
@@ -43,7 +50,7 @@ export function FieldOpsNav({
       >
         FIELD OPS
       </div>
-      {ITEMS.map((item) => {
+      {items.map((item) => {
         const isActive = active === item.id;
         return (
           <button

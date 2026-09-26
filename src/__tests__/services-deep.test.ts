@@ -69,7 +69,6 @@ describe('stationService', () => {
       expect(result.genre).toBe('FM');
       expect(result.inspection69).toBe('ยังไม่ตรวจ');
       expect(result.onAir).toBe(true);
-      expect(result.submitRequest).toBe('ยื่น');
       expect(result.dateInspected).toBe('2026-01-15');
     });
 
@@ -94,7 +93,6 @@ describe('stationService', () => {
       expect(result.name).toBe('');
       expect(result.frequency).toBe(0);
       expect(result.genre).toBe('');
-      expect(result.submitRequest).toBe('ไม่ยื่น');
       expect(result.dateInspected).toBeUndefined();
     });
   });

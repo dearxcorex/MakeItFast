@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import dynamic from "next/dynamic";
+import { useRouter } from "next/navigation";
 import type { FMStation } from "@/types/station";
 import type { InspectionMember } from '@/types/inspection';
 import type { InterferenceSite } from "@/types/interference";
@@ -16,6 +17,7 @@ import { FieldOpsBottomSheet } from "./FieldOpsBottomSheet";
 import { FieldOpsDrawer } from "./FieldOpsDrawer";
 import { MobileFilterBar } from "./MobileFilterBar";
 import { CellSitesTab } from "./CellSitesTab";
+import { DataTab } from "./DataTab";
 import { computeKpis } from "@/utils/fieldOpsKpi";
 import type { FieldSelection } from "./FieldOpsMap";
 
@@ -36,6 +38,7 @@ interface Props {
   initialCities: string[];
   initialProvinces: string[];
   currentUser?: { id: number; displayName: string };
+  isAdmin?: boolean;
 }
 
 /**
@@ -64,9 +67,16 @@ export default function FieldOpsClient({
   initialInterference,
   initialProvinces,
   currentUser,
+  isAdmin = false,
 }: Props) {
+  const router = useRouter();
   const [tab, setTab] = useState<FieldOpsTab>("field-ops");
   const [stations, setStations] = useState<FMStation[]>(initialStations);
+  // router.refresh() after a Data-tab write re-runs FieldOpsFetcher and hands
+  // down a new initialStations; adopt it so the map shows the change.
+  useEffect(() => {
+    setStations(initialStations);
+  }, [initialStations]);
   const [interference, setInterference] = useState<InterferenceSite[]>(initialInterference);
   const [filters, setFilters] = useState<FieldFilters>(DEFAULT_FILTERS);
   const [selection, setSelection] = useState<FieldSelection>(null);
@@ -98,6 +108,11 @@ export default function FieldOpsClient({
     window.addEventListener("resize", check);
     return () => window.removeEventListener("resize", check);
   }, []);
+
+  // The Data tab is desktop-only; narrowing the window drops back to the map.
+  useEffect(() => {
+    if (isMobile && tab === "data") setTab("field-ops");
+  }, [isMobile, tab]);
 
   useEffect(() => {
     const stored = window.localStorage.getItem("fo-theme");
@@ -484,7 +499,7 @@ export default function FieldOpsClient({
       />
 
       <div style={{ flex: 1, display: "flex", minHeight: 0 }}>
-        {!isMobile && <FieldOpsNav active={tab} onChange={setTab} />}
+        {!isMobile && <FieldOpsNav active={tab} onChange={setTab} showData={isAdmin} />}
 
         <main style={{ flex: 1, display: "flex", flexDirection: "column", minWidth: 0, minHeight: 0 }}>
           {tab === "field-ops" && (
@@ -641,6 +656,10 @@ export default function FieldOpsClient({
 
           {tab === "cell-sites" && (
             <CellSitesTab isMobile={isMobile} userLocation={userLocation} />
+          )}
+
+          {tab === "data" && isAdmin && !isMobile && (
+            <DataTab onChanged={() => router.refresh()} />
           )}
 
           {tab === "intermod" && (

@@ -68,14 +68,6 @@ describe('convertToFMStation', () => {
     expect(convertToFMStation(makeDbRow({ inspection_69: false })).inspection69).toBe('ยังไม่ตรวจ');
   });
 
-  it('maps submit_a_request to Thai strings', () => {
-    const submitted = convertToFMStation(makeDbRow({ submit_a_request: true }));
-    expect(submitted.submitRequest).toBe('ยื่น');
-
-    const notSubmitted = convertToFMStation(makeDbRow({ submit_a_request: false }));
-    expect(notSubmitted.submitRequest).toBe('ไม่ยื่น');
-  });
-
   it('maps on_air correctly', () => {
     expect(convertToFMStation(makeDbRow({ on_air: true })).onAir).toBe(true);
     expect(convertToFMStation(makeDbRow({ on_air: false })).onAir).toBe(false);

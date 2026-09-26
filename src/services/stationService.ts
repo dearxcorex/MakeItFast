@@ -22,7 +22,6 @@ export function convertToFMStation(row: fm_station): FMStation {
     inspection69: row.inspection_69 ? 'ตรวจแล้ว' : 'ยังไม่ตรวจ',
     dateInspected: row.date_inspected || undefined,
     onAir: row.on_air || false,
-    submitRequest: row.submit_a_request ? 'ยื่น' : 'ไม่ยื่น',
     revoked: row.revoked === true,
     revokedNote: row.revoked_note ?? undefined,
   };

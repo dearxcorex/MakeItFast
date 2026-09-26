@@ -53,6 +53,7 @@ export default async function FieldOpsFetcher() {
         initialCities={fmCities}
         initialProvinces={provinces}
         currentUser={currentUser}
+        isAdmin={session.role === "admin"}
       />
     );
   } catch (error) {

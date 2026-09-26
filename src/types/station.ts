@@ -18,7 +18,6 @@ export interface FMStation {
   inspection69?: string;
   dateInspected?: string; // Date when the station was inspected
   onAir?: boolean;
-  submitRequest?: string;
   revoked?: boolean;
   revokedNote?: string;
 }
@@ -30,4 +29,25 @@ export interface UserLocation {
   heading?: number | null;
   speed?: number | null;
   stale?: boolean;
+}
+
+/** An fm_station row as the admin Data tab sees it: every column it shows or edits. */
+export interface AdminStation {
+  id: number;
+  idFm: string | null;
+  registerStationId: number | null;
+  name: string;
+  freq: number | null;
+  lat: number | null;
+  long: number | null;
+  district: string;
+  province: string;
+  type: string;
+  permit: string | null;
+  submitRequest: boolean;
+  revoked: boolean;
+  revokedNote: string | null;
+  onAir: boolean;
+  inspected: boolean;
+  inspectionCount: number;
 }

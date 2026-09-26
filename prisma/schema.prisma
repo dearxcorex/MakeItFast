@@ -24,6 +24,9 @@ model fm_station {
   type             String?
   inspection_69    Boolean? @default(false)
   on_air           Boolean? @default(false)
+  // Not shown on the map; set only from the admin Data tab. Still live:
+  // api/stations/[id]/route.ts reads it raw to refuse on_air = true for a
+  // station that has not filed a request.
   submit_a_request Boolean? @default(false)
   date_inspected   String?
   revoked          Boolean? @default(false)
@@ -87,6 +90,7 @@ model user {
   inspection_members     station_inspection_member[]
   int_inspections_led    interference_inspection[]        @relation("int_inspection_lead")
   int_inspection_members interference_inspection_member[] @relation("int_inspection_member")
+  data_changes           data_change[]
 
   @@index([username])
 }
@@ -153,4 +157,23 @@ model interference_inspection_member {
 
   @@id([inspection_id, user_id])
   @@index([user_id])
+}
+
+// One row per add / edit / delete made from the admin Data tab, written in the
+// same transaction as the change itself. `before` is null on create, `after`
+// is null on delete, so a deleted row can be rebuilt from its last entry.
+model data_change {
+  id         Int      @id @default(autoincrement())
+  table_name String
+  row_id     Int
+  action     String
+  user_id    Int
+  before     Json?
+  after      Json?
+  created_at DateTime @default(now())
+
+  user user @relation(fields: [user_id], references: [id])
+
+  @@index([table_name, row_id])
+  @@index([created_at])
 }
