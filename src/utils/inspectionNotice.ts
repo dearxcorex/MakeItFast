@@ -3,8 +3,10 @@
 
 import { SUPPRESS_NOTIFICATIONS } from '@/lib/discord';
 import { escapeMarkdown, formatThaiDate } from '@/utils/fmStat';
+import { stationLabel } from '@/utils/stationLabel';
 
 export interface StationNoticeInput {
+  idFm: string | null;
   name: string | null;
   freq: number | null;
   district: string | null;
@@ -92,10 +94,11 @@ export function buildStationNotice(s: StationNoticeInput): InspectionNoticeMessa
   const name = s.name?.trim() || 'ไม่ระบุชื่อ';
   const freq = s.freq != null ? ` ${s.freq} MHz` : '';
   const area = [s.district, s.province].map((x) => x?.trim()).filter(Boolean).join(', ');
+  const code = s.idFm?.trim() ? stationLabel({ idFm: s.idFm }) : null;
   return message(
     `✅ ตรวจแล้ว · ${name}${freq}`,
     [mapsLink('📍 Google Maps', s.lat, s.long)],
-    [...field('พื้นที่', area), ...field('ประเภท', s.type), ...crewFields(s.lead, s.helpers)],
+    [...field('รหัสสถานี', code), ...field('พื้นที่', area), ...field('ประเภท', s.type), ...crewFields(s.lead, s.helpers)],
     s.inspectedOn,
   );
 }

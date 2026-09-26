@@ -34,6 +34,7 @@ async function loadNotice(kind: InspectionKind, inspectionId: number) {
     return {
       messageId: row.discord_message_id,
       body: buildStationNotice({
+        idFm: row.station.id_fm,
         name: row.station.name,
         freq: row.station.freq,
         district: row.station.district,

@@ -3,6 +3,7 @@ import { buildSiteNotice, buildStationNotice } from '@/utils/inspectionNotice';
 import { SUPPRESS_NOTIFICATIONS } from '@/lib/discord';
 
 const station = {
+  idFm: '5520003',
   name: 'คลื่นดี',
   freq: 99.5,
   district: 'เมืองนครราชสีมา',
@@ -21,6 +22,7 @@ describe('buildStationNotice', () => {
     const [embed] = msg.embeds;
     expect(embed.title).toBe('✅ ตรวจแล้ว · คลื่นดี 99.5 MHz');
     expect(embed.fields).toEqual([
+      { name: 'รหัสสถานี', value: 'FM-5520003', inline: true },
       { name: 'พื้นที่', value: 'เมืองนครราชสีมา, นครราชสีมา', inline: true },
       { name: 'ประเภท', value: 'สถานีหลัก', inline: true },
       { name: 'ผู้ตรวจ', value: 'Somchai', inline: false },
@@ -38,7 +40,7 @@ describe('buildStationNotice', () => {
 
   it('omits empty fields, the helper line and the map link when data is missing', () => {
     const [embed] = buildStationNotice({
-      ...station, name: null, freq: null, type: '  ', lat: null, helpers: [],
+      ...station, idFm: null, name: null, freq: null, type: '  ', lat: null, helpers: [],
     }).embeds;
     expect(embed.title).toBe('✅ ตรวจแล้ว · ไม่ระบุชื่อ');
     expect(embed.fields.map((f) => f.name)).toEqual(['พื้นที่', 'ผู้ตรวจ']);
