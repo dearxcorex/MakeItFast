@@ -24,6 +24,22 @@ const COMMANDS = [
     contexts: [0], // guild only, never DMs
     integration_types: [0], // installed to the server, not to users
   },
+  {
+    name: 'ask',
+    type: 1, // CHAT_INPUT
+    description: 'ถามผู้ช่วย AI เรื่องคลื่นรบกวน อินเตอร์มอด และเทคนิคการหาต้นตอ',
+    options: [
+      {
+        name: 'question',
+        type: 3, // STRING
+        description: 'พิมพ์คำถามเป็นภาษาไทยได้เลย เช่น ร้องเรียนคลื่นรบกวนที่ 122.5 MHz น่าจะมาจากอะไร',
+        required: true,
+        max_length: 1000,
+      },
+    ],
+    contexts: [0],
+    integration_types: [0],
+  },
 ];
 
 function requireEnv(name: string): string {

@@ -18,8 +18,14 @@ vi.mock('@/lib/prisma', () => ({
   },
 }));
 
+// The LLM loop has its own tests; here we only care that the route defers,
+// hands the question over, and formats whatever comes back.
+vi.mock('@/services/askAgent', () => ({ askAgent: vi.fn() }));
+
 import { NextRequest } from 'next/server';
 import prisma from '@/lib/prisma';
+import { askAgent } from '@/services/askAgent';
+import { __resetAskQuotaForTests } from '@/lib/askQuota';
 import { POST } from '@/app/api/discord/interactions/route';
 
 const { publicKey, privateKey } = generateKeyPairSync('ed25519');
@@ -83,6 +89,10 @@ beforeEach(() => {
   fetchMock.mockResolvedValue(new Response('{}', { status: 200 }));
   vi.mocked(prisma.fm_station.groupBy).mockResolvedValue(groups as never);
   vi.spyOn(console, 'error').mockImplementation(() => {});
+  process.env.DEEPSEEK_API_KEY = 'test-key';
+  delete process.env.ASK_DAILY_LIMIT;
+  __resetAskQuotaForTests();
+  vi.mocked(askAgent).mockResolvedValue({ answer: 'ลองสแกน 122 MHz', toolsUsed: ['scan_intermod'], truncated: false });
 });
 
 afterEach(() => {
@@ -93,6 +103,8 @@ afterEach(() => {
   delete process.env.DISCORD_APPLICATION_ID;
   delete process.env.DISCORD_CHANNEL_ID;
   delete process.env.SITE_URL;
+  delete process.env.DEEPSEEK_API_KEY;
+  delete process.env.ASK_DAILY_LIMIT;
 });
 
 describe('POST /api/discord/interactions — signature', () => {
@@ -208,5 +220,114 @@ describe('POST /api/discord/interactions — /stat', () => {
   it('rejects unsupported interaction types', async () => {
     const res = await POST(signedReq({ type: 3, token: 't', guild_id: GUILD }));
     expect(res.status).toBe(400);
+  });
+});
+
+const askCommand = {
+  type: 2,
+  token: 'interaction-token',
+  guild_id: GUILD,
+  channel_id: CHANNEL,
+  member: { user: { id: 'user-1' } },
+  data: {
+    name: 'ask',
+    options: [{ name: 'question', type: 3, value: 'ร้องเรียนคลื่นรบกวน 122.5 MHz มาจากอะไรได้บ้าง' }],
+  },
+};
+
+function editedBody() {
+  return JSON.parse(fetchMock.mock.calls[0][1].body);
+}
+
+describe('POST /api/discord/interactions — /ask', () => {
+  it('defers, runs the agent, then edits the reply with the answer', async () => {
+    const res = await POST(signedReq(askCommand));
+    expect(await res.json()).toEqual({ type: 5 });
+    expect(askAgent).not.toHaveBeenCalled();
+
+    await runAfter();
+
+    expect(askAgent).toHaveBeenCalledWith('ร้องเรียนคลื่นรบกวน 122.5 MHz มาจากอะไรได้บ้าง', expect.any(String));
+    const body = editedBody();
+    expect(body.embeds[0].title).toContain('122.5 MHz');
+    expect(body.embeds[0].description).toBe('ลองสแกน 122 MHz');
+    expect(body.allowed_mentions).toEqual({ parse: [] });
+  });
+
+  it('always stamps the recommendation disclaimer on the reply', async () => {
+    await POST(signedReq(askCommand));
+    await runAfter();
+    expect(editedBody().embeds[0].footer.text).toContain('สันนิษฐาน/คำแนะนำ');
+  });
+
+  it('says so privately when DEEPSEEK_API_KEY is missing', async () => {
+    delete process.env.DEEPSEEK_API_KEY;
+    const res = await POST(signedReq(askCommand));
+    const json = await res.json();
+    expect(json.data.flags).toBe(64);
+    expect(json.data.content).toContain('DEEPSEEK_API_KEY');
+    expect(pending).toHaveLength(0);
+  });
+
+  it('asks for a question when the option is blank', async () => {
+    const blank = { ...askCommand, data: { name: 'ask', options: [{ name: 'question', type: 3, value: '  ' }] } };
+    const res = await POST(signedReq(blank));
+    expect((await res.json()).data.flags).toBe(64);
+    expect(pending).toHaveLength(0);
+  });
+
+  it('refuses privately once the user is over the daily quota', async () => {
+    process.env.ASK_DAILY_LIMIT = '1';
+    expect(await (await POST(signedReq(askCommand))).json()).toEqual({ type: 5 });
+
+    const res = await POST(signedReq(askCommand));
+    const json = await res.json();
+    expect(json.data.flags).toBe(64);
+    expect(json.data.content).toContain('โควตา');
+    expect(pending).toHaveLength(1); // only the first call queued work
+  });
+
+  it('counts quota per user, not per server', async () => {
+    process.env.ASK_DAILY_LIMIT = '1';
+    await POST(signedReq(askCommand));
+    const other = { ...askCommand, member: { user: { id: 'user-2' } } };
+    expect(await (await POST(signedReq(other))).json()).toEqual({ type: 5 });
+  });
+
+  it('edits in an error message when the agent throws', async () => {
+    vi.mocked(askAgent).mockRejectedValue(new Error('DeepSeek returned 503'));
+    await POST(signedReq(askCommand));
+    await runAfter();
+    const body = editedBody();
+    expect(body.content).toBe('ตอบคำถามไม่สำเร็จ ลองใหม่อีกครั้ง');
+    expect(body.embeds).toBeUndefined();
+  });
+});
+
+describe('POST /api/discord/interactions — channel allowlist', () => {
+  const OTHER = '444444444444444444';
+
+  it('answers in any channel named in the comma-separated list', async () => {
+    process.env.DISCORD_CHANNEL_ID = `${CHANNEL}, ${OTHER}`;
+    const res = await POST(signedReq({ ...askCommand, channel_id: OTHER }));
+    expect(await res.json()).toEqual({ type: 5 });
+  });
+
+  it('lists every allowed room when refusing', async () => {
+    process.env.DISCORD_CHANNEL_ID = `${CHANNEL},${OTHER}`;
+    const res = await POST(signedReq({ ...askCommand, channel_id: '555' }));
+    const { content } = (await res.json()).data;
+    expect(content).toContain(`<#${CHANNEL}>`);
+    expect(content).toContain(`<#${OTHER}>`);
+  });
+
+  it('tolerates a trailing comma in the allowlist', async () => {
+    process.env.DISCORD_CHANNEL_ID = `${CHANNEL},`;
+    expect(await (await POST(signedReq(askCommand))).json()).toEqual({ type: 5 });
+  });
+
+  it('refuses an unknown command name', async () => {
+    const res = await POST(signedReq({ ...askCommand, data: { name: 'nope' } }));
+    expect((await res.json()).data.content).toBe('ไม่รู้จักคำสั่งนี้');
   });
 });

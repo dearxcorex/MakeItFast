@@ -13,12 +13,41 @@ export const EPHEMERAL = 1 << 6;
 // Posts without pushing a notification to members' phones.
 export const SUPPRESS_NOTIFICATIONS = 1 << 12;
 
+export interface InteractionOption {
+  name: string;
+  type?: number;
+  value?: string | number | boolean;
+}
+
 export interface Interaction {
   type: number;
   token: string;
   guild_id?: string;
   channel_id?: string;
-  data?: { name: string };
+  /** Present for a guild command; `user` is only populated in DMs. */
+  member?: { user?: { id?: string } };
+  user?: { id?: string };
+  data?: { name: string; options?: InteractionOption[] };
+}
+
+/** The invoking user's id, wherever Discord happened to put it. */
+export function interactionUserId(interaction: Interaction): string | undefined {
+  return interaction.member?.user?.id ?? interaction.user?.id;
+}
+
+/** A command option's value, only when it really is a non-empty string. */
+export function stringOption(interaction: Interaction, name: string): string | undefined {
+  const value = interaction.data?.options?.find((o) => o.name === name)?.value;
+  return typeof value === 'string' && value.trim() ? value.trim() : undefined;
+}
+
+/**
+ * Comma-separated allowlist, so /stat can stay in the field-ops channel while
+ * /ask lives in its own room. Empty or unset means every channel is allowed.
+ */
+export function channelAllowed(channelId: string | undefined, allowlist: string | undefined): boolean {
+  const allowed = (allowlist ?? '').split(',').map((s) => s.trim()).filter(Boolean);
+  return allowed.length === 0 || (Boolean(channelId) && allowed.includes(channelId!));
 }
 
 // SPKI DER header for a raw 32-byte Ed25519 public key.

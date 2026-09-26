@@ -19,23 +19,24 @@ A persistent wiki lives at `wiki/`. At session start, read `wiki/index.md` and `
 
 ## Architecture Overview
 
-FM radio station tracker for NBTC (Thailand), built with Next.js 15, TypeScript, Tailwind CSS 4, and Prisma + PostgreSQL. Three tabs: Field Ops (unified FM + interference map), Cell Sites (mobile base-station licences) and Intermod Calculator.
+FM radio station tracker for NBTC (Thailand), built with Next.js 15, TypeScript, Tailwind CSS 4, and Prisma + PostgreSQL. Three tabs: Field Ops (unified FM + interference map), Cell Sites (mobile base-station licences) and Intermod Calculator, plus an admin-only Data tab.
 
 ### Data Flow
 1. **`src/app/page.tsx`** renders **`FieldOpsFetcher`** — this is the only app screen
 2. **`FieldOpsFetcher`** (server component) reads `fm_station` and `interference_site` straight from Prisma, converts rows via `convertToFMStation` / `convertToInterferenceSite`, and passes them to **`FieldOpsClient`**
 3. **`FieldOpsClient`** (client component) owns all client state: active tab, filters, selection, theme, and the `isMobile` breakpoint (`window.innerWidth < 900`)
 4. **`FieldOpsMap`** uses `react-leaflet` with dynamic import (`ssr: false`) — Leaflet cannot run server-side
-5. API routes under `src/app/api/` handle mutations (inspection toggles, PATCH station/site) and inspection-history reads. Initial Field Ops data does **not** go through them; the Cell Sites tab is the exception — it lazy-loads `data/cell-sites/cell-sites-clean.csv` through `/api/cell-sites` on first open
+5. API routes under `src/app/api/` handle mutations (inspection toggles, PATCH station/site, admin station CRUD under `api/admin/stations`) and inspection-history reads. Initial Field Ops data does **not** go through them; the Cell Sites tab is the exception — it lazy-loads `data/cell-sites/cell-sites-clean.csv` through `/api/cell-sites` on first open
 
 ### Key Patterns
 - **Database → UI conversion**: `stationService.ts:convertToFMStation()` and `interferenceService.ts:convertToInterferenceSite()` map Prisma snake_case rows to camelCase interfaces. Field names differ significantly (e.g., `id_fm` → `idFm`, `freq` → `frequency`, `district` → `city`, `province` → `state`)
 - **Marker clustering**: `react-leaflet-cluster` in `FieldOpsMap`. Cluster bubbles draw a segmented ring whose arcs are proportional to the child mix (`utils/clusterIcon.ts`), and children are bucketed by `utils/pinBucket.ts` (`critical` / `pending` / `offair` / `inspected`). Every map colour comes from `utils/pinTokens.ts`
 - **Station identity**: `fm_station.id` is the surrogate key (internal, never shown). `id_fm` is a **string** holding the identifier on the licence — the NBTC code, else the register StationID as digits — printed by `utils/stationLabel.ts`. The register's numeric StationID lives in `register_station_id`, which is what the register scripts join on (ADR 0002/0003/0004)
-- **Three tabs**: Field Ops, Cell Sites, Intermod — controlled by `FieldOpsTab` in `field-ops/FieldOpsNav.tsx`
+- **Tabs**: Field Ops, Cell Sites, Intermod — controlled by `FieldOpsTab` in `field-ops/FieldOpsNav.tsx`. A 4th, **DATA**, shows only for admins on desktop: add / edit / delete `fm_station` via `DataTab`, each write logged to `data_change` in the same transaction. It never writes `register_station_id` or the toggle-owned columns, and refuses to delete a station with inspection history
 - **Coverage area**: This office tracks **นครราชสีมา** and **ชัยภูมิ** only. บุรีรัมย์ was removed on 2026-09-12 (`scripts/delete-buriram.ts`) and dropped from `TARGET_PROVINCES` so an Excel re-import cannot resurrect it
 - **Thai language**: Inspection statuses use Thai strings (`'ตรวจแล้ว'`/`'ยังไม่ตรวจ'`, `'ยื่น'`/`'ไม่ยื่น'`, `'สถานีหลัก'`). These are **comparison values in logic**, not display strings — a translation pass must not rewrite them
 - **Discord inspection notices**: turning an inspect toggle ON posts a silent embed via `DISCORD_INSPECTION_WEBHOOK_URL` (`services/inspectionNotifier.ts`, sent in `after()`); the message id is stored in `discord_message_id` on the inspection row, and turning it OFF deletes that message
+- **Discord `/ask` LLM bot**: `/ask <คำถาม>` in `dear-th-ai-passport` answers complaint-driven "what device is emitting here" questions across 30 MHz–3 GHz, plus spectrum-analyser technique. DeepSeek routes; every number comes from a tool in `services/askTools.ts` (station lookups, `scan_intermod`, FSPL, web search). It **recommends, never reports** — `utils/askMessage.ts` stamps the สันนิษฐาน/คำแนะนำ disclaimer, and tools never return coordinates. `npm test` mocks the provider; `scripts/ask-eval.ts` is the manual eval and is not in the suite
 - **Optimistic updates**: `FieldOpsClient` updates local state immediately, then PATCHes the server and reconciles
 
 ### Database
@@ -63,7 +64,7 @@ FM radio station tracker for NBTC (Thailand), built with Next.js 15, TypeScript,
 ## Testing
 
 - Vitest with jsdom environment, `@testing-library/react` for components
-- Tests in `src/__tests__/`, 632 tests across 75 files
+- Tests in `src/__tests__/`, 750 tests across 85 files
 - Leaflet requires mocking: `vi.mock('leaflet')` and `vi.mock('react-leaflet')` with divIcon/icon stubs
 - CSS stub at `src/__tests__/css-stub.js` handles `leaflet/dist/leaflet.css` imports (aliased in `vitest.config.ts`)
 - API route tests mock Prisma via `vi.mock('@/lib/prisma')` with method stubs (findMany, findFirst, etc.)
