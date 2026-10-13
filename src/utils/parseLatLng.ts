@@ -38,13 +38,13 @@ export function parseLatLngInput(latRaw: string, lngRaw: string): ParseLatLngRes
   }
 
   if (!Number.isFinite(lat) || !Number.isFinite(lng)) {
-    return { ok: false, error: `Invalid: ${(latTrim + " " + lngTrim).trim() || "empty"}` };
+    return { ok: false, error: `พิกัดไม่ถูกต้อง: ${(latTrim + " " + lngTrim).trim() || "ว่าง"}` };
   }
   if (lat < -90 || lat > 90) {
-    return { ok: false, error: "Lat out of range (-90..90)" };
+    return { ok: false, error: "ละติจูดต้องอยู่ระหว่าง -90 ถึง 90" };
   }
   if (lng < -180 || lng > 180) {
-    return { ok: false, error: "Long out of range (-180..180)" };
+    return { ok: false, error: "ลองจิจูดต้องอยู่ระหว่าง -180 ถึง 180" };
   }
   return { ok: true, lat, lng };
 }

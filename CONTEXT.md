@@ -17,6 +17,13 @@ an officer's own portal account. This project's station list is a **working copy
 register for the coverage area; the two drift apart as licences are issued, reassigned and
 revoked, and a **harvest** is the act of reading the register to measure that drift.
 
+### Relicensed
+A revoked station whose frequency NBTC has since licensed to a **new licence holder**
+(ผู้รับใบอนุญาตให้ใช้คลื่นความถี่รายใหม่). Distinct from a plain **revoked** station, where
+no one holds a licence and any signal on the frequency is unlawful. A relicensed station is
+still revoked: the old licence is gone, and the open question in the field is who is
+transmitting now.
+
 ### Harvest
 Reading register data through the portal as the officer who holds the account, at human
 pace. The register exposes no API and grants no bulk export of station data, so a harvest

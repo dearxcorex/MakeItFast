@@ -109,7 +109,7 @@ function bodyFill(html: string): string | null {
 }
 
 function bucketOf(className: string): PinBucket | null {
-  const m = className.match(/fo-bucket--(critical|pending|offair|inspected)/);
+  const m = className.match(/fo-bucket--(\w+)/);
   return m ? (m[1] as PinBucket) : null;
 }
 
@@ -117,6 +117,12 @@ describe("pin tokens — body fill always matches the marker's bucket", () => {
   it("FM: every state paints the token colour for the bucket it reports", () => {
     const cases: Array<[FMStation, PinBucket]> = [
       [makeFM({ id: 1, revoked: true }), "critical"],
+      [makeFM({ id: 5, revoked: true, inspection69: "ตรวจแล้ว" }), "revokedInspected"],
+      [makeFM({ id: 6, revoked: true, permit: "x" }), "relicensed"],
+      [
+        makeFM({ id: 7, revoked: true, permit: "x", inspection69: "ตรวจแล้ว" }),
+        "relicensedInspected",
+      ],
       [makeFM({ id: 2, onAir: false }), "offair"],
       [makeFM({ id: 3, inspection69: "ตรวจแล้ว" }), "inspected"],
       [makeFM({ id: 4 }), "pending"],
@@ -142,11 +148,9 @@ describe("pin tokens — body fill always matches the marker's bucket", () => {
     }
   });
 
-  it("a revoked FM stays critical red even once inspected", () => {
+  it("an inspected revoked FM darkens but never borrows the inspected green", () => {
     const [pin] = draw([makeFM({ revoked: true, inspection69: "ตรวจแล้ว" })]);
-    expect(bucketOf(pin.className)).toBe("critical");
-    expect(bodyFill(pin.html)).toBe(PIN_COLORS.critical);
-    // ...and does not also claim to be done.
+    expect(bodyFill(pin.html)).toBe(PIN_COLORS.revokedInspected);
     expect(pin.html).not.toContain(PIN_COLORS.inspected);
   });
 
@@ -176,47 +180,39 @@ describe("pin tokens — badges stay orthogonal to state", () => {
   });
 });
 
-describe("pin tokens — the inspected badge is gated by its own filter chip", () => {
-  const REVOKED_ON: InspectedBadgeGates = { revoked: true, offAir: false };
-  const OFFAIR_ON: InspectedBadgeGates = { revoked: false, offAir: true };
+describe("pin tokens — the inspected badge is gated by the OFF AIR chip", () => {
+  const OFFAIR_ON: InspectedBadgeGates = { offAir: true };
 
-  it("an inspected revoked pin keeps the red body and gains a green check", () => {
-    const station = makeFM({ revoked: true, inspection69: "ตรวจแล้ว" });
-    const [pin] = draw([station], [], REVOKED_ON);
-    expect(bucketOf(pin.className)).toBe("critical");
-    expect(bodyFill(pin.html)).toBe(PIN_COLORS.critical);
+  it("an inspected off-air pin keeps the grey body and gains a green check", () => {
+    const station = makeFM({ onAir: false, inspection69: "ตรวจแล้ว" });
+    const [pin] = draw([station], [], OFFAIR_ON);
+    expect(bodyFill(pin.html)).toBe(PIN_COLORS.offair);
     expect(pin.html).toContain(BADGE_INSPECTED);
     expect(pin.className).toContain("is-inspected-badge");
   });
 
   it("the same pin wears no badge while the chip is off", () => {
-    const station = makeFM({ revoked: true, inspection69: "ตรวจแล้ว" });
-    const [off] = draw([station], [], OFFAIR_ON);
-    expect(off.html).not.toContain(BADGE_INSPECTED);
-
-    const [none] = draw([station]);
-    expect(none.html).not.toContain(BADGE_INSPECTED);
+    const [pin] = draw([makeFM({ onAir: false, inspection69: "ตรวจแล้ว" })]);
+    expect(pin.html).not.toContain(BADGE_INSPECTED);
   });
 
-  it("an inspected off-air pin badges under the OFF AIR chip", () => {
-    const station = makeFM({ onAir: false, inspection69: "ตรวจแล้ว" });
-    const [pin] = draw([station], [], OFFAIR_ON);
-    expect(bodyFill(pin.html)).toBe(PIN_COLORS.offair);
-    expect(pin.html).toContain(BADGE_INSPECTED);
+  it("an uninspected off-air pin never badges", () => {
+    const [pin] = draw([makeFM({ onAir: false })], [], OFFAIR_ON);
+    expect(pin.html).not.toContain(BADGE_INSPECTED);
   });
 
-  it("an uninspected revoked pin never badges, chip or no chip", () => {
-    const [pin] = draw([makeFM({ revoked: true })], [], REVOKED_ON);
+  it("a revoked pin never badges — its colour already carries the visit", () => {
+    const [pin] = draw([makeFM({ revoked: true, inspection69: "ตรวจแล้ว" })], [], OFFAIR_ON);
     expect(pin.html).not.toContain(BADGE_INSPECTED);
   });
 
   it("the badge coexists with the main-station star", () => {
     const station = makeFM({
-      revoked: true,
+      onAir: false,
       inspection69: "ตรวจแล้ว",
       type: "สถานีหลัก",
     } as Partial<FMStation>);
-    const [pin] = draw([station], [], REVOKED_ON);
+    const [pin] = draw([station], [], OFFAIR_ON);
     expect(pin.html).toContain(BADGE_MAIN);
     expect(pin.html).toContain(BADGE_INSPECTED);
   });

@@ -22,13 +22,18 @@ describe("MobileFilterBar (redesigned)", () => {
       />
     );
     const text = container.textContent ?? "";
-    expect(text).toContain("All");
+    expect(text).toContain("ทั้งหมด");
     expect(text).toContain("FM");
-    expect(text).toContain("INT");
-    expect(text).toContain("Pending");
-    expect(text).toContain("Inspected");
-    expect(text).not.toContain("OFF AIR");
-    expect(text).not.toContain("REVOKED");
+    expect(text).toContain("รบกวน");
+    expect(text).toContain("ยังไม่ตรวจ");
+    expect(text).toContain("ตรวจแล้ว");
+    // The advanced toggles live in the (hidden) sheet, not in the bar's chips.
+    const barChips = Array.from(container.querySelectorAll("button"))
+      .filter((b) => !b.closest('[role="dialog"]'))
+      .map((b) => b.textContent ?? "")
+      .join(" ");
+    expect(barChips).not.toContain("ไม่ออกอากาศ");
+    expect(barChips).not.toContain("เพิกถอน");
   });
 
   it("chips can shrink so the row never pushes the page sideways", () => {
@@ -41,7 +46,7 @@ describe("MobileFilterBar (redesigned)", () => {
       />
     );
     const chip = Array.from(container.querySelectorAll("button")).find(
-      (b) => b.textContent?.trim() === "Inspected"
+      (b) => b.textContent?.trim() === "ตรวจแล้ว"
     );
     expect(chip).toBeDefined();
     expect(chip!.style.minWidth).toBe("0px");
@@ -81,7 +86,7 @@ describe("MobileFilterBar (redesigned)", () => {
       />
     );
     const intBtn = Array.from(container.querySelectorAll("button")).find(
-      (b) => b.textContent?.trim() === "INT"
+      (b) => b.textContent?.trim() === "รบกวน"
     );
     fireEvent.click(intBtn!);
     expect(onChange).toHaveBeenCalledWith(
@@ -100,7 +105,7 @@ describe("MobileFilterBar (redesigned)", () => {
       />
     );
     const btn = Array.from(container.querySelectorAll("button")).find(
-      (b) => b.textContent?.trim() === "Pending"
+      (b) => b.textContent?.trim() === "ยังไม่ตรวจ"
     );
     fireEvent.click(btn!);
     expect(onChange).toHaveBeenCalledWith(
@@ -118,10 +123,10 @@ describe("MobileFilterBar (redesigned)", () => {
       />
     );
     const more = Array.from(container.querySelectorAll("button")).find((b) =>
-      (b.textContent ?? "").includes("More")
+      (b.textContent ?? "").includes("เพิ่มเติม")
     );
     expect(more).toBeDefined();
-    expect(more!.textContent).not.toMatch(/More\s*·\s*\d/);
+    expect(more!.textContent).not.toMatch(/เพิ่มเติม\s*·\s*\d/);
   });
 
   it("More button shows count when advanced filters are set", () => {
@@ -134,9 +139,9 @@ describe("MobileFilterBar (redesigned)", () => {
       />
     );
     const more = Array.from(container.querySelectorAll("button")).find((b) =>
-      (b.textContent ?? "").includes("More")
+      (b.textContent ?? "").includes("เพิ่มเติม")
     );
-    expect(more!.textContent).toMatch(/More\s*·\s*3/);
+    expect(more!.textContent).toMatch(/เพิ่มเติม\s*·\s*3/);
   });
 
   it("Reset button is hidden in default state", () => {
@@ -149,7 +154,7 @@ describe("MobileFilterBar (redesigned)", () => {
       />
     );
     const reset = Array.from(container.querySelectorAll("button")).find(
-      (b) => b.textContent?.trim() === "Reset"
+      (b) => b.textContent?.trim() === "ล้าง"
     );
     expect(reset).toBeUndefined();
   });
@@ -165,7 +170,7 @@ describe("MobileFilterBar (redesigned)", () => {
       />
     );
     const reset = Array.from(container.querySelectorAll("button")).find(
-      (b) => b.textContent?.trim() === "Reset"
+      (b) => b.textContent?.trim() === "ล้าง"
     );
     expect(reset).toBeDefined();
     fireEvent.click(reset!);
@@ -186,7 +191,7 @@ describe("MobileFilterBar (redesigned)", () => {
     expect(dialog!.getAttribute("aria-hidden")).toBe("true");
 
     const more = Array.from(container.querySelectorAll("button")).find((b) =>
-      (b.textContent ?? "").includes("More")
+      (b.textContent ?? "").includes("เพิ่มเติม")
     );
     fireEvent.click(more!);
     expect(dialog!.getAttribute("aria-hidden")).toBe("false");
@@ -202,7 +207,7 @@ describe("MobileFilterBar (redesigned)", () => {
       />
     );
     const more = Array.from(container.querySelectorAll("button")).find((b) =>
-      (b.textContent ?? "").includes("More")
+      (b.textContent ?? "").includes("เพิ่มเติม")
     );
     fireEvent.click(more!);
     expect(window.sessionStorage.getItem("fo:filterSheetOpen")).toBe("true");

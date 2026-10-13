@@ -32,7 +32,7 @@ export async function PATCH(
 
         if (!station?.submit_a_request) {
           return NextResponse.json({
-            error: 'Cannot set on_air to true: station has not submitted a request'
+            error: 'เปิดออกอากาศไม่ได้: สถานียังไม่ได้ยื่นคำขอ'
           }, { status: 400 });
         }
       }

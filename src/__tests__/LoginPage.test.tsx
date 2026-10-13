@@ -21,10 +21,10 @@ import LoginPage from "@/app/login/page";
 describe("LoginPage", () => {
   it("renders username, password, remember-me, submit", () => {
     render(<LoginPage />);
-    expect(screen.getByLabelText(/username/i)).toBeInTheDocument();
-    expect(screen.getByLabelText(/password/i)).toBeInTheDocument();
-    expect(screen.getByLabelText(/remember me/i)).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: /sign in/i })).toBeInTheDocument();
+    expect(screen.getByLabelText(/ชื่อผู้ใช้/)).toBeInTheDocument();
+    expect(screen.getByLabelText(/รหัสผ่าน/)).toBeInTheDocument();
+    expect(screen.getByLabelText(/จดจำการเข้าสู่ระบบ/)).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /เข้าสู่ระบบ/ })).toBeInTheDocument();
   });
 
   it("submits and redirects on success", async () => {
@@ -43,14 +43,14 @@ describe("LoginPage", () => {
       new Response(JSON.stringify({ user: { id: 1 } }), { status: 200 }) as any
     );
     render(<LoginPage />);
-    fireEvent.change(screen.getByLabelText(/username/i), {
+    fireEvent.change(screen.getByLabelText(/ชื่อผู้ใช้/), {
       target: { value: "alice" },
     });
-    fireEvent.change(screen.getByLabelText(/password/i), {
+    fireEvent.change(screen.getByLabelText(/รหัสผ่าน/), {
       target: { value: "hunter2!!" },
     });
-    fireEvent.click(screen.getByLabelText(/remember me/i));
-    fireEvent.click(screen.getByRole("button", { name: /sign in/i }));
+    fireEvent.click(screen.getByLabelText(/จดจำการเข้าสู่ระบบ/));
+    fireEvent.click(screen.getByRole("button", { name: /เข้าสู่ระบบ/ }));
     await waitFor(() => expect(assignSpy).toHaveBeenCalledWith("/"));
     const call = (global.fetch as any).mock.calls[0];
     const body = JSON.parse(call[1].body);
@@ -68,13 +68,13 @@ describe("LoginPage", () => {
       }) as any
     );
     render(<LoginPage />);
-    fireEvent.change(screen.getByLabelText(/username/i), {
+    fireEvent.change(screen.getByLabelText(/ชื่อผู้ใช้/), {
       target: { value: "alice" },
     });
-    fireEvent.change(screen.getByLabelText(/password/i), {
+    fireEvent.change(screen.getByLabelText(/รหัสผ่าน/), {
       target: { value: "wrong" },
     });
-    fireEvent.click(screen.getByRole("button", { name: /sign in/i }));
+    fireEvent.click(screen.getByRole("button", { name: /เข้าสู่ระบบ/ }));
     await waitFor(() =>
       expect(
         screen.getByText(/ชื่อผู้ใช้หรือรหัสผ่านไม่ถูกต้อง/)
@@ -89,13 +89,13 @@ describe("LoginPage", () => {
       }) as any
     );
     render(<LoginPage />);
-    fireEvent.change(screen.getByLabelText(/username/i), {
+    fireEvent.change(screen.getByLabelText(/ชื่อผู้ใช้/), {
       target: { value: "alice" },
     });
-    fireEvent.change(screen.getByLabelText(/password/i), {
+    fireEvent.change(screen.getByLabelText(/รหัสผ่าน/), {
       target: { value: "wrong" },
     });
-    fireEvent.click(screen.getByRole("button", { name: /sign in/i }));
+    fireEvent.click(screen.getByRole("button", { name: /เข้าสู่ระบบ/ }));
     await waitFor(() =>
       expect(screen.getByText(/ลองใหม่อีกครั้งใน 15 นาที/)).toBeInTheDocument()
     );

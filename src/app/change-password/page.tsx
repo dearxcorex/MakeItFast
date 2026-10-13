@@ -60,7 +60,7 @@ export default function ChangePasswordPage() {
       // Without this the rejection escapes and setSubmitting(false) never
       // runs, leaving the only button on the page stuck on "Saving…" — and
       // middleware blocks every other route while a change is pending.
-      setError("Could not reach the server. Check your connection and retry.");
+      setError("เชื่อมต่อเซิร์ฟเวอร์ไม่ได้ ตรวจสอบการเชื่อมต่อแล้วลองใหม่");
       setSubmitting(false);
       return;
     }
@@ -78,7 +78,7 @@ export default function ChangePasswordPage() {
       // former is something the user can retype their way out of.
       const body = await res.json().catch(() => ({}));
       if (body?.error === "invalid_credentials") {
-        setError("Current password is incorrect.");
+        setError("รหัสผ่านปัจจุบันไม่ถูกต้อง");
         setSubmitting(false);
         return;
       }
@@ -94,15 +94,15 @@ export default function ChangePasswordPage() {
       // for. Reveal the field so the message is actionable instead of naming
       // an input that isn't on screen.
       setForced(false);
-      setError("Enter your current password.");
+      setError("กรอกรหัสผ่านปัจจุบัน");
     } else if (body?.error === "invalid_credentials") {
-      setError("Current password is incorrect.");
+      setError("รหัสผ่านปัจจุบันไม่ถูกต้อง");
     } else if (body?.error === "password_reused") {
-      setError("Pick a password you haven't used here before.");
+      setError("เลือกรหัสผ่านที่ยังไม่เคยใช้ในระบบนี้");
     } else if (body?.error === "validation_error") {
-      setError(`Password must be at least ${MIN_LENGTH} characters.`);
+      setError(`รหัสผ่านต้องมีอย่างน้อย ${MIN_LENGTH} ตัวอักษร`);
     } else {
-      setError("Something went wrong. Please try again.");
+      setError("เกิดข้อผิดพลาด กรุณาลองใหม่");
     }
     setSubmitting(false);
   }
@@ -120,20 +120,20 @@ export default function ChangePasswordPage() {
         style={{ background: "var(--fo-band)", color: "var(--fo-text)" }}
       >
         <h1 className="text-2xl font-semibold text-center">
-          {forced ? "Set your password" : "Change password"}
+          {forced ? "ตั้งรหัสผ่านของคุณ" : "เปลี่ยนรหัสผ่าน"}
         </h1>
 
         {forced && (
           <p className="text-sm opacity-80 text-center">
-            An admin issued your current password. Choose your own to continue —
-            only you should know it.
+            รหัสผ่านปัจจุบันออกโดยผู้ดูแลระบบ กรุณาตั้งรหัสผ่านของคุณเองเพื่อใช้งานต่อ —
+            ควรมีเพียงคุณที่รู้รหัสนี้
           </p>
         )}
 
         {!forced && (
           <div>
             <label htmlFor="current" className="block text-sm mb-1">
-              Current password
+              รหัสผ่านปัจจุบัน
             </label>
             <input
               id="current"
@@ -150,7 +150,7 @@ export default function ChangePasswordPage() {
 
         <div>
           <label htmlFor="new" className="block text-sm mb-1">
-            New password
+            รหัสผ่านใหม่
           </label>
           <div className="relative">
             <input
@@ -166,7 +166,7 @@ export default function ChangePasswordPage() {
             />
             <button
               type="button"
-              aria-label={showPw ? "Hide" : "Show"}
+              aria-label={showPw ? "ซ่อน" : "แสดง"}
               onClick={() => setShowPw((s) => !s)}
               className="absolute right-2 top-1/2 -translate-y-1/2 text-xs opacity-70"
             >
@@ -177,7 +177,7 @@ export default function ChangePasswordPage() {
 
         <div>
           <label htmlFor="confirm" className="block text-sm mb-1">
-            Confirm new password
+            ยืนยันรหัสผ่านใหม่
           </label>
           <input
             id="confirm"
@@ -191,7 +191,7 @@ export default function ChangePasswordPage() {
           />
           {mismatch && (
             <p role="alert" className="text-xs mt-1 text-red-400">
-              Passwords do not match
+              รหัสผ่านไม่ตรงกัน
             </p>
           )}
         </div>
@@ -208,7 +208,7 @@ export default function ChangePasswordPage() {
           className="w-full rounded-md bg-[var(--fo-accent)] text-black font-medium py-2 disabled:opacity-60 flex items-center justify-center gap-2"
         >
           {submitting && <span aria-hidden className="fo-spinner" />}
-          {submitting ? "Saving…" : "Save password"}
+          {submitting ? "กำลังบันทึก…" : "บันทึกรหัสผ่าน"}
         </button>
       </form>
     </div>

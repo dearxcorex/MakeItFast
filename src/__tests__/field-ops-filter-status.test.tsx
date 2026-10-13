@@ -32,11 +32,11 @@ describe('FieldOpsFilters · status chips', () => {
   it('always shows the same 3 status chips regardless of type', () => {
     for (const type of ['ALL', 'FM', 'INT'] as const) {
       const { getByText, queryByText } = renderFilters({ type });
-      expect(getByText('PENDING')).toBeTruthy();
-      expect(getByText('INSPECTED')).toBeTruthy();
+      expect(getByText('ยังไม่ตรวจ')).toBeTruthy();
+      expect(getByText('ตรวจแล้ว')).toBeTruthy();
       // CRITICAL/LAW SENT/OFF AIR no longer live in the status row
       // (they're separate severity dropdown + toggles now)
-      expect(queryByText('LAW SENT')).not.toBe(getByText('PENDING'));
+      expect(queryByText('ส่งหนังสือแล้ว')).not.toBe(getByText('ยังไม่ตรวจ'));
       cleanup();
     }
   });
@@ -45,29 +45,29 @@ describe('FieldOpsFilters · status chips', () => {
 describe('FieldOpsFilters · OFF AIR / LAW SENT toggles', () => {
   it('OFF AIR toggle is shown for type=ALL/FM and hidden for INT', () => {
     const all = renderFilters({ type: 'ALL' });
-    expect(all.queryByText('OFF AIR')).toBeTruthy();
+    expect(all.queryByText('ไม่ออกอากาศ')).toBeTruthy();
     cleanup();
     const fm = renderFilters({ type: 'FM' });
-    expect(fm.queryByText('OFF AIR')).toBeTruthy();
+    expect(fm.queryByText('ไม่ออกอากาศ')).toBeTruthy();
     cleanup();
     const int = renderFilters({ type: 'INT' });
-    expect(int.queryByText('OFF AIR')).toBeNull();
+    expect(int.queryByText('ไม่ออกอากาศ')).toBeNull();
   });
 
   it('LAW SENT toggle is shown for type=ALL/INT and hidden for FM', () => {
     const all = renderFilters({ type: 'ALL' });
-    expect(all.queryByText('LAW SENT')).toBeTruthy();
+    expect(all.queryByText('ส่งหนังสือแล้ว')).toBeTruthy();
     cleanup();
     const intView = renderFilters({ type: 'INT' });
-    expect(intView.queryByText('LAW SENT')).toBeTruthy();
+    expect(intView.queryByText('ส่งหนังสือแล้ว')).toBeTruthy();
     cleanup();
     const fm = renderFilters({ type: 'FM' });
-    expect(fm.queryByText('LAW SENT')).toBeNull();
+    expect(fm.queryByText('ส่งหนังสือแล้ว')).toBeNull();
   });
 
   it('clicking OFF AIR flips the filter flag', () => {
     const { onChange, getByText } = renderFilters({ type: 'ALL', offAir: false });
-    fireEvent.click(getByText('OFF AIR'));
+    fireEvent.click(getByText('ไม่ออกอากาศ'));
     expect(onChange.mock.calls[0][0]).toMatchObject({ offAir: true });
   });
 });
@@ -91,7 +91,7 @@ describe('FieldOpsFilters · type-change cascade', () => {
       type: 'ALL',
       offAir: true,
     });
-    fireEvent.click(getAllByText('INT')[0]);
+    fireEvent.click(getAllByText('รบกวน')[0]);
     const next = onChange.mock.calls[0][0];
     expect(next.type).toBe('INT');
     expect(next.offAir).toBe(false);

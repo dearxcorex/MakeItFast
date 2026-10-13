@@ -17,7 +17,7 @@ import { CellSiteDetail } from "./CellSiteDetail";
 
 const CellSitesMap = dynamic(
   () => import("./CellSitesMap").then((m) => m.CellSitesMap),
-  { ssr: false, loading: () => <Placeholder label="LOADING MAP…" /> }
+  { ssr: false, loading: () => <Placeholder label="กำลังโหลดแผนที่…" /> }
 );
 
 // ~6,600 sites is too much to ship with every page load, so the tab fetches
@@ -112,7 +112,7 @@ export function CellSitesTab({
       <div style={{ flex: 1, display: "flex", minHeight: 0 }}>
         <div style={{ flex: 1, position: "relative", minWidth: 0 }}>
           {error ? (
-            <Placeholder label="COULD NOT LOAD CELL SITES">
+            <Placeholder label="โหลดสถานีฐานไม่สำเร็จ">
               <button
                 type="button"
                 className="fo-mono"
@@ -129,11 +129,11 @@ export function CellSitesTab({
                   letterSpacing: "0.16em",
                 }}
               >
-                RETRY
+                ลองใหม่
               </button>
             </Placeholder>
           ) : sites === null ? (
-            <Placeholder label="LOADING CELL SITES…" />
+            <Placeholder label="กำลังโหลดสถานีฐาน…" />
           ) : (
             <CellSitesMap
               sites={filtered}
@@ -169,7 +169,7 @@ export function CellSitesTab({
               }}
             >
               <span className="fo-mono" style={{ color: "var(--fo-accent)" }}>
-                {selectedSite ? "CURRENT" : "SELECT A SITE"}
+                {selectedSite ? "ที่เลือก" : "เลือกจุด"}
               </span>
             </div>
             {selectedSite ? (
@@ -177,10 +177,10 @@ export function CellSitesTab({
             ) : (
               <div style={{ padding: 20, flex: 1 }}>
                 <div className="fo-serif" style={{ fontSize: 18, color: "var(--fo-rail-text)", marginBottom: 6 }}>
-                  Tap a marker
+                  แตะหมุดบนแผนที่
                 </div>
                 <div className="fo-mono" style={{ color: "var(--fo-rail-mute)" }}>
-                  Map shows {filtered.length} cell sites
+                  บนแผนที่ {filtered.length} สถานีฐาน
                 </div>
               </div>
             )}
@@ -191,7 +191,7 @@ export function CellSitesTab({
       {isMobile && selectedSite && (
         <div
           role="dialog"
-          aria-label="Cell site details"
+          aria-label="รายละเอียดสถานีฐาน"
           style={{
             background: "var(--fo-sheet-bg)",
             borderTop: "1px solid var(--fo-rail-border)",
@@ -207,7 +207,7 @@ export function CellSitesTab({
           <div style={{ display: "flex", justifyContent: "flex-end", padding: "8px 12px 0" }}>
             <button
               type="button"
-              aria-label="Close"
+              aria-label="ปิด"
               onClick={clearSelection}
               className="fo-mono"
               style={{
@@ -265,7 +265,7 @@ export function CellSiteFilterBar({
         alignItems: "center",
       }}
     >
-      <span className="fo-mono" style={{ color: "var(--fo-band-mute)" }}>OPERATOR</span>
+      <span className="fo-mono" style={{ color: "var(--fo-band-mute)" }}>ผู้ให้บริการ</span>
       {CELL_OPERATORS.map((op) => {
         const active = filters.operators.includes(op);
         const color = CELL_OPERATOR_COLORS[op];
@@ -301,7 +301,7 @@ export function CellSiteFilterBar({
       })}
 
       <select
-        aria-label="Province filter"
+        aria-label="กรองจังหวัด"
         className="fo-mono"
         value={filters.province}
         onChange={(e) => onChange({ ...filters, province: e.target.value })}
@@ -319,7 +319,7 @@ export function CellSiteFilterBar({
       >
         {["All", ...provinces].map((p) => (
           <option key={p} value={p}>
-            {p === "All" ? "ALL PROVINCES" : p}
+            {p === "All" ? "ทุกจังหวัด" : p}
           </option>
         ))}
       </select>
@@ -328,8 +328,8 @@ export function CellSiteFilterBar({
 
       <input
         type="search"
-        aria-label="Search licence or station code"
-        placeholder="Search licence no., station code…"
+        aria-label="ค้นหาเลขใบอนุญาตหรือรหัสสถานี"
+        placeholder="ค้นหาเลขใบอนุญาต, รหัสสถานี…"
         value={filters.search}
         onChange={(e) => onChange({ ...filters, search: e.target.value })}
         style={{
@@ -344,7 +344,7 @@ export function CellSiteFilterBar({
         }}
       />
       <span className="fo-mono" style={{ color: "var(--fo-band-mute)" }}>
-        {visibleCount} VISIBLE
+        แสดง {visibleCount} รายการ
       </span>
     </div>
   );

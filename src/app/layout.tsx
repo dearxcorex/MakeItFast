@@ -59,8 +59,8 @@ const kalam = Kalam({
 });
 
 export const metadata: Metadata = {
-  title: "Field Ops | NBTC FM + Interference Tracker",
-  description: "Unified field operations surface for FM station inspection and interference site monitoring",
+  title: "งานภาคสนาม | ติดตามสถานี FM และการรบกวน กสทช.",
+  description: "ระบบงานภาคสนามสำหรับตรวจสถานีวิทยุ FM และติดตามจุดรบกวนคลื่นความถี่",
   keywords: "FM radio, interference, NBTC, field ops, inspection, intermodulation",
 };
 
@@ -81,7 +81,7 @@ export default function RootLayout({
   ].join(" ");
 
   return (
-    <html lang="en" className="dark" suppressHydrationWarning>
+    <html lang="th" className="dark" suppressHydrationWarning>
       <body className={`${fontVars} font-sans antialiased`} suppressHydrationWarning>
         <UserProvider>
           <ThemeProvider>

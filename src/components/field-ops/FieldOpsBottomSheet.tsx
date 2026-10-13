@@ -9,6 +9,8 @@ import TeammatePicker, { type InspectorOption } from "./TeammatePicker";
 import InspectionTeamChips from './InspectionTeamChips';
 import type { InspectionMember } from '@/types/inspection';
 import { stationLabel } from "@/utils/stationLabel";
+import { isRelicensed } from "@/utils/pinBucket";
+import { rankingLabel } from "@/utils/rankingLabel";
 
 function googleMapsUrl(lat: number, lng: number) {
   return `https://www.google.com/maps/dir/?api=1&destination=${lat},${lng}&travelmode=driving`;
@@ -138,7 +140,7 @@ export function FieldOpsBottomSheet({
             className="fo-mono"
             style={{ color: "var(--fo-accent)", fontSize: 10, letterSpacing: "0.16em" }}
           >
-            MARK SOURCE
+            ปักหมุดแหล่งรบกวน
           </div>
           <div
             style={{
@@ -151,7 +153,7 @@ export function FieldOpsBottomSheet({
               textOverflow: "ellipsis",
             }}
           >
-            Tap the map to drop the source pin
+            แตะแผนที่เพื่อปักหมุดแหล่งรบกวน
           </div>
         </div>
         <button
@@ -171,7 +173,7 @@ export function FieldOpsBottomSheet({
             flexShrink: 0,
           }}
         >
-          ✕ CANCEL
+          ✕ ยกเลิก
         </button>
       </div>
     );
@@ -184,7 +186,7 @@ export function FieldOpsBottomSheet({
   const isFM = selection.kind === "fm" && station;
   const isINT = selection.kind === "int" && site;
   const id = isFM ? stationLabel(station!) : `INT-${site!.id}`;
-  const title = isFM ? station!.name : (site!.siteName || site!.siteCode || `Site #${site!.id}`);
+  const title = isFM ? station!.name : (site!.siteName || site!.siteCode || `จุด #${site!.id}`);
   const province = isFM ? station!.state : site!.changwat || "";
   const district = isFM ? station!.city : (site!.cellName || "—");
   const inspected = isFM ? station!.inspection69 === "ตรวจแล้ว" : site!.status === "ตรวจแล้ว";
@@ -231,7 +233,7 @@ export function FieldOpsBottomSheet({
       <button
         type="button"
         onClick={() => setExpanded((v) => !v)}
-        aria-label={expanded ? "Collapse" : "Expand"}
+        aria-label={expanded ? "ย่อ" : "ขยาย"}
         style={{
           display: "flex",
           justifyContent: "center",
@@ -256,7 +258,7 @@ export function FieldOpsBottomSheet({
             color: isFM ? "var(--fo-accent)" : "var(--fo-white)",
           }}
         >
-          {isFM ? "FM" : "INT"}
+          {isFM ? "FM" : "รบกวน"}
         </span>
         <span className="fo-mono" style={{ color: "var(--fo-sheet-text)" }}>{id}</span>
         <div style={{ flex: 1 }} />
@@ -270,7 +272,7 @@ export function FieldOpsBottomSheet({
             fontSize: 9,
           }}
         >
-          {inspected ? "INSPECTED" : "PENDING"}
+          {inspected ? "ตรวจแล้ว" : "ยังไม่ตรวจ"}
         </span>
         {isFM && (
           <span
@@ -283,13 +285,13 @@ export function FieldOpsBottomSheet({
               fontSize: 9,
             }}
           >
-            {onAir ? "ON AIR" : "OFF AIR"}
+            {onAir ? "ออกอากาศ" : "ไม่ออกอากาศ"}
           </span>
         )}
         {onClose && (
           <button
             type="button"
-            aria-label="Close"
+            aria-label="ปิด"
             onClick={(e) => {
               e.stopPropagation();
               onClose();
@@ -341,15 +343,20 @@ export function FieldOpsBottomSheet({
       <div style={{ padding: "8px 16px 0", display: "flex", gap: 16, fontSize: 12 }}>
         {isFM ? (
           <>
-            <Inline label="FREQ" value={`${station!.frequency.toFixed(2)} MHz`} />
-            {station!.permit && <Inline label="PERMIT" value={station!.permit} />}
+            <Inline label="ความถี่" value={`${station!.frequency.toFixed(2)} MHz`} />
+            {station!.permit && (
+              <Inline
+                label={isRelicensed(station!) ? "ผู้รับใบอนุญาตรายใหม่" : "ผู้รับใบอนุญาต"}
+                value={station!.permit}
+              />
+            )}
           </>
         ) : (
           <>
             {site!.avgNiCarrier !== null && site!.avgNiCarrier !== undefined && (
               <Inline label="N/I" value={`${site!.avgNiCarrier.toFixed(1)}`} />
             )}
-            {site!.ranking && <Inline label="RANK" value={site!.ranking} />}
+            {site!.ranking && <Inline label="ระดับ" value={rankingLabel(site!.ranking)} />}
           </>
         )}
       </div>
@@ -377,7 +384,7 @@ export function FieldOpsBottomSheet({
             textAlign: "center",
           }}
         >
-          ▶ NAVIGATE
+          ▶ นำทาง
         </a>
         <button
           type="button"
@@ -412,7 +419,7 @@ export function FieldOpsBottomSheet({
             opacity: pending ? 0.6 : 1,
           }}
         >
-          {inspected ? "✓ INSPECTED" : "✓ INSPECT"}
+          {inspected ? "✓ ตรวจแล้ว" : "✓ ตรวจ"}
         </button>
       </div>
 
@@ -437,7 +444,7 @@ export function FieldOpsBottomSheet({
               opacity: pending ? 0.6 : 1,
             }}
           >
-            {onAir ? "📡 ON AIR · STOP" : "📡 OFF AIR · GO LIVE"}
+            {onAir ? "📡 ออกอากาศ · หยุด" : "📡 ไม่ออกอากาศ · เปิด"}
           </button>
         </div>
       )}
@@ -490,7 +497,7 @@ export function FieldOpsBottomSheet({
                   cursor: pending ? "wait" : "pointer",
                 }}
               >
-                ✕ CLEAR
+                ✕ ล้าง
               </button>
               <button
                 type="button"
@@ -510,7 +517,7 @@ export function FieldOpsBottomSheet({
                   cursor: pending ? "wait" : "pointer",
                 }}
               >
-                ⊕ RE-MARK SOURCE
+                ⊕ ปักหมุดใหม่
               </button>
             </div>
           ) : (
@@ -532,7 +539,7 @@ export function FieldOpsBottomSheet({
                 cursor: pending ? "wait" : "pointer",
               }}
             >
-              ⊕ MARK SOURCE
+              ⊕ ปักหมุดแหล่งรบกวน
             </button>
           )}
         </div>
@@ -574,12 +581,12 @@ export function FieldOpsBottomSheet({
             >
               <span style={{ fontSize: 18 }}>✉</span>
               <span style={{ flex: 1 }}>
-                <span className="fo-mono">LAW PAPER</span>
+                <span className="fo-mono">หนังสือแจ้ง</span>
                 <div style={{ fontSize: 13, fontWeight: 600 }}>
-                  {lawSent ? "ส่งแล้ว · Sent" : "ยังไม่ส่ง · Not sent"}
+                  {lawSent ? "ส่งแล้ว" : "ยังไม่ส่ง"}
                 </div>
               </span>
-              <span className="fo-mono" style={{ color: "var(--fo-rail-mute)" }}>TAP TO TOGGLE</span>
+              <span className="fo-mono" style={{ color: "var(--fo-rail-mute)" }}>แตะเพื่อสลับ</span>
             </button>
           )}
 
@@ -610,7 +617,7 @@ export function FieldOpsBottomSheet({
                   cursor: "pointer",
                 }}
               >
-                <span>ENTER COORDS MANUALLY</span>
+                <span>กรอกพิกัดเอง</span>
                 <span>{coordsOpen ? "▴" : "▾"}</span>
               </button>
               {coordsOpen && (
@@ -660,7 +667,7 @@ export function FieldOpsBottomSheet({
                       letterSpacing: "0.14em",
                     }}
                   >
-                    SAVE COORDS
+                    บันทึกพิกัด
                   </button>
                   {coordError && (
                     <div className="fo-mono" style={{ color: "var(--fo-crit)", fontSize: 10 }}>
@@ -668,7 +675,7 @@ export function FieldOpsBottomSheet({
                     </div>
                   )}
                   <div className="fo-mono" style={{ color: "var(--fo-rail-mute)", fontSize: 10 }}>
-                    Tip: paste &quot;13.756, 100.501&quot; into LAT
+                    เคล็ดลับ: วาง &quot;13.756, 100.501&quot; ในช่อง LAT
                   </div>
                 </div>
               )}
@@ -679,10 +686,10 @@ export function FieldOpsBottomSheet({
             const cells: React.ReactNode[] = [];
             if (isFM) {
               if (station!.transmitterPower !== undefined) {
-                cells.push(<Cell key="power" label="POWER" value={`${station!.transmitterPower} W`} />);
+                cells.push(<Cell key="power" label="กำลังส่ง" value={`${station!.transmitterPower} W`} />);
               }
               if (station!.dateInspected) {
-                cells.push(<Cell key="inspected" label="INSPECTED" value={station!.dateInspected} />);
+                cells.push(<Cell key="inspected" label="วันที่ตรวจ" value={station!.dateInspected} />);
               }
             }
             if (cells.length === 0) return null;
@@ -769,7 +776,7 @@ function CoLocatedStrip({
           marginBottom: 6,
         }}
       >
-        ALSO HERE · {others.length}
+        ที่เดียวกัน · {others.length}
       </div>
       <div
         style={{
@@ -784,7 +791,7 @@ function CoLocatedStrip({
           const isStation = "frequency" in s;
           const label = isStation
             ? `${s.name} · ${s.frequency.toFixed(2)}`
-            : (s.siteName || s.siteCode || `Site #${s.id}`);
+            : (s.siteName || s.siteCode || `จุด #${s.id}`);
           const handleClick = () => {
             if (isStation) onSelectStation?.(s.id);
             else onSelectSite?.(s.id);

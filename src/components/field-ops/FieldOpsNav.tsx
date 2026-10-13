@@ -3,14 +3,14 @@
 export type FieldOpsTab = "field-ops" | "cell-sites" | "intermod" | "data";
 
 const ITEMS: Array<{ id: FieldOpsTab; label: string; icon: string }> = [
-  { id: "field-ops", label: "FIELD OPS", icon: "◉" },
-  { id: "cell-sites", label: "CELL SITES", icon: "▲" },
+  { id: "field-ops", label: "ภาคสนาม", icon: "◉" },
+  { id: "cell-sites", label: "สถานีฐาน", icon: "▲" },
   { id: "intermod", label: "INTERMOD", icon: "Σ" },
 ];
 
 // Admin-only: add / edit / delete fm_station rows. Desktop only, so it is not
 // in FieldOpsDrawer.
-const DATA_ITEM = { id: "data" as const, label: "DATA", icon: "▤" };
+const DATA_ITEM = { id: "data" as const, label: "ข้อมูล", icon: "▤" };
 
 export function FieldOpsNav({
   active,
@@ -48,7 +48,7 @@ export function FieldOpsNav({
           transform: "rotate(180deg)",
         }}
       >
-        FIELD OPS
+        ภาคสนาม
       </div>
       {items.map((item) => {
         const isActive = active === item.id;
@@ -86,8 +86,8 @@ export function FieldOpsNav({
             <span
               className="fo-mono"
               style={{
-                fontSize: 7,
-                letterSpacing: "0.12em",
+                fontSize: 9,
+                letterSpacing: "0.02em",
                 color: isActive ? "#001e2b" : "var(--fo-rail-mute)",
               }}
             >

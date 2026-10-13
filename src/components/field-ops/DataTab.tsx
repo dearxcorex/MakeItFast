@@ -91,15 +91,15 @@ export function DataTab({ onChanged }: { onChanged: () => void }) {
             color: "var(--fo-band-text)",
           }}
         >
-          <span className="fo-mono" style={{ letterSpacing: "0.12em" }}>FM STATIONS</span>
+          <span className="fo-mono" style={{ letterSpacing: "0.12em" }}>สถานี FM</span>
           <select
-            aria-label="Province filter"
+            aria-label="กรองจังหวัด"
             className="fo-mono"
             value={province}
             onChange={(e) => setProvince(e.target.value)}
             style={pill}
           >
-            <option value="All">ALL PROVINCES</option>
+            <option value="All">ทุกจังหวัด</option>
             {TARGET_PROVINCES.map((p) => (
               <option key={p} value={p}>{p}</option>
             ))}
@@ -141,7 +141,7 @@ export function DataTab({ onChanged }: { onChanged: () => void }) {
             </div>
           )}
           {!error && rows === null && (
-            <div className="fo-mono" style={{ padding: 20, color: "var(--fo-mute)" }}>LOADING…</div>
+            <div className="fo-mono" style={{ padding: 20, color: "var(--fo-mute)" }}>กำลังโหลด…</div>
           )}
           {rows !== null && (
             <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 13 }}>
@@ -194,9 +194,9 @@ export function DataTab({ onChanged }: { onChanged: () => void }) {
                         {r.revoked ? (
                           <span style={{ color: "var(--fo-crit)" }}>เพิกถอน</span>
                         ) : r.onAir ? (
-                          "on air"
+                          "ออกอากาศ"
                         ) : (
-                          <span style={{ color: "var(--fo-mute)" }}>off air</span>
+                          <span style={{ color: "var(--fo-mute)" }}>ไม่ออกอากาศ</span>
                         )}
                       </td>
                     </tr>

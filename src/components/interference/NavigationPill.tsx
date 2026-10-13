@@ -25,7 +25,7 @@ export default function NavigationPill({
   if (distance !== null) {
     parts.push(`${distance.toFixed(1)} km`);
   } else if (bearing !== null) {
-    parts.push('pending source');
+    parts.push('ยังไม่ระบุแหล่งรบกวน');
   }
 
   return (

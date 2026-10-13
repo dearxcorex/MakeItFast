@@ -32,6 +32,14 @@ const RISK_TONE: Record<RiskLevel, { color: string; pillClass: string }> = {
   LOW: { color: 'var(--fo-accent-2)', pillClass: 'fo-risk-low' },
 };
 
+const RISK_LABEL: Record<RiskLevel | 'ALL', string> = {
+  ALL: 'ทั้งหมด',
+  CRITICAL: 'วิกฤต',
+  HIGH: 'สูง',
+  MEDIUM: 'ปานกลาง',
+  LOW: 'ต่ำ',
+};
+
 export default function IntermodCalculator({
   stations,
   onHighlightStations,
@@ -66,7 +74,7 @@ export default function IntermodCalculator({
           const f1 = parseFloat(freq1);
           const f2 = parseFloat(freq2);
           if (isNaN(f1) || isNaN(f2)) {
-            alert('Please enter valid frequencies');
+            alert('กรุณากรอกความถี่ให้ถูกต้อง');
             setIsCalculating(false);
             return;
           }
@@ -80,7 +88,7 @@ export default function IntermodCalculator({
                     {
                       station1: {
                         id: 'manual-1',
-                        name: `Manual ${f1} MHz`,
+                        name: `กรอกเอง ${f1} MHz`,
                         frequency: f1,
                         latitude: 0,
                         longitude: 0,
@@ -90,7 +98,7 @@ export default function IntermodCalculator({
                       },
                       station2: {
                         id: 'manual-2',
-                        name: `Manual ${f2} MHz`,
+                        name: `กรอกเอง ${f2} MHz`,
                         frequency: f2,
                         latitude: 0,
                         longitude: 0,
@@ -109,7 +117,7 @@ export default function IntermodCalculator({
           setRiskAssessments([]);
         } else {
           if (!targetAircraftFrequency) {
-            alert('Please enter an aircraft frequency');
+            alert('กรุณากรอกความถี่อากาศยาน');
             setIsCalculating(false);
             return;
           }
@@ -120,7 +128,7 @@ export default function IntermodCalculator({
         }
       } catch (error) {
         console.error('Calculation error:', error);
-        alert('An error occurred during calculation');
+        alert('เกิดข้อผิดพลาดระหว่างคำนวณ');
       } finally {
         setIsCalculating(false);
       }
@@ -211,10 +219,10 @@ export default function IntermodCalculator({
           </div>
           <div>
             <div className="fo-mono" style={{ color: 'var(--fo-accent-2)' }}>
-              INTERMOD CALCULATOR
+              คำนวณ INTERMOD
             </div>
             <div className="fo-serif" style={{ fontSize: 22, marginTop: 2 }}>
-              Aircraft <span className="fo-underline-accent">interference</span>
+              <span className="fo-underline-accent">การรบกวน</span>อากาศยาน
             </div>
           </div>
         </div>
@@ -222,15 +230,15 @@ export default function IntermodCalculator({
         {/* Mode */}
         <div style={{ marginBottom: 14 }}>
           <label className="fo-mono" style={{ display: 'block', marginBottom: 6 }}>
-            MODE
+            โหมด
           </label>
           <select
             value={mode}
             onChange={(e) => setMode(e.target.value as CalculatorMode)}
             className="fo-select"
           >
-            <option value="aircraft-check">Find FM Pairs (Aircraft Freq)</option>
-            <option value="specific-frequency">Check FM Frequencies</option>
+            <option value="aircraft-check">หาคู่สถานี FM (จากความถี่อากาศยาน)</option>
+            <option value="specific-frequency">ตรวจความถี่ FM สองค่า</option>
           </select>
         </div>
 
@@ -240,12 +248,12 @@ export default function IntermodCalculator({
             <>
               <div className="fo-card" style={{ padding: 14, background: 'var(--fo-canvas)' }}>
                 <div className="fo-mono" style={{ marginBottom: 10 }}>
-                  ENTER TWO FM FREQUENCIES
+                  กรอกความถี่ FM สองค่า
                 </div>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
                   <div>
                     <label className="fo-mono" style={{ display: 'block', marginBottom: 4 }}>
-                      FM FREQUENCY 1 (MHZ)
+                      ความถี่ FM 1 (MHz)
                     </label>
                     <input
                       type="number"
@@ -260,7 +268,7 @@ export default function IntermodCalculator({
                   </div>
                   <div>
                     <label className="fo-mono" style={{ display: 'block', marginBottom: 4 }}>
-                      FM FREQUENCY 2 (MHZ)
+                      ความถี่ FM 2 (MHz)
                     </label>
                     <input
                       type="number"
@@ -285,7 +293,7 @@ export default function IntermodCalculator({
                 }}
               >
                 <div className="fo-mono" style={{ color: 'var(--fo-accent-2)', marginBottom: 4 }}>
-                  3RD ORDER PRODUCTS
+                  ผลคูณอันดับ 3
                 </div>
                 <div style={{ fontFamily: 'var(--fo-mono)', fontSize: 12, color: 'var(--fo-ink)' }}>
                   2 × f1 − f2 ={' '}
@@ -312,7 +320,7 @@ export default function IntermodCalculator({
                     <path strokeLinecap="round" strokeLinejoin="round" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" />
                   </svg>
                   <span className="fo-mono" style={{ color: 'var(--fo-accent-2)' }}>
-                    AIRCRAFT FREQUENCY · 108–137 MHZ
+                    ความถี่อากาศยาน · 108–137 MHz
                   </span>
                 </div>
                 <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
@@ -344,7 +352,7 @@ export default function IntermodCalculator({
                       textAlign: 'center',
                     }}
                   >
-                    TARGET · {targetAircraftFrequency} MHZ
+                    เป้าหมาย · {targetAircraftFrequency} MHz
                   </div>
                 )}
               </div>
@@ -354,7 +362,7 @@ export default function IntermodCalculator({
                   className="fo-mono"
                   style={{ cursor: 'pointer', color: 'var(--fo-ink)' }}
                 >
-                  COMMON FREQUENCIES REFERENCE
+                  ความถี่ที่ใช้บ่อย
                 </summary>
                 <div
                   style={{
@@ -369,7 +377,7 @@ export default function IntermodCalculator({
                   }}
                 >
                   <span>108.0 VOR/ILS</span>
-                  <span>121.5 EMERGENCY</span>
+                  <span>121.5 ฉุกเฉิน</span>
                   <span>118.0 ATC</span>
                   <span>125.0 APPROACH</span>
                 </div>
@@ -377,7 +385,7 @@ export default function IntermodCalculator({
 
               <details className="fo-card" style={{ padding: 12, background: 'var(--fo-canvas)' }}>
                 <summary className="fo-mono" style={{ cursor: 'pointer' }}>
-                  OPTIONAL · AIRCRAFT LOCATION
+                  ไม่บังคับ · ตำแหน่งอากาศยาน
                 </summary>
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8, marginTop: 8 }}>
                   <div>
@@ -421,7 +429,7 @@ export default function IntermodCalculator({
                 </div>
                 <div style={{ marginTop: 8 }}>
                   <label className="fo-mono" style={{ display: 'block', marginBottom: 4 }}>
-                    ALTITUDE (FT)
+                    ความสูง (ฟุต)
                   </label>
                   <input
                     type="number"
@@ -442,7 +450,7 @@ export default function IntermodCalculator({
                     className="fo-mono"
                     style={{ marginTop: 4, fontSize: 10, color: 'var(--fo-mute)', letterSpacing: '0.08em' }}
                   >
-                    LAT/LNG + ALTITUDE ENABLE LINE-OF-SIGHT (TOWER {`${60}`}M)
+                    กรอก LAT/LNG และความสูงเพื่อคำนวณแนวสายตา (เสาสูง {`${60}`} ม.)
                   </div>
                 </div>
               </details>
@@ -459,10 +467,10 @@ export default function IntermodCalculator({
                 }}
               >
                 <span className="fo-mono" style={{ color: 'var(--fo-accent-2)', marginRight: 4 }}>
-                  REVERSE LOOKUP ·
+                  ค้นย้อนกลับ ·
                 </span>
-                Finds all FM station pairs from {totalStationsCount} stations that could create
-                interference at the target aircraft frequency.
+                หาคู่สถานี FM ทั้งหมดจาก {totalStationsCount} สถานี
+                ที่อาจก่อการรบกวนที่ความถี่อากาศยานเป้าหมาย
               </div>
             </>
           )}
@@ -476,14 +484,14 @@ export default function IntermodCalculator({
               style={{ width: '100%', padding: 14 }}
             >
               {isCalculating ? (
-                <span className="fo-mono" style={{ color: '#fff' }}>SEARCHING…</span>
+                <span className="fo-mono" style={{ color: '#fff' }}>กำลังค้นหา…</span>
               ) : (
                 <>
                   <svg width={18} height={18} fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
                   </svg>
                   <span className="fo-mono" style={{ color: '#fff' }}>
-                    {mode === 'aircraft-check' ? 'FIND FM PAIRS' : 'CALCULATE'}
+                    {mode === 'aircraft-check' ? 'หาคู่สถานี FM' : 'คำนวณ'}
                   </span>
                 </>
               )}
@@ -494,7 +502,7 @@ export default function IntermodCalculator({
               className="fo-btn"
               style={{ width: '100%' }}
             >
-              <span className="fo-mono">CLEAR ALL</span>
+              <span className="fo-mono">ล้างทั้งหมด</span>
             </button>
           </div>
         </div>
@@ -510,19 +518,19 @@ export default function IntermodCalculator({
           }}
         >
           <div className="fo-mono" style={{ color: 'var(--fo-accent-2)', marginBottom: 8 }}>
-            AVIATION BAND · 108–137 MHZ
+            ย่านการบิน · 108–137 MHz
           </div>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 4, fontSize: 12 }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', color: 'var(--fo-mute)' }}>
-              <span>VOR/ILS Navigation</span>
+              <span>นำร่อง VOR/ILS</span>
               <span style={{ fontFamily: 'var(--fo-mono)' }}>108.0 – 117.95</span>
             </div>
             <div style={{ display: 'flex', justifyContent: 'space-between', color: 'var(--fo-mute)' }}>
-              <span>Emergency</span>
+              <span>ฉุกเฉิน</span>
               <span style={{ fontFamily: 'var(--fo-mono)' }}>121.5</span>
             </div>
             <div style={{ display: 'flex', justifyContent: 'space-between', color: 'var(--fo-mute)' }}>
-              <span>ATC Voice</span>
+              <span>สื่อสาร ATC</span>
               <span style={{ fontFamily: 'var(--fo-mono)' }}>118.0 – 137.0</span>
             </div>
           </div>
@@ -552,10 +560,10 @@ export default function IntermodCalculator({
         >
           <div>
             <div className="fo-mono" style={{ color: 'var(--fo-accent-2)' }}>
-              RESULTS
+              ผลลัพธ์
             </div>
             <div className="fo-serif" style={{ fontSize: 22 }}>
-              Interference pairs
+              คู่สถานีที่ก่อการรบกวน
             </div>
           </div>
         </div>
@@ -590,12 +598,12 @@ export default function IntermodCalculator({
               </svg>
             </div>
             <div className="fo-serif" style={{ fontSize: 22, marginBottom: 6 }}>
-              No results yet
+              ยังไม่มีผลลัพธ์
             </div>
             <div className="fo-mono" style={{ maxWidth: 360 }}>
               {mode === 'aircraft-check'
-                ? 'ENTER AN AIRCRAFT FREQUENCY TO FIND FM PAIRS THAT COULD CAUSE INTERFERENCE'
-                : 'ENTER TWO FM FREQUENCIES TO SEE THEIR INTERMODULATION PRODUCTS'}
+                ? 'กรอกความถี่อากาศยานเพื่อหาคู่สถานี FM ที่อาจก่อการรบกวน'
+                : 'กรอกความถี่ FM สองค่าเพื่อดูผลคูณ intermod'}
             </div>
           </div>
         ) : (
@@ -614,7 +622,7 @@ export default function IntermodCalculator({
                   }}
                 >
                   <div className="fo-mono" style={{ marginBottom: 10 }}>
-                    3RD ORDER INTERMOD PRODUCTS
+                    ผลคูณ INTERMOD อันดับ 3
                   </div>
                   {calculationResult.dangerousPairs[0].products.map((product, idx) => {
                     const f1 = parseFloat(freq1);
@@ -643,7 +651,7 @@ export default function IntermodCalculator({
                             {product.type}
                           </span>
                           {isInAviation && (
-                            <span className="fo-risk-pill fo-risk-critical">AVIATION BAND</span>
+                            <span className="fo-risk-pill fo-risk-critical">ย่านการบิน</span>
                           )}
                         </div>
                         <div className="fo-mono" style={{ marginBottom: 4 }}>
@@ -690,7 +698,7 @@ export default function IntermodCalculator({
                         letterSpacing: '0.12em',
                       }}
                     >
-                      ⚠ {calculationResult.dangerousPairs[0].aviationProducts.length} PRODUCT(S) FALL IN AVIATION BAND
+                      ⚠ {calculationResult.dangerousPairs[0].aviationProducts.length} ผลคูณตกในย่านการบิน
                     </div>
                   ) : (
                     <div
@@ -707,7 +715,7 @@ export default function IntermodCalculator({
                         letterSpacing: '0.12em',
                       }}
                     >
-                      ✓ NO PRODUCTS IN AVIATION BAND
+                      ✓ ไม่มีผลคูณในย่านการบิน
                     </div>
                   )}
                 </div>
@@ -725,7 +733,7 @@ export default function IntermodCalculator({
                   textAlign: 'center',
                 }}
               >
-                <div className="fo-mono">SEARCHING FOR FM PAIRS THAT CREATE</div>
+                <div className="fo-mono">กำลังหาคู่สถานี FM ที่ทำให้เกิด</div>
                 <div
                   className="fo-serif"
                   style={{ fontSize: 30, color: 'var(--fo-accent-2)', marginTop: 4 }}
@@ -771,12 +779,12 @@ export default function IntermodCalculator({
                       >
                         {summary.byRisk[lv]}
                       </div>
-                      <div className="fo-mono">{lv}</div>
+                      <div className="fo-mono">{RISK_LABEL[lv]}</div>
                     </div>
                   ))}
                 </div>
                 <div className="fo-mono" style={{ textAlign: 'center' }}>
-                  FOUND {calculationResult.dangerousPairs.length} PAIRS · {calculationResult.calculationTimeMs.toFixed(2)} MS
+                  พบ {calculationResult.dangerousPairs.length} คู่ · {calculationResult.calculationTimeMs.toFixed(2)} ms
                 </div>
               </div>
             )}
@@ -792,7 +800,7 @@ export default function IntermodCalculator({
                   flexWrap: 'wrap',
                 }}
               >
-                <span className="fo-mono">FILTER ·</span>
+                <span className="fo-mono">กรอง ·</span>
                 {(['ALL', 'CRITICAL', 'HIGH', 'MEDIUM', 'LOW'] as const).map((lv) => (
                   <button
                     key={lv}
@@ -801,7 +809,7 @@ export default function IntermodCalculator({
                     className={`fo-pill ${riskFilter === lv ? 'is-active' : ''}`}
                     style={{ padding: '4px 12px', fontSize: 10 }}
                   >
-                    {lv}
+                    {RISK_LABEL[lv]}
                   </button>
                 ))}
               </div>
@@ -839,15 +847,15 @@ export default function IntermodCalculator({
                     </svg>
                   </div>
                   <div className="fo-serif" style={{ fontSize: 20, marginBottom: 4 }}>
-                    No interference found
+                    ไม่พบการรบกวน
                   </div>
                   <div className="fo-mono">
-                    NO FM PAIRS WOULD CREATE {targetAircraftFrequency} MHZ
+                    ไม่มีคู่สถานี FM ที่ทำให้เกิด {targetAircraftFrequency} MHz
                   </div>
                 </div>
               ) : filteredResults.length === 0 ? (
                 <div className="fo-mono" style={{ textAlign: 'center', padding: 32 }}>
-                  NO RESULTS MATCH THE CURRENT FILTER
+                  ไม่มีผลลัพธ์ตรงกับตัวกรอง
                 </div>
               ) : (
                 filteredResults.map((risk, index) => {
@@ -890,7 +898,7 @@ export default function IntermodCalculator({
                           gap: 8,
                         }}
                       >
-                        <span className={`fo-risk-pill ${tone.pillClass}`}>{risk.riskLevel}</span>
+                        <span className={`fo-risk-pill ${tone.pillClass}`}>{RISK_LABEL[risk.riskLevel]}</span>
                         <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
                           {risk.lineOfSight === false && (
                             <span
@@ -903,7 +911,7 @@ export default function IntermodCalculator({
                                 border: '1px solid rgba(227,75,75,0.35)',
                               }}
                             >
-                              NO LINE OF SIGHT
+                              ไม่อยู่ในแนวสายตา
                             </span>
                           )}
                           {product?.affectedService && (
@@ -933,7 +941,7 @@ export default function IntermodCalculator({
                         }}
                       >
                         <div className="fo-mono" style={{ marginBottom: 4 }}>
-                          INTERMOD CALCULATION
+                          การคำนวณ INTERMOD
                         </div>
                         <div style={{ fontFamily: 'var(--fo-mono)', fontSize: 13, fontWeight: 600 }}>
                           {formulaDisplay}
@@ -947,7 +955,7 @@ export default function IntermodCalculator({
                             flexWrap: 'wrap',
                           }}
                         >
-                          <span className="fo-mono">FORMULA · {product?.type ?? '—'}</span>
+                          <span className="fo-mono">สูตร · {product?.type ?? '—'}</span>
                           {product?.frequency !== undefined && (
                             <span
                               className="fo-serif"
@@ -1046,12 +1054,12 @@ export default function IntermodCalculator({
                           gap: 8,
                         }}
                       >
-                        <span>STATION DIST · {formatDistance(risk.pair.distance)}</span>
+                        <span>ระยะระหว่างสถานี · {formatDistance(risk.pair.distance)}</span>
                         {risk.distanceToAircraft !== undefined && (
-                          <span>TO AIRCRAFT · {formatDistance(risk.distanceToAircraft)}</span>
+                          <span>ถึงอากาศยาน · {formatDistance(risk.distanceToAircraft)}</span>
                         )}
                         {onHighlightStations && (
-                          <span style={{ color: 'var(--fo-accent-2)' }}>VIEW ON MAP →</span>
+                          <span style={{ color: 'var(--fo-accent-2)' }}>ดูบนแผนที่ →</span>
                         )}
                       </div>
                     </div>

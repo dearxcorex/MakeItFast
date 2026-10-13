@@ -144,7 +144,7 @@ describe('FieldOpsMap — current location pin', () => {
     expect(setViewCalls).toHaveLength(1);
 
     const btn = Array.from(container.querySelectorAll('button')).find((b) =>
-      (b.getAttribute('aria-label') ?? '').toLowerCase().includes('recenter')
+      (b.getAttribute('aria-label') ?? '').includes('ตำแหน่งของฉัน')
     );
     expect(btn).toBeDefined();
     btn!.click();
@@ -164,7 +164,7 @@ describe('FieldOpsMap — current location pin', () => {
       />
     );
     const btn = Array.from(container.querySelectorAll('button')).find((b) =>
-      (b.getAttribute('aria-label') ?? '').toLowerCase().includes('recenter')
+      (b.getAttribute('aria-label') ?? '').includes('ตำแหน่งของฉัน')
     );
     expect(btn).toBeUndefined();
   });

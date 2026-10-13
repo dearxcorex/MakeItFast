@@ -44,17 +44,17 @@ describe('FieldOpsDrawer', () => {
         onClose={vi.fn()}
       />
     );
-    expect(container.textContent).toContain('NAV');
-    expect(container.textContent).toContain('FIELD OPS');
+    expect(container.textContent).toContain('เมนู');
+    expect(container.textContent).toContain('ภาคสนาม');
     expect(container.textContent).toContain('INTERMOD');
-    expect(container.textContent).toContain('DARK');
-    expect(container.textContent).toContain('LIVE');
-    expect(container.textContent).toContain('STATS');
-    expect(container.textContent).toContain('INSPECTED');
+    expect(container.textContent).toContain('มืด');
+    expect(container.textContent).toContain('ออนไลน์');
+    expect(container.textContent).toContain('สถิติ');
+    expect(container.textContent).toContain('ตรวจแล้ว');
     expect(container.textContent).toContain('0/200');
-    expect(container.textContent).toContain('PENDING');
+    expect(container.textContent).toContain('ยังไม่ตรวจ');
     expect(container.textContent).toContain('26');
-    expect(container.textContent).toContain('CRITICAL');
+    expect(container.textContent).toContain('วิกฤต');
   });
 
   it('clicking a NAV button calls onChangeTab AND onClose', () => {
@@ -106,7 +106,7 @@ describe('FieldOpsDrawer', () => {
         onClose={vi.fn()}
       />
     );
-    fireEvent.click(getByText(/DARK/));
+    fireEvent.click(getByText(/มืด/));
     expect(onToggleTheme).toHaveBeenCalled();
   });
 
@@ -122,7 +122,7 @@ describe('FieldOpsDrawer', () => {
         onClose={vi.fn()}
       />
     );
-    expect(container.textContent).toContain('CRITICAL');
+    expect(container.textContent).toContain('วิกฤต');
     expect(container.textContent).toContain('—');
   });
 });

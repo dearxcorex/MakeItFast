@@ -23,7 +23,7 @@ export default function InspectionTeamChips({
         className="fo-mono"
         style={{ fontSize: 9, letterSpacing: '0.16em', color: 'var(--fo-rail-mute)', marginBottom: 6 }}
       >
-        INSPECTED BY{inspectedOn ? ` · ${inspectedOn}` : ''}
+        ตรวจโดย{inspectedOn ? ` · ${inspectedOn}` : ''}
       </div>
       <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
         <span

@@ -24,7 +24,7 @@ describe("NavigationPill", () => {
 
   it("renders 'pending source' when bearing present but distance null", () => {
     const { container } = render(<NavigationPill bearing={62} distance={null} />);
-    expect(container.textContent?.replace(/\s+/g, ' ').trim()).toBe('→ 062° · pending source');
+    expect(container.textContent?.replace(/\s+/g, ' ').trim()).toBe('→ 062° · ยังไม่ระบุแหล่งรบกวน');
   });
 
   it("renders nothing when both bearing and distance are null", () => {

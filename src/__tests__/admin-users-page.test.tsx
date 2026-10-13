@@ -68,10 +68,10 @@ describe("AdminUsersPage reset flow", () => {
 
     fireEvent.click(screen.getByTestId("reset-password-2"));
     fireEvent.click(screen.getByTestId("generate-password"));
-    fireEvent.click(screen.getByRole("button", { name: "Reset" }));
+    fireEvent.click(screen.getByRole("button", { name: "รีเซ็ต" }));
 
     await screen.findByTestId("handover-password");
-    fireEvent.click(screen.getByRole("button", { name: "Done" }));
+    fireEvent.click(screen.getByRole("button", { name: "เสร็จ" }));
 
     await waitFor(() =>
       expect(screen.getByTestId("must-change-2")).toBeInTheDocument()
@@ -85,9 +85,9 @@ describe("AdminUsersPage reset flow", () => {
 
     fireEvent.click(screen.getByTestId("reset-password-2"));
     fireEvent.click(screen.getByTestId("generate-password"));
-    fireEvent.click(screen.getByRole("button", { name: "Reset" }));
+    fireEvent.click(screen.getByRole("button", { name: "รีเซ็ต" }));
     await screen.findByTestId("handover-password");
-    fireEvent.click(screen.getByRole("button", { name: "Done" }));
+    fireEvent.click(screen.getByRole("button", { name: "เสร็จ" }));
 
     await waitFor(() =>
       expect(screen.queryByTestId("handover-password")).toBeNull()

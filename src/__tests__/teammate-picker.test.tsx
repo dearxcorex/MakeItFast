@@ -21,7 +21,7 @@ describe('TeammatePicker', () => {
         onChange={vi.fn()}
       />,
     );
-    expect(screen.getByRole('button', { name: /\+ tag teammates/i })).toBeTruthy();
+    expect(screen.getByRole('button', { name: /\+ เพิ่มผู้ร่วมตรวจ/ })).toBeTruthy();
     // helper checkboxes should not exist until expanded
     expect(screen.queryByLabelText('daf')).toBeNull();
     expect(screen.queryByLabelText('iff')).toBeNull(); // self always hidden
@@ -36,7 +36,7 @@ describe('TeammatePicker', () => {
         onChange={vi.fn()}
       />,
     );
-    fireEvent.click(screen.getByRole('button', { name: /\+ tag teammates/i }));
+    fireEvent.click(screen.getByRole('button', { name: /\+ เพิ่มผู้ร่วมตรวจ/ }));
     expect(screen.getByLabelText('Admin')).toBeTruthy();
     expect(screen.getByLabelText('ice')).toBeTruthy();
     expect(screen.getByLabelText('daf')).toBeTruthy();
@@ -53,7 +53,7 @@ describe('TeammatePicker', () => {
         onChange={onChange}
       />,
     );
-    fireEvent.click(screen.getByRole('button', { name: /\+ tag teammates/i }));
+    fireEvent.click(screen.getByRole('button', { name: /\+ เพิ่มผู้ร่วมตรวจ/ }));
     fireEvent.click(screen.getByLabelText('daf'));
     expect(onChange).toHaveBeenLastCalledWith([6]);
 
@@ -68,7 +68,7 @@ describe('TeammatePicker', () => {
         onChange={onChange}
       />,
     );
-    fireEvent.click(screen.getByRole('button', { name: /\+ tag teammates/i }));
+    fireEvent.click(screen.getByRole('button', { name: /\+ เพิ่มผู้ร่วมตรวจ/ }));
     fireEvent.click(screen.getByLabelText('daf'));
     expect(onChange).toHaveBeenLastCalledWith([]);
   });

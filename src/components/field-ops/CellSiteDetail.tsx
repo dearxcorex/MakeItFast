@@ -36,7 +36,7 @@ export function CellSiteDetail({
     <div style={{ padding: "16px 20px", display: "flex", flexDirection: "column", gap: 14, overflowY: "auto" }}>
       <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
         <span className="fo-mono" style={{ color: "var(--fo-rail-mute)", fontSize: 10 }}>
-          CELL SITE · {site.province ?? "—"}
+          สถานีฐาน · {site.province ?? "—"}
         </span>
         <span className="fo-mono" style={{ color: "var(--fo-rail-text)", fontSize: 12 }}>
           {site.lat}, {site.lng}
@@ -56,7 +56,7 @@ export function CellSiteDetail({
         return (
           <section
             key={op}
-            aria-label={`${op} licences`}
+            aria-label={`ใบอนุญาต ${op}`}
             data-faded={shown ? undefined : "true"}
             style={{ opacity: shown ? 1 : 0.4, display: "flex", flexDirection: "column", gap: 6 }}
           >
@@ -69,22 +69,22 @@ export function CellSiteDetail({
                 {variants}
               </span>
               <span className="fo-mono" style={{ color: "var(--fo-rail-mute)", fontSize: 10 }}>
-                {licences.length} {licences.length === 1 ? "LICENCE" : "LICENCES"}
+                {licences.length} ใบอนุญาต
               </span>
             </div>
             {licences.length === 0 ? (
               <span className="fo-mono" style={{ color: "var(--fo-rail-mute)", fontSize: 11, paddingLeft: 18 }}>
-                No licence listed
+                ไม่มีข้อมูลใบอนุญาต
               </span>
             ) : (
               <ul style={{ listStyle: "none", margin: 0, padding: "0 0 0 18px", display: "flex", flexDirection: "column", gap: 4 }}>
                 {licences.map((l, i) => (
                   <li key={i} style={{ display: "flex", flexDirection: "column", gap: 1 }}>
                     <span className="fo-mono" style={{ color: "var(--fo-rail-text)", fontSize: 12 }}>
-                      {l.licenseNo ?? "— no licence no."}
+                      {l.licenseNo ?? "— ไม่มีเลขใบอนุญาต"}
                     </span>
                     <span style={{ color: "var(--fo-rail-mute)", fontSize: 12 }}>
-                      {l.stationCode ?? "— no station code"}
+                      {l.stationCode ?? "— ไม่มีรหัสสถานี"}
                     </span>
                   </li>
                 ))}
@@ -112,7 +112,7 @@ export function CellSiteDetail({
           textDecoration: "none",
         }}
       >
-        ▶ NAVIGATE
+        ▶ นำทาง
       </a>
     </div>
   );

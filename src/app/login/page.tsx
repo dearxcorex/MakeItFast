@@ -79,11 +79,11 @@ export default function LoginPage() {
           color: "var(--fo-text)",
         }}
       >
-        <h1 className="text-2xl font-semibold text-center">Field Ops</h1>
+        <h1 className="text-2xl font-semibold text-center">งานภาคสนาม</h1>
 
         <div>
           <label htmlFor="username" className="block text-sm mb-1">
-            Username
+            ชื่อผู้ใช้
           </label>
           <input
             id="username"
@@ -98,7 +98,7 @@ export default function LoginPage() {
 
         <div>
           <label htmlFor="password" className="block text-sm mb-1">
-            Password
+            รหัสผ่าน
           </label>
           <div className="relative">
             <input
@@ -113,7 +113,7 @@ export default function LoginPage() {
             />
             <button
               type="button"
-              aria-label={showPw ? "Hide" : "Show"}
+              aria-label={showPw ? "ซ่อน" : "แสดง"}
               onClick={() => setShowPw((s) => !s)}
               className="absolute right-2 top-1/2 -translate-y-1/2 text-xs opacity-70"
             >
@@ -128,7 +128,7 @@ export default function LoginPage() {
             checked={rememberMe}
             onChange={(e) => setRememberMe(e.target.checked)}
           />
-          Remember me
+          จดจำการเข้าสู่ระบบ
         </label>
 
         <button
@@ -137,7 +137,7 @@ export default function LoginPage() {
           className="w-full rounded-md bg-[var(--fo-accent)] text-black font-medium py-2 disabled:opacity-60 flex items-center justify-center gap-2"
         >
           {submitting && <span aria-hidden className="fo-spinner" />}
-          {submitting ? "Signing in…" : "Sign in"}
+          {submitting ? "กำลังเข้าสู่ระบบ…" : "เข้าสู่ระบบ"}
         </button>
 
         {error && (

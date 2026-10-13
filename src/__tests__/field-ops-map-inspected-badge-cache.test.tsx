@@ -42,8 +42,8 @@ function makeFM(o: Partial<FMStation> = {}): FMStation {
     state: "S",
     genre: "",
     inspection69: "ตรวจแล้ว",
-    onAir: true,
-    revoked: true,
+    onAir: false,
+    revoked: false,
     ...o,
   } as FMStation;
 }
@@ -56,10 +56,10 @@ function makeFM(o: Partial<FMStation> = {}): FMStation {
  * happens to be rebuilt for some other reason.
  */
 describe("FieldOpsMap — inspected badge survives the icon cache", () => {
-  it("re-renders the pin when the REVOKED chip flips, nothing else changing", () => {
+  it("re-renders the pin when the OFF AIR chip flips, nothing else changing", () => {
     const stations = [makeFM()];
-    const off: InspectedBadgeGates = { revoked: false, offAir: false };
-    const on: InspectedBadgeGates = { revoked: true, offAir: false };
+    const off: InspectedBadgeGates = { offAir: false };
+    const on: InspectedBadgeGates = { offAir: true };
 
     captured.length = 0;
     const { rerender } = render(

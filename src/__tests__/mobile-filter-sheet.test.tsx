@@ -22,9 +22,9 @@ describe("MobileFilterSheet", () => {
     expect(container.querySelector('input[type="search"]')).not.toBeNull();
     expect(container.querySelector("select")).not.toBeNull();
     const text = container.textContent ?? "";
-    expect(text).toContain("Off air");
-    expect(text).toContain("Revoked");
-    expect(text).toContain("Law-paper sent");
+    expect(text).toContain("ไม่ออกอากาศ");
+    expect(text).toContain("เพิกถอน");
+    expect(text).toContain("ส่งหนังสือแล้ว");
   });
 
   it("hides INT toggles when type=FM", () => {
@@ -39,8 +39,8 @@ describe("MobileFilterSheet", () => {
       />
     );
     const text = container.textContent ?? "";
-    expect(text).toContain("Off air");
-    expect(text).not.toContain("Law-paper sent");
+    expect(text).toContain("ไม่ออกอากาศ");
+    expect(text).not.toContain("ส่งหนังสือแล้ว");
   });
 
   it("hides FM toggles when type=INT", () => {
@@ -55,9 +55,9 @@ describe("MobileFilterSheet", () => {
       />
     );
     const text = container.textContent ?? "";
-    expect(text).not.toContain("Off air");
-    expect(text).not.toContain("Revoked");
-    expect(text).toContain("Law-paper sent");
+    expect(text).not.toContain("ไม่ออกอากาศ");
+    expect(text).not.toContain("เพิกถอน");
+    expect(text).toContain("ส่งหนังสือแล้ว");
   });
 
   it("typing in search calls onChange with new search value", () => {
@@ -107,7 +107,7 @@ describe("MobileFilterSheet", () => {
       />
     );
     const btn = Array.from(container.querySelectorAll("button")).find((b) =>
-      (b.textContent ?? "").includes("Off air")
+      (b.textContent ?? "").includes("ไม่ออกอากาศ")
     );
     expect(btn).toBeDefined();
     fireEvent.click(btn!);
@@ -125,7 +125,7 @@ describe("MobileFilterSheet", () => {
         resultCount={1}
       />
     );
-    expect(container.textContent ?? "").not.toContain("Active:");
+    expect(container.textContent ?? "").not.toContain("ที่ใช้อยู่:");
   });
 
   it("active-chip row shows applied advanced filters; clicking a chip clears it", () => {
@@ -141,13 +141,13 @@ describe("MobileFilterSheet", () => {
         resultCount={1}
       />
     );
-    expect(container.textContent ?? "").toContain("Active:");
-    expect(container.textContent ?? "").toContain('Search "btc"');
-    expect(container.textContent ?? "").toContain("Province: Bangkok");
-    expect(container.textContent ?? "").toContain("Off air");
+    expect(container.textContent ?? "").toContain("ที่ใช้อยู่:");
+    expect(container.textContent ?? "").toContain('ค้นหา "btc"');
+    expect(container.textContent ?? "").toContain("จังหวัด: Bangkok");
+    expect(container.textContent ?? "").toContain("ไม่ออกอากาศ");
 
     const offAirChip = Array.from(container.querySelectorAll("button")).find(
-      (b) => (b.textContent ?? "").startsWith("Off air") && (b.textContent ?? "").includes("✕")
+      (b) => (b.textContent ?? "").startsWith("ไม่ออกอากาศ") && (b.textContent ?? "").includes("✕")
     );
     expect(offAirChip).toBeDefined();
     fireEvent.click(offAirChip!);
@@ -168,7 +168,7 @@ describe("MobileFilterSheet", () => {
       />
     );
     const cta = Array.from(container.querySelectorAll("button")).find((b) =>
-      (b.textContent ?? "").includes("Show 247 results")
+      (b.textContent ?? "").includes("แสดง 247 รายการ")
     );
     expect(cta).toBeDefined();
     fireEvent.click(cta!);

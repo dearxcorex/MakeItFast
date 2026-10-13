@@ -22,10 +22,10 @@ export function UserList({
       <thead>
         <tr className="text-left opacity-70">
           <th className="py-2 w-12">ID</th>
-          <th>Username</th>
-          <th>Display name</th>
-          <th>Role</th>
-          <th>Active</th>
+          <th>ชื่อผู้ใช้</th>
+          <th>ชื่อที่แสดง</th>
+          <th>บทบาท</th>
+          <th>ใช้งาน</th>
           <th />
         </tr>
       </thead>
@@ -46,10 +46,10 @@ export function UserList({
                 {u.mustChangePassword && (
                   <span
                     data-testid={`must-change-${u.id}`}
-                    title="Admin-issued password — the user must replace it at next sign-in"
+                    title="รหัสผ่านที่ผู้ดูแลระบบออกให้ — ผู้ใช้ต้องเปลี่ยนเมื่อเข้าสู่ระบบครั้งถัดไป"
                     className="ml-2 text-[10px] uppercase tracking-wider opacity-70 border border-[var(--fo-divider)] rounded px-1 py-0.5"
                   >
-                    temp pw
+                    รหัสชั่วคราว
                   </span>
                 )}
               </td>
@@ -66,7 +66,7 @@ export function UserList({
                   disabled={isSelf}
                   onClick={() => onToggleActive(u, !u.active)}
                   className="text-xs underline disabled:opacity-40 disabled:no-underline"
-                  aria-label={u.active ? "Disable" : "Enable"}
+                  aria-label={u.active ? "ปิดใช้งาน" : "เปิดใช้งาน"}
                 >
                   {u.active ? "✓" : "—"}
                 </button>
@@ -78,7 +78,7 @@ export function UserList({
                   onClick={() => onEdit(u)}
                   className="text-xs underline mr-2"
                 >
-                  Edit
+                  แก้ไข
                 </button>
                 <button
                   type="button"
@@ -86,7 +86,7 @@ export function UserList({
                   onClick={() => onResetPassword(u)}
                   className="text-xs underline"
                 >
-                  Reset password
+                  รีเซ็ตรหัสผ่าน
                 </button>
               </td>
             </tr>

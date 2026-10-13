@@ -37,7 +37,7 @@ describe('parseLatLngInput', () => {
   it('rejects empty input', () => {
     const r = parseLatLngInput('', '');
     expect(r.ok).toBe(false);
-    if (!r.ok) expect(r.error).toMatch(/invalid/i);
+    if (!r.ok) expect(r.error).toMatch(/พิกัดไม่ถูกต้อง/);
   });
 
   it('rejects non-numeric input', () => {
@@ -48,13 +48,13 @@ describe('parseLatLngInput', () => {
   it('rejects lat out of range', () => {
     const r = parseLatLngInput('91', '0');
     expect(r.ok).toBe(false);
-    if (!r.ok) expect(r.error).toMatch(/lat/i);
+    if (!r.ok) expect(r.error).toMatch(/ละติจูด/);
   });
 
   it('rejects long out of range', () => {
     const r = parseLatLngInput('0', '181');
     expect(r.ok).toBe(false);
-    if (!r.ok) expect(r.error).toMatch(/long/i);
+    if (!r.ok) expect(r.error).toMatch(/ลองจิจูด/);
   });
 
   it('accepts boundary values lat=±90 long=±180', () => {

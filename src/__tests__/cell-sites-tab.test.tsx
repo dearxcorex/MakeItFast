@@ -30,10 +30,10 @@ describe('CellSiteDetail', () => {
     const text = container.textContent ?? '';
     expect(text).toContain('060365103281');
     expect(text).toContain('870163');
-    expect(text).toContain('— no station code');
+    expect(text).toContain('— ไม่มีรหัสสถานี');
     expect(text).toContain('NT*');
     expect(text).toContain('NMA0319-L23');
-    expect(text).toContain('No licence listed');
+    expect(text).toContain('ไม่มีข้อมูลใบอนุญาต');
   });
 
   it('fades operators the filter hides instead of dropping them', () => {
@@ -43,7 +43,7 @@ describe('CellSiteDetail', () => {
     const faded = [...container.querySelectorAll('section[data-faded="true"]')].map((s) =>
       s.getAttribute('aria-label')
     );
-    expect(faded).toEqual(['AWN licences', 'TUC licences']);
+    expect(faded).toEqual(['ใบอนุญาต AWN', 'ใบอนุญาต TUC']);
   });
 
   it('links to driving directions for the exact coordinate', () => {
@@ -91,14 +91,14 @@ describe('CellSiteFilterBar', () => {
 
   it('offers the provinces found in the data', () => {
     const { getByLabelText } = renderBar();
-    const options = [...(getByLabelText('Province filter') as HTMLSelectElement).options].map((o) => o.value);
+    const options = [...(getByLabelText('กรองจังหวัด') as HTMLSelectElement).options].map((o) => o.value);
     expect(options).toEqual(['All', 'ชัยภูมิ', 'นครราชสีมา']);
   });
 
   it('passes search text through', () => {
     const onChange = vi.fn();
     const { getByLabelText } = renderBar(onChange);
-    fireEvent.change(getByLabelText('Search licence or station code'), { target: { value: 'NMA0319' } });
+    fireEvent.change(getByLabelText('ค้นหาเลขใบอนุญาตหรือรหัสสถานี'), { target: { value: 'NMA0319' } });
     expect(onChange).toHaveBeenLastCalledWith({ ...DEFAULT_CELL_FILTERS, search: 'NMA0319' });
   });
 });
@@ -108,7 +108,7 @@ describe('Cell Sites navigation', () => {
     const onChange = vi.fn();
     const { getAllByRole } = render(<FieldOpsNav active="field-ops" onChange={onChange} />);
     const labels = getAllByRole('button').map((b) => b.getAttribute('aria-label'));
-    expect(labels).toEqual(['FIELD OPS', 'CELL SITES', 'INTERMOD']);
+    expect(labels).toEqual(['ภาคสนาม', 'สถานีฐาน', 'INTERMOD']);
     fireEvent.click(getAllByRole('button')[1]);
     expect(onChange).toHaveBeenCalledWith('cell-sites');
   });
@@ -126,8 +126,8 @@ describe('Cell Sites navigation', () => {
         onClose={vi.fn()}
       />
     );
-    expect(container.textContent).toContain('CELL SITES');
-    fireEvent.click(getByText('CELL SITES'));
+    expect(container.textContent).toContain('สถานีฐาน');
+    fireEvent.click(getByText('สถานีฐาน'));
     expect(onChangeTab).toHaveBeenCalledWith('cell-sites');
   });
 });

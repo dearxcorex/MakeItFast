@@ -38,13 +38,12 @@ export function CopyablePassword({ value }: { value: string }) {
           onClick={copy}
           className="rounded-md border border-[var(--fo-divider)] px-3 text-xs shrink-0"
         >
-          {state === "copied" ? "Copied" : "Copy"}
+          {state === "copied" ? "คัดลอกแล้ว" : "คัดลอก"}
         </button>
       </div>
       {state === "failed" && (
         <p role="alert" data-testid="copy-failed" className="text-xs text-red-400">
-          Couldn&apos;t copy automatically — select the password above and copy
-          it by hand.
+          คัดลอกอัตโนมัติไม่ได้ — เลือกรหัสผ่านด้านบนแล้วคัดลอกเอง
         </p>
       )}
     </div>

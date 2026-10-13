@@ -19,6 +19,18 @@ export interface FieldFilters {
   search: string;
 }
 
+export const TYPE_LABEL: Record<TypeFilter, string> = {
+  ALL: "ทั้งหมด",
+  FM: "FM",
+  INT: "รบกวน",
+};
+
+export const STATUS_LABEL: Record<StatusFilter, string> = {
+  ALL: "ทั้งหมด",
+  PENDING: "ยังไม่ตรวจ",
+  INSPECTED: "ตรวจแล้ว",
+};
+
 export const DEFAULT_FILTERS: FieldFilters = {
   type: "ALL",
   province: "All",
@@ -74,7 +86,8 @@ export function FieldOpsFilters({
       }}
     >
       <ChipGroup
-        label="TYPE"
+        label="ประเภท"
+        labels={TYPE_LABEL}
         options={types}
         value={filters.type}
         onChange={handleTypeChange}
@@ -83,7 +96,7 @@ export function FieldOpsFilters({
       <Divider />
 
       <select
-        aria-label="Province filter"
+        aria-label="กรองจังหวัด"
         className="fo-mono"
         value={filters.province}
         onChange={(e) => onChange({ ...filters, province: e.target.value })}
@@ -91,7 +104,7 @@ export function FieldOpsFilters({
       >
         {provinceOptions.map((p) => (
           <option key={p} value={p}>
-            {p === "All" ? "ALL PROVINCES" : p}
+            {p === "All" ? "ทุกจังหวัด" : p}
           </option>
         ))}
       </select>
@@ -99,7 +112,8 @@ export function FieldOpsFilters({
       <Divider />
 
       <ChipGroup
-        label="STATUS"
+        label="สถานะ"
+        labels={STATUS_LABEL}
         options={statuses}
         value={filters.status}
         onChange={(v) => onChange({ ...filters, status: v })}
@@ -109,14 +123,14 @@ export function FieldOpsFilters({
 
       {showOffAir && (
         <Toggle
-          label="OFF AIR"
+          label="ไม่ออกอากาศ"
           active={filters.offAir}
           onChange={(v) => onChange({ ...filters, offAir: v })}
         />
       )}
       {showOffAir && (
         <Toggle
-          label="REVOKED"
+          label="เพิกถอน"
           active={filters.revoked}
           onChange={(v) => onChange({ ...filters, revoked: v })}
           activeColor="var(--fo-crit)"
@@ -124,7 +138,7 @@ export function FieldOpsFilters({
       )}
       {showLawSent && (
         <Toggle
-          label="LAW SENT"
+          label="ส่งหนังสือแล้ว"
           active={filters.lawSent}
           onChange={(v) => onChange({ ...filters, lawSent: v })}
         />
@@ -134,7 +148,7 @@ export function FieldOpsFilters({
 
       <input
         type="search"
-        placeholder="Search id, name, frequency…"
+        placeholder="ค้นหา ID, ชื่อ, ความถี่…"
         value={filters.search}
         onChange={(e) => onChange({ ...filters, search: e.target.value })}
         style={{
@@ -148,7 +162,7 @@ export function FieldOpsFilters({
         }}
       />
       <span className="fo-mono" style={{ color: "var(--fo-band-mute)" }}>
-        {visibleCount} VISIBLE
+        แสดง {visibleCount} รายการ
       </span>
     </div>
   );
@@ -205,11 +219,13 @@ function Toggle({
 
 function ChipGroup<T extends string>({
   label,
+  labels,
   options,
   value,
   onChange,
 }: {
   label: string;
+  labels: Record<T, string>;
   options: readonly T[];
   value: T;
   onChange: (v: T) => void;
@@ -245,7 +261,7 @@ function ChipGroup<T extends string>({
                 fontSize: 10,
               }}
             >
-              {opt}
+              {labels[opt]}
             </button>
           );
         })}

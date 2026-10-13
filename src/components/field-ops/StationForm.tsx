@@ -228,7 +228,7 @@ export function StationForm({
 
       <label style={check}>
         <input type="checkbox" checked={form.submitRequest} onChange={(e) => set("submitRequest", e.target.checked)} />
-        ยื่นคำขอแล้ว (จำเป็นก่อนเปิด on air)
+        ยื่นคำขอแล้ว (จำเป็นก่อนเปิดออกอากาศ)
       </label>
 
       <label style={check}>

@@ -85,7 +85,7 @@ export default function TeammatePicker({
           disabled={disabled}
           style={linkStyle}
         >
-          + tag teammates
+          + เพิ่มผู้ร่วมตรวจ
         </button>
         {selectedHelpers.map((u) => (
           <span key={u.id} style={chipStyleSelected}>{u.displayName}</span>
@@ -123,7 +123,7 @@ export default function TeammatePicker({
         disabled={disabled}
         style={{ ...linkStyle, color: 'var(--fo-rail-mute)' }}
       >
-        – collapse
+        – ย่อ
       </button>
     </div>
   );

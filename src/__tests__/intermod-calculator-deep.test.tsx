@@ -61,16 +61,16 @@ describe('IntermodCalculator - Deep Tests', () => {
     const { container } = render(<IntermodCalculator stations={stations} />);
     const select = container.querySelector('select') as HTMLSelectElement;
     expect(select.value).toBe('aircraft-check');
-    expect(container.textContent).toContain('AIRCRAFT FREQUENCY · 108–137 MHZ');
+    expect(container.textContent).toContain('ความถี่อากาศยาน · 108–137 MHz');
   });
 
   it('switches to specific-frequency mode', () => {
     const { container } = render(<IntermodCalculator stations={stations} />);
     const select = container.querySelector('select') as HTMLSelectElement;
     fireEvent.change(select, { target: { value: 'specific-frequency' } });
-    expect(container.textContent).toContain('FM FREQUENCY 1 (MHZ)');
-    expect(container.textContent).toContain('FM FREQUENCY 2 (MHZ)');
-    expect(container.textContent).not.toContain('AIRCRAFT FREQUENCY · 108–137 MHZ');
+    expect(container.textContent).toContain('ความถี่ FM 1 (MHz)');
+    expect(container.textContent).toContain('ความถี่ FM 2 (MHz)');
+    expect(container.textContent).not.toContain('ความถี่อากาศยาน · 108–137 MHz');
   });
 
   it('switches back to aircraft-check mode', () => {
@@ -78,7 +78,7 @@ describe('IntermodCalculator - Deep Tests', () => {
     const select = container.querySelector('select') as HTMLSelectElement;
     fireEvent.change(select, { target: { value: 'specific-frequency' } });
     fireEvent.change(select, { target: { value: 'aircraft-check' } });
-    expect(container.textContent).toContain('AIRCRAFT FREQUENCY · 108–137 MHZ');
+    expect(container.textContent).toContain('ความถี่อากาศยาน · 108–137 MHz');
   });
 
   it('updates frequency inputs in specific-frequency mode', () => {
@@ -127,7 +127,7 @@ describe('IntermodCalculator - Deep Tests', () => {
     fireEvent.change(inputs[1], { target: { value: '88.0' } });
 
     const calcBtn = Array.from(container.querySelectorAll('button')).find(
-      (b) => b.textContent?.includes('CALCULATE')
+      (b) => b.textContent?.includes('คำนวณ')
     )!;
     fireEvent.click(calcBtn);
 
@@ -138,8 +138,8 @@ describe('IntermodCalculator - Deep Tests', () => {
 
     expect(mockCalculateThirdOrderProducts).toHaveBeenCalledWith(98.0, 88.0);
     // Results should now be rendered
-    expect(container.textContent).toContain('3RD ORDER INTERMOD PRODUCTS');
-    expect(container.textContent).toContain('AVIATION BAND');
+    expect(container.textContent).toContain('ผลคูณ INTERMOD อันดับ 3');
+    expect(container.textContent).toContain('ย่านการบิน');
 
     vi.useRealTimers();
   });
@@ -178,10 +178,10 @@ describe('IntermodCalculator - Deep Tests', () => {
     fireEvent.change(freqInput, { target: { value: '121.5' } });
 
     // Target should be displayed
-    expect(container.textContent).toContain('TARGET · 121.5 MHZ');
+    expect(container.textContent).toContain('เป้าหมาย · 121.5 MHz');
 
     const findBtn = Array.from(container.querySelectorAll('button')).find(
-      (b) => b.textContent?.includes('FIND FM PAIRS')
+      (b) => b.textContent?.includes('หาคู่สถานี FM')
     )!;
     fireEvent.click(findBtn);
 
@@ -194,7 +194,7 @@ describe('IntermodCalculator - Deep Tests', () => {
 
     // Results should display
     expect(container.textContent).toContain('121.5 MHz');
-    expect(container.textContent).toContain('CRITICAL');
+    expect(container.textContent).toContain('วิกฤต');
 
     vi.useRealTimers();
   });
@@ -224,7 +224,7 @@ describe('IntermodCalculator - Deep Tests', () => {
     fireEvent.change(freqInput, { target: { value: '121.5' } });
 
     const findBtn = Array.from(container.querySelectorAll('button')).find(
-      (b) => b.textContent?.includes('FIND FM PAIRS')
+      (b) => b.textContent?.includes('หาคู่สถานี FM')
     )!;
     fireEvent.click(findBtn);
 
@@ -233,10 +233,10 @@ describe('IntermodCalculator - Deep Tests', () => {
     });
 
     // Summary section should show counts
-    expect(container.textContent).toContain('CRITICAL');
-    expect(container.textContent).toContain('HIGH');
-    expect(container.textContent).toContain('MEDIUM');
-    expect(container.textContent).toContain('LOW');
+    expect(container.textContent).toContain('วิกฤต');
+    expect(container.textContent).toContain('สูง');
+    expect(container.textContent).toContain('ปานกลาง');
+    expect(container.textContent).toContain('ต่ำ');
 
     vi.useRealTimers();
   });
@@ -255,7 +255,7 @@ describe('IntermodCalculator - Deep Tests', () => {
     fireEvent.change(freqInput, { target: { value: '121.5' } });
 
     const findBtn = Array.from(container.querySelectorAll('button')).find(
-      (b) => b.textContent?.includes('FIND FM PAIRS')
+      (b) => b.textContent?.includes('หาคู่สถานี FM')
     )!;
     fireEvent.click(findBtn);
 
@@ -263,7 +263,7 @@ describe('IntermodCalculator - Deep Tests', () => {
       vi.advanceTimersByTime(100);
     });
 
-    expect(container.textContent).toContain('No interference found');
+    expect(container.textContent).toContain('ไม่พบการรบกวน');
 
     vi.useRealTimers();
   });
@@ -271,7 +271,7 @@ describe('IntermodCalculator - Deep Tests', () => {
   it('disables Find FM Pairs button when no frequency is entered', () => {
     const { container } = render(<IntermodCalculator stations={stations} />);
     const findBtn = Array.from(container.querySelectorAll('button')).find(
-      (b) => b.textContent?.includes('FIND FM PAIRS')
+      (b) => b.textContent?.includes('หาคู่สถานี FM')
     )!;
     expect(findBtn.disabled).toBe(true);
   });
@@ -282,7 +282,7 @@ describe('IntermodCalculator - Deep Tests', () => {
     fireEvent.change(freqInput, { target: { value: '121.5' } });
 
     const findBtn = Array.from(container.querySelectorAll('button')).find(
-      (b) => b.textContent?.includes('FIND FM PAIRS')
+      (b) => b.textContent?.includes('หาคู่สถานี FM')
     )!;
     expect(findBtn.disabled).toBe(false);
   });
@@ -301,7 +301,7 @@ describe('IntermodCalculator - Deep Tests', () => {
     fireEvent.change(freqInput, { target: { value: '121.5' } });
 
     const findBtn = Array.from(container.querySelectorAll('button')).find(
-      (b) => b.textContent?.includes('FIND FM PAIRS')
+      (b) => b.textContent?.includes('หาคู่สถานี FM')
     )!;
     fireEvent.click(findBtn);
 
@@ -310,19 +310,19 @@ describe('IntermodCalculator - Deep Tests', () => {
     });
 
     const clearBtn = Array.from(container.querySelectorAll('button')).find(
-      (b) => b.textContent?.includes('CLEAR ALL')
+      (b) => b.textContent?.includes('ล้างทั้งหมด')
     )!;
     fireEvent.click(clearBtn);
 
     expect(freqInput.value).toBe('');
-    expect(container.textContent).toContain('No results yet');
+    expect(container.textContent).toContain('ยังไม่มีผลลัพธ์');
 
     vi.useRealTimers();
   });
 
   it('shows station count from props', () => {
     const { container } = render(<IntermodCalculator stations={stations} />);
-    expect(container.textContent).toContain(`from ${stations.length} stations`);
+    expect(container.textContent).toContain(`จาก ${stations.length} สถานี`);
   });
 
   it('calls onHighlightStations and onSwitchToStations when result is clicked', async () => {
@@ -365,7 +365,7 @@ describe('IntermodCalculator - Deep Tests', () => {
     fireEvent.change(freqInput, { target: { value: '121.5' } });
 
     const findBtn = Array.from(container.querySelectorAll('button')).find(
-      (b) => b.textContent?.includes('FIND FM PAIRS')
+      (b) => b.textContent?.includes('หาคู่สถานี FM')
     )!;
     fireEvent.click(findBtn);
 
@@ -411,7 +411,7 @@ describe('IntermodCalculator - Deep Tests', () => {
     fireEvent.change(freqInput, { target: { value: '121.5' } });
 
     const findBtn = Array.from(container.querySelectorAll('button')).find(
-      (b) => b.textContent?.includes('FIND FM PAIRS')
+      (b) => b.textContent?.includes('หาคู่สถานี FM')
     )!;
     fireEvent.click(findBtn);
 
@@ -420,9 +420,9 @@ describe('IntermodCalculator - Deep Tests', () => {
     });
 
     // Filter buttons: ALL, CRITICAL, HIGH, MEDIUM, LOW
-    expect(container.textContent).toContain('FILTER ·');
+    expect(container.textContent).toContain('กรอง ·');
     const filterBtns = Array.from(container.querySelectorAll('button')).filter((b) =>
-      ['ALL', 'CRITICAL', 'HIGH', 'MEDIUM', 'LOW'].includes(b.textContent?.trim() || '')
+      ['ทั้งหมด', 'วิกฤต', 'สูง', 'ปานกลาง', 'ต่ำ'].includes(b.textContent?.trim() || '')
     );
     expect(filterBtns.length).toBe(5);
 
@@ -445,7 +445,7 @@ describe('IntermodCalculator - Deep Tests', () => {
     fireEvent.change(inputs[1], { target: { value: '98.0' } });
 
     const calcBtn = Array.from(container.querySelectorAll('button')).find(
-      (b) => b.textContent?.includes('CALCULATE')
+      (b) => b.textContent?.includes('คำนวณ')
     )!;
     fireEvent.click(calcBtn);
 
@@ -457,7 +457,7 @@ describe('IntermodCalculator - Deep Tests', () => {
     // The result has 0 dangerousPairs because aviationProducts is empty
     // so it creates empty dangerousPairs array, and displays "No Interference Found"
     // Actually looking at the code, dangerousPairs will be empty since aviationProducts.length === 0
-    expect(container.textContent).toContain('No interference found');
+    expect(container.textContent).toContain('ไม่พบการรบกวน');
 
     vi.useRealTimers();
   });
@@ -468,7 +468,7 @@ describe('IntermodCalculator - Deep Tests', () => {
     // Open the optional aircraft location details
     const details = container.querySelectorAll('details');
     const locationDetails = Array.from(details).find((d) =>
-      d.textContent?.includes('AIRCRAFT LOCATION')
+      d.textContent?.includes('ตำแหน่งอากาศยาน')
     )!;
     // Open it
     fireEvent.click(locationDetails.querySelector('summary')!);

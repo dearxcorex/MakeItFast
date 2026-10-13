@@ -64,10 +64,10 @@ export default async function FieldOpsFetcher() {
     return (
       <div className="field-ops-root" style={{ minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center", padding: 24 }}>
         <div style={{ maxWidth: 480, padding: 24, background: "var(--fo-ink)", color: "var(--fo-white)", borderRadius: 16, border: "1px solid var(--fo-crit)" }}>
-          <div className="fo-mono" style={{ color: "var(--fo-crit)", marginBottom: 8 }}>DATABASE ERROR</div>
-          <div className="fo-serif" style={{ fontSize: 22, marginBottom: 8 }}>Failed to connect to database</div>
+          <div className="fo-mono" style={{ color: "var(--fo-crit)", marginBottom: 8 }}>ฐานข้อมูลผิดพลาด</div>
+          <div className="fo-serif" style={{ fontSize: 22, marginBottom: 8 }}>เชื่อมต่อฐานข้อมูลไม่สำเร็จ</div>
           <div style={{ fontSize: 12, color: "var(--fo-line)" }}>
-            {hasDbUrl ? "DATABASE_URL is set" : "DATABASE_URL is missing"}
+            {hasDbUrl ? "ตั้งค่า DATABASE_URL แล้ว" : "ไม่พบ DATABASE_URL"}
           </div>
           <pre style={{ marginTop: 12, fontSize: 11, color: "var(--fo-crit)", whiteSpace: "pre-wrap", wordBreak: "break-all" }}>
             {errorMessage}

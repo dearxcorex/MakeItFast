@@ -12,8 +12,8 @@ interface NavItem {
 }
 
 const NAV_ITEMS: NavItem[] = [
-  { id: "field-ops", label: "FIELD OPS", icon: "⚑" },
-  { id: "cell-sites", label: "CELL SITES", icon: "▲" },
+  { id: "field-ops", label: "ภาคสนาม", icon: "⚑" },
+  { id: "cell-sites", label: "สถานีฐาน", icon: "▲" },
   { id: "intermod", label: "INTERMOD", icon: "Σ" },
 ];
 
@@ -55,7 +55,7 @@ export function FieldOpsDrawer({
       />
       <aside
         role="dialog"
-        aria-label="Field Ops navigation"
+        aria-label="เมนูงานภาคสนาม"
         style={{
           position: "fixed",
           top: 0,
@@ -78,7 +78,7 @@ export function FieldOpsDrawer({
         <div style={{ height: 1, background: "var(--fo-rail-border)", margin: "4px 0" }} />
 
         <div className="fo-mono" style={{ color: "var(--fo-rail-mute)", fontSize: 9, letterSpacing: "0.2em" }}>
-          NAV
+          เมนู
         </div>
         <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
           {NAV_ITEMS.map((item) => {
@@ -138,7 +138,7 @@ export function FieldOpsDrawer({
             <span aria-hidden style={{ fontSize: 12, lineHeight: 1 }}>
               {theme === "light" ? "☀" : "☾"}
             </span>
-            <span style={{ lineHeight: 1 }}>{theme === "light" ? "LIGHT" : "DARK"}</span>
+            <span style={{ lineHeight: 1 }}>{theme === "light" ? "สว่าง" : "มืด"}</span>
           </button>
           <span
             className="fo-mono"
@@ -160,23 +160,23 @@ export function FieldOpsDrawer({
             <span aria-hidden style={{ fontSize: 10, lineHeight: 1 }}>
               ●
             </span>
-            <span style={{ lineHeight: 1 }}>LIVE</span>
+            <span style={{ lineHeight: 1 }}>ออนไลน์</span>
           </span>
         </div>
 
         <div style={{ height: 1, background: "var(--fo-rail-border)", margin: "4px 0" }} />
 
         <div className="fo-mono" style={{ color: "var(--fo-rail-mute)", fontSize: 9, letterSpacing: "0.2em" }}>
-          STATS
+          สถิติ
         </div>
         <StatsRow
-          label="INSPECTED"
+          label="ตรวจแล้ว"
           value={`${kpis.inspected}/${kpis.target} · ${kpis.pct}%`}
           accent
         />
-        <StatsRow label="PENDING" value={String(kpis.pending)} />
+        <StatsRow label="ยังไม่ตรวจ" value={String(kpis.pending)} />
         <StatsRow
-          label="CRITICAL"
+          label="วิกฤต"
           value={kpis.critical === null ? "—" : String(kpis.critical)}
           warn={kpis.critical !== null}
           mute={kpis.critical === null}
@@ -193,7 +193,7 @@ function AccountSection({ onAfterAction }: { onAfterAction: () => void }) {
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
       <div className="fo-mono" style={{ color: "var(--fo-rail-mute)", fontSize: 9, letterSpacing: "0.2em" }}>
-        ACCOUNT
+        บัญชี
       </div>
       <div
         style={{
@@ -220,7 +220,7 @@ function AccountSection({ onAfterAction }: { onAfterAction: () => void }) {
               flexShrink: 0,
             }}
           >
-            ADMIN
+            ผู้ดูแล
           </span>
         )}
       </div>
@@ -241,7 +241,7 @@ function AccountSection({ onAfterAction }: { onAfterAction: () => void }) {
             textDecoration: "none",
           }}
         >
-          MANAGE USERS
+          จัดการผู้ใช้
         </Link>
       )}
       <button
@@ -262,7 +262,7 @@ function AccountSection({ onAfterAction }: { onAfterAction: () => void }) {
           cursor: "pointer",
         }}
       >
-        ⏻ LOG OUT
+        ⏻ ออกจากระบบ
       </button>
     </div>
   );

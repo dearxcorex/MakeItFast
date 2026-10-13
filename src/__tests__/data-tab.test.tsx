@@ -64,9 +64,9 @@ function fillValid(container: HTMLElement) {
 describe("FieldOpsNav DATA item", () => {
   it("is hidden unless showData is set", () => {
     const { getAllByRole, rerender } = render(<FieldOpsNav active="field-ops" onChange={vi.fn()} />);
-    expect(getAllByRole("button").map((b) => b.getAttribute("aria-label"))).not.toContain("DATA");
+    expect(getAllByRole("button").map((b) => b.getAttribute("aria-label"))).not.toContain("ข้อมูล");
     rerender(<FieldOpsNav active="field-ops" onChange={vi.fn()} showData />);
-    expect(getAllByRole("button").map((b) => b.getAttribute("aria-label"))).toContain("DATA");
+    expect(getAllByRole("button").map((b) => b.getAttribute("aria-label"))).toContain("ข้อมูล");
   });
 });
 

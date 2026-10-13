@@ -19,7 +19,7 @@ beforeEach(() => {
 describe('LoginPage — submit spinner', () => {
   it('idle button shows "Sign in" with no spinner', () => {
     const { getByRole, container } = render(<LoginPage />);
-    const btn = getByRole('button', { name: /sign in/i });
+    const btn = getByRole('button', { name: /เข้าสู่ระบบ/ });
     expect(btn.hasAttribute('disabled')).toBe(false);
     // The spinner span carries the fo-spinner class only while submitting.
     expect(container.querySelector('.fo-spinner')).toBeNull();
@@ -27,14 +27,14 @@ describe('LoginPage — submit spinner', () => {
 
   it('after submit, button is disabled, shows spinner + "Signing in…"', async () => {
     const { getByRole, getByLabelText, container } = render(<LoginPage />);
-    fireEvent.change(getByLabelText(/username/i), { target: { value: 'iff' } });
-    fireEvent.change(getByLabelText(/password/i), { target: { value: 'pw12345678' } });
-    const btn = getByRole('button', { name: /sign in/i });
+    fireEvent.change(getByLabelText(/ชื่อผู้ใช้/), { target: { value: 'iff' } });
+    fireEvent.change(getByLabelText(/รหัสผ่าน/), { target: { value: 'pw12345678' } });
+    const btn = getByRole('button', { name: /เข้าสู่ระบบ/ });
     fireEvent.click(btn);
     await waitFor(() => {
       expect(btn.hasAttribute('disabled')).toBe(true);
     });
-    expect(btn.textContent).toContain('Signing in');
+    expect(btn.textContent).toContain('กำลังเข้าสู่ระบบ');
     expect(container.querySelector('.fo-spinner')).not.toBeNull();
   });
 
@@ -60,16 +60,16 @@ describe('LoginPage — submit spinner', () => {
 
     try {
       const { getByRole, getByLabelText, container } = render(<LoginPage />);
-      fireEvent.change(getByLabelText(/username/i), { target: { value: 'iff' } });
-      fireEvent.change(getByLabelText(/password/i), { target: { value: 'pw12345678' } });
-      const btn = getByRole('button', { name: /sign in/i });
+      fireEvent.change(getByLabelText(/ชื่อผู้ใช้/), { target: { value: 'iff' } });
+      fireEvent.change(getByLabelText(/รหัสผ่าน/), { target: { value: 'pw12345678' } });
+      const btn = getByRole('button', { name: /เข้าสู่ระบบ/ });
       fireEvent.click(btn);
 
       await waitFor(() => expect(assign).toHaveBeenCalledWith('/'));
 
       // Spinner stays up — the success path returns with `submitting` true.
       expect(btn.hasAttribute('disabled')).toBe(true);
-      expect(btn.textContent).toContain('Signing in');
+      expect(btn.textContent).toContain('กำลังเข้าสู่ระบบ');
       expect(container.querySelector('.fo-spinner')).not.toBeNull();
     } finally {
       Object.defineProperty(window, 'location', {

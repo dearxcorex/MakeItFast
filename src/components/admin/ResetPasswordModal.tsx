@@ -39,7 +39,7 @@ export function ResetPasswordModal({ user, onClose, onDone }: Props) {
       setSuccess(true);
       return;
     }
-    setError("Failed to reset password");
+    setError("รีเซ็ตรหัสผ่านไม่สำเร็จ");
   }
 
   return (
@@ -50,20 +50,20 @@ export function ResetPasswordModal({ user, onClose, onDone }: Props) {
         style={{ color: "var(--fo-text)" }}
       >
         <h2 className="text-lg font-semibold">
-          Reset password for{" "}
+          รีเซ็ตรหัสผ่านของ{" "}
           <span className="font-mono">{user.username}</span>
         </h2>
 
         {success ? (
           <>
             <p className="text-sm">
-              Password reset. This is the only time it is shown — copy it now
-              and pass it to the user verbally or via chat.
+              รีเซ็ตรหัสผ่านแล้ว รหัสจะแสดงเพียงครั้งนี้ครั้งเดียว — คัดลอกไว้เลย
+              แล้วแจ้งผู้ใช้ด้วยวาจาหรือทางแชต
             </p>
             <CopyablePassword value={newPassword} />
             <p className="text-xs opacity-70">
-              {user.displayName} must choose their own password the next time
-              they sign in; this one stops working then.
+              {user.displayName} ต้องตั้งรหัสผ่านของตัวเองเมื่อเข้าสู่ระบบครั้งถัดไป
+              หลังจากนั้นรหัสนี้จะใช้ไม่ได้
             </p>
             <div className="flex justify-end">
               <button
@@ -71,7 +71,7 @@ export function ResetPasswordModal({ user, onClose, onDone }: Props) {
                 onClick={onDone}
                 className="rounded-md bg-[var(--fo-accent)] text-black px-3 py-1.5 text-sm"
               >
-                Done
+                เสร็จ
               </button>
             </div>
           </>
@@ -88,11 +88,11 @@ export function ResetPasswordModal({ user, onClose, onDone }: Props) {
               }}
               className="w-full rounded-md border border-[var(--fo-divider)] py-2 text-sm"
             >
-              Generate strong password
+              สร้างรหัสผ่านที่คาดเดายาก
             </button>
 
             <label className="block text-sm">
-              New password
+              รหัสผ่านใหม่
               <div className="relative">
                 <input
                   type={showPw ? "text" : "password"}
@@ -104,19 +104,19 @@ export function ResetPasswordModal({ user, onClose, onDone }: Props) {
                 <button
                   type="button"
                   onClick={() => setShowPw((s) => !s)}
-                  aria-label={showPw ? "Hide" : "Show"}
+                  aria-label={showPw ? "ซ่อน" : "แสดง"}
                   className="absolute right-2 top-1/2 -translate-y-1/2 text-xs opacity-70"
                 >
                   {showPw ? "🙈" : "👁"}
                 </button>
               </div>
               {tooShort && (
-                <span className="text-xs text-red-400">at least 8 chars</span>
+                <span className="text-xs text-red-400">อย่างน้อย 8 ตัวอักษร</span>
               )}
             </label>
 
             <label className="block text-sm">
-              Confirm
+              ยืนยัน
               <input
                 type={showPw ? "text" : "password"}
                 value={confirm}
@@ -125,7 +125,7 @@ export function ResetPasswordModal({ user, onClose, onDone }: Props) {
               />
               {mismatch && (
                 <span className="text-xs text-red-400">
-                  passwords do not match
+                  รหัสผ่านไม่ตรงกัน
                 </span>
               )}
             </label>
@@ -138,14 +138,14 @@ export function ResetPasswordModal({ user, onClose, onDone }: Props) {
 
             <div className="flex justify-end gap-2">
               <button type="button" onClick={onClose} className="text-sm">
-                Cancel
+                ยกเลิก
               </button>
               <button
                 type="submit"
                 disabled={!canSubmit}
                 className="rounded-md bg-[var(--fo-accent)] text-black px-3 py-1.5 text-sm disabled:opacity-50"
               >
-                {submitting ? "..." : "Reset"}
+                {submitting ? "..." : "รีเซ็ต"}
               </button>
             </div>
           </>

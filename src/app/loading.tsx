@@ -13,7 +13,7 @@ export default function Loading() {
     >
       <div
         role="status"
-        aria-label="Loading"
+        aria-label="กำลังโหลด"
         style={{
           display: "flex",
           alignItems: "center",
@@ -24,7 +24,7 @@ export default function Loading() {
         }}
       >
         <span aria-hidden className="fo-spinner" />
-        LOADING…
+        กำลังโหลด…
       </div>
     </div>
   );

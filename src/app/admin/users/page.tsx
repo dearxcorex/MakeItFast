@@ -46,7 +46,7 @@ export default function AdminUsersPage() {
     });
     if (!res.ok) {
       setUsers(prev);
-      alert("Failed to update user");
+      alert("อัปเดตผู้ใช้ไม่สำเร็จ");
     }
   }
 
@@ -65,10 +65,10 @@ export default function AdminUsersPage() {
             className="text-sm opacity-80 hover:opacity-100"
             style={{ color: "var(--fo-text)" }}
           >
-            ← Back
+            ← กลับ
           </Link>
           <h1 className="text-xl font-semibold" style={{ color: "var(--fo-text)" }}>
-            Manage users
+            จัดการผู้ใช้
           </h1>
         </div>
         <button
@@ -77,12 +77,12 @@ export default function AdminUsersPage() {
           className="rounded-md bg-[var(--fo-accent)] px-3 py-1.5 text-sm font-medium"
           style={{ color: "#001e2b" }}
         >
-          + New user
+          + เพิ่มผู้ใช้
         </button>
       </header>
 
       {loadingList ? (
-        <p>Loading…</p>
+        <p>กำลังโหลด…</p>
       ) : (
         <UserList
           users={users}

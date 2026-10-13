@@ -21,12 +21,15 @@ export interface DiscordMessage {
 // pinTokens `inspected`
 const EMBED_COLOR = 0x00684a;
 
-// Left to right in the reply: done work first, the legal-risk count last.
-const BUCKET_LABELS: Array<[PinBucket, string, string]> = [
-  ['inspected', '🟢', 'ตรวจแล้ว'],
-  ['pending', '🟡', 'ยังไม่ตรวจ'],
-  ['offair', '⚫', 'ไม่ออกอากาศ'],
-  ['critical', '🔴', 'เพิกถอน'],
+// Left to right in the reply: done work first, the legal-risk counts last.
+// Revoked is reported by licence outcome only — whether it was visited is
+// already in the progress line.
+const BUCKET_LABELS: Array<[PinBucket[], string, string]> = [
+  [['inspected'], '🟢', 'ตรวจแล้ว'],
+  [['pending'], '🟡', 'ยังไม่ตรวจ'],
+  [['offair'], '⚫', 'ไม่ออกอากาศ'],
+  [['critical', 'revokedInspected'], '🔴', 'เพิกถอน'],
+  [['relicensed', 'relicensedInspected'], '🟣', 'เพิกถอน (มีผู้รับรายใหม่)'],
 ];
 
 const THAI_MONTHS = [
@@ -35,7 +38,15 @@ const THAI_MONTHS = [
 ];
 
 export function emptyBuckets(): BucketCounts {
-  return { critical: 0, pending: 0, offair: 0, inspected: 0 };
+  return {
+    critical: 0,
+    revokedInspected: 0,
+    relicensed: 0,
+    relicensedInspected: 0,
+    pending: 0,
+    offair: 0,
+    inspected: 0,
+  };
 }
 
 /** `2026-09-13` → `13 ก.ย. 2569` */
@@ -53,9 +64,10 @@ function percent(part: number, whole: number): number {
 }
 
 function bucketLine(b: BucketCounts, withLabels: boolean): string {
-  return BUCKET_LABELS.map(([bucket, emoji, label]) =>
-    withLabels ? `${emoji} ${label} ${b[bucket]}` : `${emoji} ${b[bucket]}`,
-  ).join(' · ');
+  return BUCKET_LABELS.map(([buckets, emoji, label]) => {
+    const n = buckets.reduce((sum, bucket) => sum + b[bucket], 0);
+    return withLabels ? `${emoji} ${label} ${n}` : `${emoji} ${n}`;
+  }).join(' · ');
 }
 
 function provinceBlock(p: ProvinceStat): string[] {
@@ -72,7 +84,7 @@ function totalLine(provinces: ProvinceStat[]): string {
   let total = 0;
   for (const p of provinces) {
     total += p.total;
-    for (const [bucket] of BUCKET_LABELS) sum[bucket] += p.buckets[bucket];
+    for (const bucket of Object.keys(sum) as PinBucket[]) sum[bucket] += p.buckets[bucket];
   }
   return `รวม ${total} — ${bucketLine(sum, false)}`;
 }

@@ -46,15 +46,17 @@ function isMainStation(s: FMStation): boolean {
  *
  * Body colour and inner glyph both come from `bucketForStation`, so a pin can
  * never contradict the cluster arc that summarises it: red ! = revoked,
- * grey x = off air, green check = inspected, amber ring = not yet inspected.
+ * violet arrows = revoked with a new licence holder (each darkening to a
+ * check once inspected), grey x = off air, green check = inspected, amber
+ * ring = not yet inspected.
  *
  * Badges are a separate, orthogonal channel — they describe what the station
  * *is*, not what state it is in:
  *  - MAIN STATION (สถานีหลัก): gold star, upper-right
  *  - STACKED (multiple stations at the same coords): "+N", upper-left
- *  - ALREADY INSPECTED: green check, lower-right. Only ever appears on pins
- *    whose bucket outranks `inspected` (revoked, off air) and only while the
- *    matching filter chip is on — see `showsInspectedBadge`. All three badges
+ *  - ALREADY INSPECTED: green check, lower-right. Only ever appears on
+ *    off-air pins and only while the OFF AIR filter chip is on — see
+ *    `showsInspectedBadge`. All three badges
  *    can appear at once; they are three independent facts, and suppressing one
  *    to save room would make the pin lie.
  */
@@ -99,7 +101,7 @@ function fmIcon(
       : "";
 
   // Lower-right: the only free corner (star owns upper-right, "+N" upper-left).
-  // White keyline so the dark green disc survives the red revoked body.
+  // White keyline so the dark green disc survives the grey off-air body.
   const inspectedBadgeMark = inspectedBadge
     ? `<g transform="translate(16, 13)">
          <circle cx="6" cy="6" r="6" fill="${BADGE_INSPECTED}" stroke="${PIN_STROKE}" stroke-width="1.2"/>
@@ -333,7 +335,7 @@ export function RecenterButton({ location }: { location: UserLocation }) {
   return (
     <button
       type="button"
-      aria-label="Recenter map on my location"
+      aria-label="เลื่อนแผนที่มาที่ตำแหน่งของฉัน"
       onClick={() => {
         map.setView([location.latitude, location.longitude], 14);
       }}
@@ -354,7 +356,7 @@ export function RecenterButton({ location }: { location: UserLocation }) {
       }}
       className="fo-mono"
     >
-      ◎ ME
+      ◎ ฉัน
     </button>
   );
 }
@@ -541,16 +543,14 @@ export function FieldOpsMap({
           getChildCount: () => number;
           getAllChildMarkers: () => Array<{ options: { icon?: { options?: { className?: string } } } }>;
         }) => {
-          const buckets: Record<PinBucket, number> = {
-            critical: 0,
-            pending: 0,
-            offair: 0,
-            inspected: 0,
-          };
+          const buckets: Partial<Record<PinBucket, number>> = {};
           for (const m of c.getAllChildMarkers()) {
             const cn = m.options.icon?.options?.className ?? "";
-            const match = cn.match(/fo-bucket--(critical|pending|offair|inspected)/);
-            if (match) buckets[match[1] as PinBucket]++;
+            const match = cn.match(/fo-bucket--(\w+)/);
+            if (match && match[1] in PIN_COLORS) {
+              const b = match[1] as PinBucket;
+              buckets[b] = (buckets[b] ?? 0) + 1;
+            }
           }
           return makeClusterIcon(c.getChildCount(), buckets);
         }}
@@ -561,9 +561,9 @@ export function FieldOpsMap({
         const isSelected = selection?.kind === "fm" && group.some((s) => s.id === selection.id);
         // `inspectedBadge` belongs in the key: it depends on the filter chips
         // and on siblings, neither of which appears anywhere else in it, so
-        // without it a cached pin survives a REVOKED toggle and renders stale.
+        // without it a cached pin survives an OFF AIR toggle and renders stale.
         const inspectedBadge = showsInspectedBadge(group, inspectedBadges);
-        const cacheKey = `${head.id}-${isSelected}-${head.inspection69}-${head.onAir}-${head.revoked ? "R" : "x"}-${isMainStation(head) ? "M" : "x"}-${stackCount}-${inspectedBadge ? "I" : "x"}`;
+        const cacheKey = `${head.id}-${isSelected}-${head.inspection69}-${head.onAir}-${bucketForStation(head)}-${isMainStation(head) ? "M" : "x"}-${stackCount}-${inspectedBadge ? "I" : "x"}`;
         if (!fmIconCache.current.has(cacheKey)) {
           fmIconCache.current.set(
             cacheKey,

@@ -58,13 +58,23 @@ describe("computeRingArcs", () => {
     }
   });
 
-  it("counts an offair bucket and orders it after pending", () => {
-    const arcs = computeRingArcs({ critical: 1, pending: 1, offair: 1, inspected: 1 });
-    expect(arcs).toHaveLength(4);
+  it("orders open work first and finished work last", () => {
+    const arcs = computeRingArcs({
+      critical: 1,
+      revokedInspected: 1,
+      relicensed: 1,
+      relicensedInspected: 1,
+      pending: 1,
+      offair: 1,
+      inspected: 1,
+    });
     expect(arcs.map((a) => a.color)).toEqual([
       PIN_COLORS.critical,
+      PIN_COLORS.relicensed,
       PIN_COLORS.pending,
       PIN_COLORS.offair,
+      PIN_COLORS.revokedInspected,
+      PIN_COLORS.relicensedInspected,
       PIN_COLORS.inspected,
     ]);
   });
@@ -118,8 +128,11 @@ describe("computeSegmentArcs", () => {
     expect(computeRingArcs(buckets)).toEqual(
       computeSegmentArcs([
         { color: PIN_COLORS.critical, count: 2 },
+        { color: PIN_COLORS.relicensed, count: 0 },
         { color: PIN_COLORS.pending, count: 5 },
         { color: PIN_COLORS.offair, count: 0 },
+        { color: PIN_COLORS.revokedInspected, count: 0 },
+        { color: PIN_COLORS.relicensedInspected, count: 0 },
         { color: PIN_COLORS.inspected, count: 9 },
       ])
     );

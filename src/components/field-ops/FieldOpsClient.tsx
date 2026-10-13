@@ -28,7 +28,7 @@ const FieldOpsMap = dynamic(
 
 const IntermodCalculator = dynamic(() => import("@/components/IntermodCalculator"), {
   ssr: false,
-  loading: () => <SimpleLoading label="Loading Intermod Calculator…" />,
+  loading: () => <SimpleLoading label="กำลังโหลด Intermod…" />,
 });
 
 
@@ -359,7 +359,7 @@ export default function FieldOpsClient({
         setStations((all) =>
           all.map((s) => (s.id === selectedStation.id ? { ...s, onAir: prev } : s))
         );
-        alert(json?.error ?? "On-air update failed");
+        alert(json?.error ?? "เปลี่ยนสถานะออกอากาศไม่สำเร็จ");
         return;
       }
     } catch (err) {
@@ -534,10 +534,7 @@ export default function FieldOpsClient({
                     onMarkSource={handleMarkSource}
                     onCancelMarkSource={() => setMarkingSourceForId(null)}
                     userLocation={userLocation}
-                    inspectedBadges={{
-                      revoked: filters.revoked,
-                      offAir: filters.offAir,
-                    }}
+                    inspectedBadges={{ offAir: filters.offAir }}
                   />
                 </div>
 
@@ -564,7 +561,7 @@ export default function FieldOpsClient({
                       }}
                     >
                       <span className="fo-mono" style={{ color: "var(--fo-accent)" }}>
-                        {selection ? "CURRENT" : "SELECT A SITE"}
+                        {selection ? "ที่เลือก" : "เลือกจุด"}
                       </span>
                     </div>
 
@@ -606,10 +603,10 @@ export default function FieldOpsClient({
                     {!selection && (
                       <div style={{ padding: 20, flex: 1 }}>
                         <div className="fo-serif" style={{ fontSize: 18, color: "var(--fo-rail-text)", marginBottom: 6 }}>
-                          Tap a marker
+                          แตะหมุดบนแผนที่
                         </div>
                         <div className="fo-mono" style={{ color: "var(--fo-rail-mute)" }}>
-                          Map shows {filteredStations.length} FM · {filteredInterference.length} INT
+                          บนแผนที่ {filteredStations.length} FM · {filteredInterference.length} รบกวน
                         </div>
                       </div>
                     )}
@@ -706,7 +703,7 @@ function MapLoading() {
         justifyContent: "center",
       }}
     >
-      <span className="fo-mono">LOADING MAP…</span>
+      <span className="fo-mono">กำลังโหลดแผนที่…</span>
     </div>
   );
 }

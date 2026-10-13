@@ -43,7 +43,11 @@ export function EditUserModal({ user, isSelf, onClose, onSaved }: Props) {
       return;
     }
     const errBody = await res.json().catch(() => ({}));
-    setError(errBody.error ?? "Failed to save");
+    setError(
+      errBody.error === "cannot_modify_self"
+        ? "แก้ไขบทบาทหรือสถานะของตัวเองไม่ได้"
+        : "บันทึกไม่สำเร็จ"
+    );
   }
 
   return (
@@ -54,11 +58,11 @@ export function EditUserModal({ user, isSelf, onClose, onSaved }: Props) {
         style={{ color: "var(--fo-text)" }}
       >
         <h2 className="text-lg font-semibold">
-          Edit user · <span className="font-mono">{user.username}</span>
+          แก้ไขผู้ใช้ · <span className="font-mono">{user.username}</span>
         </h2>
 
         <label className="block text-sm">
-          Display name
+          ชื่อที่แสดง
           <input
             value={displayName}
             onChange={(e) => setDisplayName(e.target.value)}
@@ -67,7 +71,7 @@ export function EditUserModal({ user, isSelf, onClose, onSaved }: Props) {
         </label>
 
         <fieldset className="text-sm">
-          <legend className="mb-1">Role</legend>
+          <legend className="mb-1">บทบาท</legend>
           <label className="mr-3">
             <input
               type="radio"
@@ -77,7 +81,7 @@ export function EditUserModal({ user, isSelf, onClose, onSaved }: Props) {
               checked={role === "inspector"}
               onChange={() => setRole("inspector")}
             />{" "}
-            Inspector
+            ผู้ตรวจ
           </label>
           <label>
             <input
@@ -88,11 +92,11 @@ export function EditUserModal({ user, isSelf, onClose, onSaved }: Props) {
               checked={role === "admin"}
               onChange={() => setRole("admin")}
             />{" "}
-            Admin
+            ผู้ดูแลระบบ
           </label>
           {isSelf && (
             <p className="text-xs opacity-70 mt-1">
-              You cannot change your own role.
+              เปลี่ยนบทบาทของตัวเองไม่ได้
             </p>
           )}
         </fieldset>
@@ -105,14 +109,14 @@ export function EditUserModal({ user, isSelf, onClose, onSaved }: Props) {
 
         <div className="flex justify-end gap-2">
           <button type="button" onClick={onClose} className="text-sm">
-            Cancel
+            ยกเลิก
           </button>
           <button
             type="submit"
             disabled={submitting}
             className="rounded-md bg-[var(--fo-accent)] text-black px-3 py-1.5 text-sm"
           >
-            {submitting ? "..." : "Save"}
+            {submitting ? "..." : "บันทึก"}
           </button>
         </div>
       </form>

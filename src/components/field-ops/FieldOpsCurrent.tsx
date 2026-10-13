@@ -8,6 +8,8 @@ import TeammatePicker, { type InspectorOption } from "./TeammatePicker";
 import InspectionTeamChips from './InspectionTeamChips';
 import type { InspectionMember } from '@/types/inspection';
 import { stationLabel } from "@/utils/stationLabel";
+import { isRelicensed } from "@/utils/pinBucket";
+import { rankingLabel } from "@/utils/rankingLabel";
 
 interface CommonAction {
   label: string;
@@ -77,7 +79,7 @@ export function FieldOpsCurrentFM({
             }}
             title={station.revokedNote || "ใบอนุญาตถูกเพิกถอน"}
           >
-            ⚠ REVOKED
+            ⚠ เพิกถอน
           </span>
         )}
         {main && (
@@ -94,9 +96,9 @@ export function FieldOpsCurrentFM({
               gap: 4,
               fontWeight: 700,
             }}
-            title="สถานีหลัก · main station"
+            title="สถานีหลัก"
           >
-            ★ MAIN
+            ★ หลัก
           </span>
         )}
         <span
@@ -109,9 +111,9 @@ export function FieldOpsCurrentFM({
             fontSize: 9,
           }}
         >
-          {inspected ? "INSPECTED" : "PENDING"}
+          {inspected ? "ตรวจแล้ว" : "ยังไม่ตรวจ"}
         </span>
-        {!station.onAir && <Badge tone="off">OFF AIR</Badge>}
+        {!station.onAir && <Badge tone="off">ไม่ออกอากาศ</Badge>}
       </div>
 
       <div className="fo-serif" style={{ fontSize: 24, color: "var(--fo-rail-text)", lineHeight: 1.15 }}>
@@ -123,18 +125,21 @@ export function FieldOpsCurrentFM({
 
       <div style={{ display: "flex", gap: 18, flexWrap: "wrap", paddingTop: 4 }}>
         <Meter label="ID" value={stationLabel(station)} />
-        <Meter label="FREQ" value={`${station.frequency.toFixed(2)} MHz`} />
-        <Meter label="PERMIT" value={station.permit || "—"} />
+        <Meter label="ความถี่" value={`${station.frequency.toFixed(2)} MHz`} />
+        <Meter
+          label={isRelicensed(station) ? "ผู้รับใบอนุญาตรายใหม่" : "ผู้รับใบอนุญาต"}
+          value={station.permit || "—"}
+        />
         {station.transmitterPower !== undefined && (
-          <Meter label="POWER" value={`${station.transmitterPower} W`} />
+          <Meter label="กำลังส่ง" value={`${station.transmitterPower} W`} />
         )}
       </div>
 
       <ButtonRow
         actions={[
-          { label: "▶ NAVIGATE", pending: "...", onClick: () => window.open(googleMapsUrl(station.latitude, station.longitude), "_blank"), variant: "primary" },
+          { label: "▶ นำทาง", pending: "...", onClick: () => window.open(googleMapsUrl(station.latitude, station.longitude), "_blank"), variant: "primary" },
           {
-            label: inspected ? "✓ INSPECTED" : "✓ INSPECT",
+            label: inspected ? "✓ ตรวจแล้ว" : "✓ ตรวจ",
             pending: "...",
             onClick: onToggleInspection,
             variant: station.revoked ? "danger" : (inspected ? "ghost" : "primary"),
@@ -170,7 +175,7 @@ export function FieldOpsCurrentFM({
         <ButtonRow
           actions={[
             {
-              label: station.onAir ? "📡 ON AIR · STOP" : "📡 OFF AIR · GO LIVE",
+              label: station.onAir ? "📡 ออกอากาศ · หยุด" : "📡 ไม่ออกอากาศ · เปิด",
               pending: "...",
               onClick: onToggleOnAir,
               variant: station.onAir ? "warn" : "primary",
@@ -194,7 +199,7 @@ export function FieldOpsCurrentFM({
           }}
         >
           <div className="fo-mono" style={{ color: "var(--fo-rail-mute)" }}>
-            ALSO AT THIS LOCATION · {others.length}
+            ที่ตำแหน่งเดียวกัน · {others.length}
           </div>
           {others.map((s) => {
             const sInsp = s.inspection69 === "ตรวจแล้ว";
@@ -312,7 +317,7 @@ export function FieldOpsCurrentINT({
   return (
     <div style={{ padding: "20px 20px", display: "flex", flexDirection: "column", gap: 12 }}>
       <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
-        <Badge tone="int">INT</Badge>
+        <Badge tone="int">รบกวน</Badge>
         {site.ranking && (
           <span
             className="fo-mono"
@@ -324,7 +329,7 @@ export function FieldOpsCurrentINT({
               fontSize: 9,
             }}
           >
-            {site.ranking.toUpperCase()}
+            {rankingLabel(site.ranking)}
           </span>
         )}
         <span
@@ -337,12 +342,12 @@ export function FieldOpsCurrentINT({
             fontSize: 9,
           }}
         >
-          {inspected ? "INSPECTED" : "PENDING"}
+          {inspected ? "ตรวจแล้ว" : "ยังไม่ตรวจ"}
         </span>
       </div>
 
       <div className="fo-serif" style={{ fontSize: 22, color: "var(--fo-rail-text)", lineHeight: 1.15 }}>
-        {site.siteName || site.siteCode || `Site #${site.id}`}
+        {site.siteName || site.siteCode || `จุด #${site.id}`}
       </div>
       <div className="fo-mono" style={{ color: "var(--fo-rail-mute)" }}>
         {(site.changwat || "").toUpperCase()}
@@ -352,26 +357,26 @@ export function FieldOpsCurrentINT({
 
       <div style={{ display: "flex", gap: 18, flexWrap: "wrap", paddingTop: 4 }}>
         {site.direction !== null && site.direction !== undefined && (
-          <Meter label="BEARING" value={`${site.direction.toFixed(0)}°`} />
+          <Meter label="ทิศทาง" value={`${site.direction.toFixed(0)}°`} />
         )}
         {site.avgNiCarrier !== null && site.avgNiCarrier !== undefined && (
           <Meter label="N/I" value={`${site.avgNiCarrier.toFixed(1)} dBm`} />
         )}
         {site.estimateDistance !== null && site.estimateDistance !== undefined && (
-          <Meter label="DIST" value={`${site.estimateDistance.toFixed(2)} km`} />
+          <Meter label="ระยะ" value={`${site.estimateDistance.toFixed(2)} km`} />
         )}
       </div>
 
       {hasSource && (
         <div className="fo-mono" style={{ color: "var(--fo-rail-mute)", fontSize: 11 }}>
-          SOURCE · {site.sourceLat!.toFixed(5)}, {site.sourceLong!.toFixed(5)}
+          แหล่งรบกวน · {site.sourceLat!.toFixed(5)}, {site.sourceLong!.toFixed(5)}
         </div>
       )}
 
       <ButtonRow
         actions={[
           {
-            label: "▶ NAVIGATE",
+            label: "▶ นำทาง",
             pending: "...",
             onClick: () =>
               site.lat !== null &&
@@ -381,7 +386,7 @@ export function FieldOpsCurrentINT({
             disabled: site.lat === null || site.long === null,
           },
           {
-            label: inspected ? "✓ INSPECTED" : "✓ INSPECT",
+            label: inspected ? "✓ ตรวจแล้ว" : "✓ ตรวจ",
             pending: "...",
             onClick: onToggleInspection,
             variant: inspected ? "ghost" : "primary",
@@ -434,12 +439,12 @@ export function FieldOpsCurrentINT({
       >
         <span style={{ fontSize: 18 }}>✉</span>
         <span style={{ flex: 1 }}>
-          <span className="fo-mono" style={{ color: "inherit" }}>LAW PAPER</span>
+          <span className="fo-mono" style={{ color: "inherit" }}>หนังสือแจ้ง</span>
           <div style={{ fontSize: 13, fontWeight: 600, marginTop: 2 }}>
-            {lawSent ? "ส่งแล้ว · Sent" : "ยังไม่ส่ง · Not sent"}
+            {lawSent ? "ส่งแล้ว" : "ยังไม่ส่ง"}
           </div>
         </span>
-        <span className="fo-mono" style={{ color: "inherit", opacity: 0.7 }}>TAP TO TOGGLE</span>
+        <span className="fo-mono" style={{ color: "inherit", opacity: 0.7 }}>แตะเพื่อสลับ</span>
       </button>
 
       {(onStartMarkSource || onClearSource || onSubmitSourceCoords) && (
@@ -456,7 +461,7 @@ export function FieldOpsCurrentINT({
                   borderRadius: 8,
                 }}
               >
-                ◎ Click on the map to drop the source pin · ESC to cancel
+                ◎ คลิกแผนที่เพื่อปักหมุดแหล่งรบกวน · กด ESC เพื่อยกเลิก
               </div>
               <button
                 type="button"
@@ -474,7 +479,7 @@ export function FieldOpsCurrentINT({
                   letterSpacing: "0.12em",
                 }}
               >
-                ✕ CANCEL
+                ✕ ยกเลิก
               </button>
             </>
           ) : hasSource ? (
@@ -496,7 +501,7 @@ export function FieldOpsCurrentINT({
                   letterSpacing: "0.12em",
                 }}
               >
-                ✕ CLEAR
+                ✕ ล้าง
               </button>
               <button
                 type="button"
@@ -515,7 +520,7 @@ export function FieldOpsCurrentINT({
                   letterSpacing: "0.12em",
                 }}
               >
-                ⊕ RE-MARK SOURCE
+                ⊕ ปักหมุดใหม่
               </button>
             </div>
           ) : (
@@ -535,7 +540,7 @@ export function FieldOpsCurrentINT({
                 letterSpacing: "0.12em",
               }}
             >
-              ⊕ MARK SOURCE
+              ⊕ ปักหมุดแหล่งรบกวน
             </button>
           )}
 
@@ -551,7 +556,7 @@ export function FieldOpsCurrentINT({
               }}
             >
               <div className="fo-mono" style={{ color: "var(--fo-rail-mute)", fontSize: 10 }}>
-                OR ENTER COORDS
+                หรือกรอกพิกัด
               </div>
               <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 6, minWidth: 0 }}>
                 <input
@@ -619,7 +624,7 @@ export function FieldOpsCurrentINT({
                   boxSizing: "border-box",
                 }}
               >
-                SAVE COORDS
+                บันทึกพิกัด
               </button>
               {coordError && (
                 <div className="fo-mono" style={{ color: "var(--fo-crit)", fontSize: 10 }}>
@@ -627,7 +632,7 @@ export function FieldOpsCurrentINT({
                 </div>
               )}
               <div className="fo-mono" style={{ color: "var(--fo-rail-mute)", fontSize: 10 }}>
-                Tip: paste &quot;13.756, 100.501&quot; into LAT
+                เคล็ดลับ: วาง &quot;13.756, 100.501&quot; ในช่อง LAT
               </div>
             </div>
           )}
@@ -646,7 +651,7 @@ export function FieldOpsCurrentINT({
           }}
         >
           <div className="fo-mono" style={{ color: "var(--fo-rail-mute)" }}>
-            ALSO AT THIS LOCATION · {others.length}
+            ที่ตำแหน่งเดียวกัน · {others.length}
           </div>
           {others.map((s) => {
             const sInsp = s.status === "ตรวจแล้ว";

@@ -16,9 +16,9 @@
   --fo-crit: #ff5b4a;
   --fo-ok: #00ed64;
 
-  --fo-serif: var(--fo-font-serif), 'Playfair Display', Georgia, serif;
-  --fo-body: var(--fo-font-inter), 'Inter', -apple-system, system-ui, sans-serif;
-  --fo-mono: var(--fo-font-mono), 'Source Code Pro', ui-monospace, monospace;
+  --fo-serif: var(--fo-font-serif), 'Playfair Display', var(--font-noto-thai), Georgia, serif;
+  --fo-body: var(--fo-font-inter), 'Inter', var(--font-noto-thai), -apple-system, system-ui, sans-serif;
+  --fo-mono: var(--fo-font-mono), 'Source Code Pro', var(--font-noto-thai), ui-monospace, monospace;
   --fo-sketch: var(--fo-font-kalam), 'Kalam', cursive;
 
   background: var(--fo-paper);
@@ -194,9 +194,9 @@
   --fo-podium-bronze: #d4a574;
   --fo-podium-bronze-ink: #1c2d38;
 
-  --fo-serif: var(--fo-font-serif), 'Playfair Display', Georgia, serif;
-  --fo-body: var(--fo-font-inter), 'Inter', -apple-system, system-ui, sans-serif;
-  --fo-mono: var(--fo-font-mono), 'Source Code Pro', ui-monospace, monospace;
+  --fo-serif: var(--fo-font-serif), 'Playfair Display', var(--font-noto-thai), Georgia, serif;
+  --fo-body: var(--fo-font-inter), 'Inter', var(--font-noto-thai), -apple-system, system-ui, sans-serif;
+  --fo-mono: var(--fo-font-mono), 'Source Code Pro', var(--font-noto-thai), ui-monospace, monospace;
   --fo-sketch: var(--fo-font-kalam), 'Kalam', cursive;
 
   background: var(--fo-canvas);

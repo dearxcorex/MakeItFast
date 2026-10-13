@@ -7,13 +7,13 @@ const provinces: ProvinceStat[] = [
     province: 'นครราชสีมา',
     total: 144,
     inspected: 64,
-    buckets: { inspected: 58, pending: 70, offair: 10, critical: 6 },
+    buckets: { ...emptyBuckets(), inspected: 58, pending: 70, offair: 10, critical: 1, revokedInspected: 3, relicensed: 1, relicensedInspected: 1 },
   },
   {
     province: 'ชัยภูมิ',
     total: 77,
     inspected: 21,
-    buckets: { inspected: 21, pending: 48, offair: 5, critical: 3 },
+    buckets: { ...emptyBuckets(), inspected: 21, pending: 48, offair: 5, revokedInspected: 1, relicensed: 2 },
   },
 ];
 
@@ -47,14 +47,14 @@ describe('buildStatMessage', () => {
     const d = describeOf();
     expect(d).toContain(
       '**นครราชสีมา** (144)\n' +
-        '🟢 ตรวจแล้ว 58 · 🟡 ยังไม่ตรวจ 70 · ⚫ ไม่ออกอากาศ 10 · 🔴 เพิกถอน 6\n' +
+        '🟢 ตรวจแล้ว 58 · 🟡 ยังไม่ตรวจ 70 · ⚫ ไม่ออกอากาศ 10 · 🔴 เพิกถอน 4 · 🟣 เพิกถอน (มีผู้รับรายใหม่) 2\n' +
         'ความคืบหน้า ตรวจแล้ว 64/144 (44%)',
     );
     expect(d).toContain('ความคืบหน้า ตรวจแล้ว 21/77 (27%)');
   });
 
   it('ends with one total line summing every province', () => {
-    expect(describeOf().split('\n').at(-1)).toBe('รวม 221 — 🟢 79 · 🟡 118 · ⚫ 15 · 🔴 9');
+    expect(describeOf().split('\n').at(-1)).toBe('รวม 221 — 🟢 79 · 🟡 118 · ⚫ 15 · 🔴 5 · 🟣 4');
   });
 
   it("does not list today's inspections", () => {

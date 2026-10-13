@@ -60,35 +60,35 @@ export function MobileFilterSheet({
   if (filters.search.trim().length > 0) {
     activeChips.push({
       key: "search",
-      label: `Search "${filters.search}"`,
+      label: `ค้นหา "${filters.search}"`,
       clear: () => onChange({ ...filters, search: "" }),
     });
   }
   if (filters.province !== "All") {
     activeChips.push({
       key: "province",
-      label: `Province: ${filters.province}`,
+      label: `จังหวัด: ${filters.province}`,
       clear: () => onChange({ ...filters, province: "All" }),
     });
   }
   if (filters.offAir) {
     activeChips.push({
       key: "offAir",
-      label: "Off air",
+      label: "ไม่ออกอากาศ",
       clear: () => onChange({ ...filters, offAir: false }),
     });
   }
   if (filters.revoked) {
     activeChips.push({
       key: "revoked",
-      label: "Revoked",
+      label: "เพิกถอน",
       clear: () => onChange({ ...filters, revoked: false }),
     });
   }
   if (filters.lawSent) {
     activeChips.push({
       key: "lawSent",
-      label: "Law-paper sent",
+      label: "ส่งหนังสือแล้ว",
       clear: () => onChange({ ...filters, lawSent: false }),
     });
   }
@@ -114,7 +114,7 @@ export function MobileFilterSheet({
       />
       <aside
         role="dialog"
-        aria-label="More filters"
+        aria-label="ตัวกรองเพิ่มเติม"
         aria-hidden={!open}
         onTouchStart={handleSwipeStart}
         onTouchEnd={handleSwipeEnd}
@@ -164,11 +164,11 @@ export function MobileFilterSheet({
           }}
         >
           <span className="fo-serif" style={{ fontSize: 18, lineHeight: 1.1 }}>
-            More filters
+            ตัวกรองเพิ่มเติม
           </span>
           <button
             type="button"
-            aria-label="Close"
+            aria-label="ปิด"
             onClick={onClose}
             style={{
               width: 44,
@@ -215,7 +215,7 @@ export function MobileFilterSheet({
                   letterSpacing: "0.16em",
                 }}
               >
-                Active:
+                ที่ใช้อยู่:
               </span>
               {activeChips.map((c) => (
                 <button
@@ -244,11 +244,11 @@ export function MobileFilterSheet({
             </div>
           )}
 
-          <FilterSection label="Search">
+          <FilterSection label="ค้นหา">
             <input
               ref={searchRef}
               type="search"
-              placeholder="Search stations…"
+              placeholder="ค้นหาสถานี…"
               value={filters.search}
               onChange={(e) => onChange({ ...filters, search: e.target.value })}
               style={{
@@ -264,7 +264,7 @@ export function MobileFilterSheet({
             />
           </FilterSection>
 
-          <FilterSection label="Province">
+          <FilterSection label="จังหวัด">
             <select
               value={filters.province}
               onChange={(e) => onChange({ ...filters, province: e.target.value })}
@@ -280,7 +280,7 @@ export function MobileFilterSheet({
                 cursor: "pointer",
               }}
             >
-              <option value="All">All provinces</option>
+              <option value="All">ทุกจังหวัด</option>
               {provinces.map((p) => (
                 <option key={p} value={p}>
                   {p}
@@ -290,15 +290,15 @@ export function MobileFilterSheet({
           </FilterSection>
 
           {showFMFilters && (
-            <FilterSection label="FM filters">
+            <FilterSection label="ตัวกรอง FM">
               <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
                 <TogglePill
-                  label="Off air"
+                  label="ไม่ออกอากาศ"
                   active={filters.offAir}
                   onClick={() => onChange({ ...filters, offAir: !filters.offAir })}
                 />
                 <TogglePill
-                  label="Revoked"
+                  label="เพิกถอน"
                   active={filters.revoked}
                   onClick={() => onChange({ ...filters, revoked: !filters.revoked })}
                 />
@@ -307,10 +307,10 @@ export function MobileFilterSheet({
           )}
 
           {showINTFilters && (
-            <FilterSection label="INT filters">
+            <FilterSection label="ตัวกรองการรบกวน">
               <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
                 <TogglePill
-                  label="Law-paper sent"
+                  label="ส่งหนังสือแล้ว"
                   active={filters.lawSent}
                   onClick={() => onChange({ ...filters, lawSent: !filters.lawSent })}
                 />
@@ -345,7 +345,7 @@ export function MobileFilterSheet({
               touchAction: "manipulation",
             }}
           >
-            Show {resultCount} {resultCount === 1 ? "result" : "results"}
+            แสดง {resultCount} รายการ
           </button>
         </div>
       </aside>

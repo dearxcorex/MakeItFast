@@ -31,7 +31,7 @@ describe('FieldOpsCurrentFM — revoked station', () => {
         pending={false}
       />
     );
-    expect(container.textContent).toContain('REVOKED');
+    expect(container.textContent).toContain('เพิกถอน');
   });
 
   it('does NOT render the REVOKED chip when station.revoked is false or undefined', () => {
@@ -42,7 +42,7 @@ describe('FieldOpsCurrentFM — revoked station', () => {
         pending={false}
       />
     );
-    expect(container.textContent).not.toContain('REVOKED');
+    expect(container.textContent).not.toContain('เพิกถอน');
   });
 
   it('still renders the INSPECT button when revoked', () => {
@@ -54,7 +54,7 @@ describe('FieldOpsCurrentFM — revoked station', () => {
         pending={false}
       />
     );
-    expect(container.textContent).toContain('✓ INSPECT');
+    expect(container.textContent).toContain('✓ ตรวจ');
   });
 
   it('renders INSPECT with the danger palette for a revoked station', () => {
@@ -73,7 +73,7 @@ describe('FieldOpsCurrentFM — revoked station', () => {
       />
     );
     const buttons = container.querySelectorAll('button');
-    const inspectBtn = Array.from(buttons).find(btn => btn.textContent === '✓ INSPECT')!;
+    const inspectBtn = Array.from(buttons).find(btn => btn.textContent === '✓ ตรวจ')!;
     expect(inspectBtn.getAttribute('style')).toContain('var(--fo-crit)');
   });
 
@@ -92,7 +92,7 @@ describe('FieldOpsCurrentFM — revoked station', () => {
       />
     );
     const buttons = container.querySelectorAll('button');
-    const inspectBtn = Array.from(buttons).find(btn => btn.textContent === '✓ INSPECT')!;
+    const inspectBtn = Array.from(buttons).find(btn => btn.textContent === '✓ ตรวจ')!;
     expect(inspectBtn.getAttribute('style')).toContain('var(--fo-accent)');
     expect(inspectBtn.getAttribute('style')).not.toContain('var(--fo-crit)');
   });
@@ -115,7 +115,7 @@ describe('FieldOpsCurrentFM — teammate picker', () => {
         onHelperUserIdsChange={vi.fn()}
       />,
     );
-    expect(getByRole('button', { name: /\+ tag teammates/i })).toBeTruthy();
+    expect(getByRole('button', { name: /\+ เพิ่มผู้ร่วมตรวจ/ })).toBeTruthy();
   });
 
   it('does NOT render the teammate picker when station is INSPECTED', () => {
@@ -134,7 +134,7 @@ describe('FieldOpsCurrentFM — teammate picker', () => {
         onHelperUserIdsChange={vi.fn()}
       />,
     );
-    expect(queryByRole('button', { name: /\+ tag teammates/i })).toBeNull();
+    expect(queryByRole('button', { name: /\+ เพิ่มผู้ร่วมตรวจ/ })).toBeNull();
   });
 });
 
@@ -176,7 +176,7 @@ describe('FieldOpsCurrentINT — teammate picker', () => {
         onHelperUserIdsChange={vi.fn()}
       />,
     );
-    expect(getByRole('button', { name: /\+ tag teammates/i })).toBeTruthy();
+    expect(getByRole('button', { name: /\+ เพิ่มผู้ร่วมตรวจ/ })).toBeTruthy();
   });
 
   it('does NOT render the teammate picker when site is INSPECTED', () => {
@@ -196,6 +196,6 @@ describe('FieldOpsCurrentINT — teammate picker', () => {
         onHelperUserIdsChange={vi.fn()}
       />,
     );
-    expect(queryByRole('button', { name: /\+ tag teammates/i })).toBeNull();
+    expect(queryByRole('button', { name: /\+ เพิ่มผู้ร่วมตรวจ/ })).toBeNull();
   });
 });

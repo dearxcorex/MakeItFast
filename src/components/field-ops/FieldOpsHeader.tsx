@@ -39,7 +39,7 @@ export function FieldOpsHeader({
   const accentText = isLight ? "#00684a" : "var(--fo-accent)";
 
   const scopeLabel =
-    type === "FM" ? "FM ONLY" : type === "INT" ? "INTERFERENCE ONLY" : "ALL";
+    type === "FM" ? "เฉพาะ FM" : type === "INT" ? "เฉพาะการรบกวน" : "ทั้งหมด";
 
   if (isMobile) {
     return <MobileHeader
@@ -70,20 +70,20 @@ export function FieldOpsHeader({
     >
       <div>
         <div className="fo-mono" style={{ color: accentText }}>
-          NBTC · FIELD OPS · {scopeLabel}
+          กสทช. · ภาคสนาม · {scopeLabel}
         </div>
         <div
           className="fo-serif"
           style={{ fontSize: 20, lineHeight: 1.1, marginTop: 2, color: textColor }}
         >
-          Field Operations
+          งานภาคสนาม
         </div>
       </div>
 
       <div style={{ flex: 1 }} />
 
       <Stat
-        label="INSPECTED"
+        label="ตรวจแล้ว"
         value={kpis.inspected}
         sub={`/ ${kpis.target} · ${kpis.pct}%`}
         accent
@@ -91,9 +91,9 @@ export function FieldOpsHeader({
         labelColor={labelColor}
         accentText={accentText}
       />
-      <Stat label="PENDING" value={kpis.pending} textColor={textColor} labelColor={labelColor} />
+      <Stat label="ยังไม่ตรวจ" value={kpis.pending} textColor={textColor} labelColor={labelColor} />
       <Stat
-        label="CRITICAL"
+        label="วิกฤต"
         value={kpis.critical}
         warn
         textColor={textColor}
@@ -110,7 +110,7 @@ export function FieldOpsHeader({
         type="button"
         onClick={onToggleTheme}
         className="fo-mono"
-        title={`Switch to ${isLight ? "dark" : "light"} theme`}
+        title={`เปลี่ยนเป็นธีม${isLight ? "มืด" : "สว่าง"}`}
         style={{
           display: "inline-flex",
           alignItems: "center",
@@ -130,7 +130,7 @@ export function FieldOpsHeader({
         <span aria-hidden style={{ fontSize: 12, lineHeight: 1 }}>
           {isLight ? "☀" : "☾"}
         </span>
-        <span style={{ lineHeight: 1 }}>{isLight ? "LIGHT" : "DARK"}</span>
+        <span style={{ lineHeight: 1 }}>{isLight ? "สว่าง" : "มืด"}</span>
       </button>
 
       <div
@@ -152,7 +152,7 @@ export function FieldOpsHeader({
         <span aria-hidden style={{ fontSize: 10, lineHeight: 1 }}>
           ●
         </span>
-        <span style={{ lineHeight: 1 }}>LIVE</span>
+        <span style={{ lineHeight: 1 }}>ออนไลน์</span>
       </div>
 
       <UserChip accentText={accentText} textColor={textColor} borderColor={borderColor} />
@@ -244,7 +244,7 @@ function MobileHeader({
     >
       <button
         type="button"
-        aria-label="Open menu"
+        aria-label="เปิดเมนู"
         onClick={onOpenDrawer}
         style={{
           border: `1px solid ${borderColor}`,
@@ -261,10 +261,10 @@ function MobileHeader({
       </button>
       <div style={{ flex: 1, minWidth: 0 }}>
         <div className="fo-mono" style={{ color: accentText, fontSize: 9, letterSpacing: "0.18em" }}>
-          NBTC · FIELD OPS · {scopeLabel}
+          กสทช. · ภาคสนาม · {scopeLabel}
         </div>
         <div className="fo-serif" style={{ fontSize: 14, lineHeight: 1.1, color: textColor }}>
-          Field Operations
+          งานภาคสนาม
         </div>
       </div>
       <LocationBadge
@@ -291,7 +291,7 @@ function LocationBadge({
   if (!status || status === 'unsupported' || status === 'locating' || status === 'granted') {
     return null;
   }
-  const buttonLabel = status === 'denied' ? '⚠ ENABLE LOCATION' : '↻ RETRY LOCATION';
+  const buttonLabel = status === 'denied' ? '⚠ เปิดใช้ตำแหน่ง' : '↻ หาตำแหน่งอีกครั้ง';
   return (
     <button
       type="button"
@@ -346,7 +346,7 @@ function UserChip({
             textDecoration: "none",
           }}
         >
-          MANAGE USERS
+          จัดการผู้ใช้
         </Link>
       )}
       <span style={{ fontSize, color: textColor, lineHeight: 1 }}>
@@ -365,14 +365,14 @@ function UserChip({
             lineHeight: 1,
           }}
         >
-          ADMIN
+          ผู้ดูแล
         </span>
       )}
       <button
         type="button"
         onClick={() => void logout()}
-        aria-label="Log out"
-        title="Log out"
+        aria-label="ออกจากระบบ"
+        title="ออกจากระบบ"
         style={{
           border: `1px solid ${borderColor}`,
           background: "transparent",

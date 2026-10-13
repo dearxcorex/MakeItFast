@@ -1,7 +1,7 @@
 import type { PinBucket } from "./pinBucket";
 
 /**
- * Single source of truth for map pin, cluster-ring and legend colours.
+ * Single source of truth for map pin and cluster-ring colours.
  *
  * Before this existed the same state had different hexes depending on where it
  * was drawn — an FM "pending" pin was #f5a623 while the cluster arc summarising
@@ -18,19 +18,25 @@ import type { PinBucket } from "./pinBucket";
  */
 export const PIN_COLORS: Record<PinBucket, string> = {
   critical: "#ff5b4a",
+  revokedInspected: "#8a2a22",
+  relicensed: "#8b5cf6",
+  relicensedInspected: "#4c3a8f",
   pending: "#ffb800",
   offair: "#5c6c75",
   inspected: "#00684a",
 };
 
 /**
- * Severity order: most urgent first. Cluster ring arcs are emitted in this
- * order so red sits at 12 o'clock, and the legend lists swatches the same way.
+ * Open work first, finished work last. Cluster ring arcs are emitted in this
+ * order so red sits at 12 o'clock.
  */
 export const PIN_BUCKET_ORDER: PinBucket[] = [
   "critical",
+  "relicensed",
   "pending",
   "offair",
+  "revokedInspected",
+  "relicensedInspected",
   "inspected",
 ];
 
@@ -38,15 +44,19 @@ export const PIN_BUCKET_ORDER: PinBucket[] = [
  * Inner glyph per bucket, so colour is never the only channel carrying state
  * (red and amber are the classic red-green-blind confusion pair).
  *
- * Drawn in the pin's 24x32 viewBox with the head centred on (12, 11); the
- * legend reuses these strings inside the same viewBox so a swatch is pixel-wise
- * the pin it stands for.
+ * Drawn in the pin's 24x32 viewBox with the head centred on (12, 11).
  */
+const TICK_GLYPH = `<path d="M8.5 12.5 l2.5 2.5 l5 -5" stroke="#ffffff" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" fill="none"/>`;
+
 export const PIN_GLYPHS: Record<PinBucket, string> = {
   critical: `<path d="M12 7 L12 14 M12 16.5 L12 17.5" stroke="#ffffff" stroke-width="2.4" stroke-linecap="round"/>`,
+  revokedInspected: TICK_GLYPH,
+  // Two opposed arrows: the licence changed hands.
+  relicensed: `<path d="M7.5 9 H16 M13.5 6.5 L16 9 L13.5 11.5 M16.5 14 H8 M10.5 11.5 L8 14 L10.5 16.5" stroke="#ffffff" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" fill="none"/>`,
+  relicensedInspected: TICK_GLYPH,
   pending: `<circle cx="12" cy="11.5" r="4" fill="none" stroke="#ffffff" stroke-width="2"/>`,
   offair: `<path d="M9 9 l6 6 M15 9 l-6 6" stroke="#ffffff" stroke-width="2" stroke-linecap="round"/>`,
-  inspected: `<path d="M8.5 12.5 l2.5 2.5 l5 -5" stroke="#ffffff" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" fill="none"/>`,
+  inspected: TICK_GLYPH,
 };
 
 /** Dark ink used for pin outlines-on-badges, cluster discs and badge glyphs. */
@@ -73,10 +83,8 @@ export const BADGE_MAIN = "#ffd24a";
 export const BADGE_LAW = "#e6ecf0";
 
 /**
- * Badge: already inspected, worn by pins whose bucket outranks `inspected`
- * (revoked, off air). Deliberately the *same* green as the inspected bucket —
- * reusing it keeps "green = inspected" true everywhere on the map, where a new
- * hue would invent a fourth state nobody has a legend for.
+ * Badge: already inspected, worn by off-air pins. Deliberately the *same*
+ * green as the inspected bucket so "green = inspected" holds everywhere.
  */
 export const BADGE_INSPECTED = PIN_COLORS.inspected;
 

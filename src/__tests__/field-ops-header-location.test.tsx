@@ -38,7 +38,7 @@ describe('FieldOpsHeader — location badge', () => {
       <FieldOpsHeader {...baseProps} locationStatus="denied" onRetryLocation={retry} />
     );
     const btn = Array.from(container.querySelectorAll('button')).find((b) =>
-      (b.textContent ?? '').toLowerCase().includes('enable')
+      (b.textContent ?? '').includes('เปิดใช้ตำแหน่ง')
     );
     expect(btn).toBeDefined();
     fireEvent.click(btn!);

@@ -2,6 +2,7 @@ import { describe, it, expect } from "vitest";
 import {
   bucketForStation,
   bucketForSite,
+  isRelicensed,
   showsInspectedBadge,
   NO_INSPECTED_BADGES,
 } from "@/utils/pinBucket";
@@ -48,11 +49,26 @@ function makeINT(o: Partial<InterferenceSite> = {}): InterferenceSite {
 }
 
 describe("bucketForStation", () => {
-  it("revoked FM → critical, even if inspected", () => {
+  it("revoked FM with no new holder → critical, revokedInspected once visited", () => {
     expect(bucketForStation(makeFM({ revoked: true }))).toBe("critical");
     expect(
       bucketForStation(makeFM({ revoked: true, inspection69: "ตรวจแล้ว" }))
-    ).toBe("critical");
+    ).toBe("revokedInspected");
+  });
+
+  it("revoked FM with a permit → relicensed, relicensedInspected once visited", () => {
+    const permit = "หจก. ก เป็นผู้รับใบอนุญาตให้ใช้คลื่นความถี่รายใหม่";
+    expect(bucketForStation(makeFM({ revoked: true, permit }))).toBe("relicensed");
+    expect(
+      bucketForStation(makeFM({ revoked: true, permit, inspection69: "ตรวจแล้ว" }))
+    ).toBe("relicensedInspected");
+  });
+
+  it("a blank permit is not a new holder, and a permit means nothing unless revoked", () => {
+    expect(bucketForStation(makeFM({ revoked: true, permit: "  " }))).toBe("critical");
+    expect(bucketForStation(makeFM({ permit: "x" }))).toBe("pending");
+    expect(isRelicensed(makeFM({ permit: "x" }))).toBe(false);
+    expect(isRelicensed(makeFM({ revoked: true, permit: "x" }))).toBe(true);
   });
 
   it("inspected non-revoked FM → inspected", () => {
@@ -111,39 +127,33 @@ describe("bucketForSite", () => {
 });
 
 describe("showsInspectedBadge", () => {
-  const ALL_ON = { revoked: true, offAir: true };
-  const inspectedRevoked = makeFM({ revoked: true, inspection69: "ตรวจแล้ว" });
+  const ON = { offAir: true };
   const inspectedOffAir = makeFM({ onAir: false, inspection69: "ตรวจแล้ว" });
 
-  it("badges an inspected revoked pin only while the REVOKED chip is on", () => {
-    expect(showsInspectedBadge([inspectedRevoked], { revoked: true, offAir: false })).toBe(true);
-    expect(showsInspectedBadge([inspectedRevoked], { revoked: false, offAir: true })).toBe(false);
-    expect(showsInspectedBadge([inspectedRevoked], NO_INSPECTED_BADGES)).toBe(false);
-  });
-
   it("badges an inspected off-air pin only while the OFF AIR chip is on", () => {
-    expect(showsInspectedBadge([inspectedOffAir], { revoked: false, offAir: true })).toBe(true);
-    expect(showsInspectedBadge([inspectedOffAir], { revoked: true, offAir: false })).toBe(false);
+    expect(showsInspectedBadge([inspectedOffAir], ON)).toBe(true);
+    expect(showsInspectedBadge([inspectedOffAir], NO_INSPECTED_BADGES)).toBe(false);
   });
 
   it("never badges a pin that has not been inspected", () => {
-    expect(showsInspectedBadge([makeFM({ revoked: true })], ALL_ON)).toBe(false);
-    expect(showsInspectedBadge([makeFM({ onAir: false })], ALL_ON)).toBe(false);
+    expect(showsInspectedBadge([makeFM({ onAir: false })], ON)).toBe(false);
   });
 
-  it("never badges pending or inspected buckets — their glyph already says it", () => {
-    expect(showsInspectedBadge([makeFM({ inspection69: "ตรวจแล้ว" })], ALL_ON)).toBe(false);
-    expect(showsInspectedBadge([makeFM()], ALL_ON)).toBe(false);
+  it("never badges revoked, pending or inspected buckets — their colour already says it", () => {
+    expect(showsInspectedBadge([makeFM({ revoked: true, inspection69: "ตรวจแล้ว" })], ON)).toBe(false);
+    expect(showsInspectedBadge([makeFM({ revoked: true, permit: "x", inspection69: "ตรวจแล้ว" })], ON)).toBe(false);
+    expect(showsInspectedBadge([makeFM({ inspection69: "ตรวจแล้ว" })], ON)).toBe(false);
+    expect(showsInspectedBadge([makeFM()], ON)).toBe(false);
   });
 
   it("badges a stack only when every station in it is inspected", () => {
-    const partly = [inspectedRevoked, makeFM({ id: 2, revoked: true })];
-    const all = [inspectedRevoked, makeFM({ id: 2, revoked: true, inspection69: "ตรวจแล้ว" })];
-    expect(showsInspectedBadge(partly, ALL_ON)).toBe(false);
-    expect(showsInspectedBadge(all, ALL_ON)).toBe(true);
+    const partly = [inspectedOffAir, makeFM({ id: 2, onAir: false })];
+    const all = [inspectedOffAir, makeFM({ id: 2, onAir: false, inspection69: "ตรวจแล้ว" })];
+    expect(showsInspectedBadge(partly, ON)).toBe(false);
+    expect(showsInspectedBadge(all, ON)).toBe(true);
   });
 
   it("handles an empty group", () => {
-    expect(showsInspectedBadge([], ALL_ON)).toBe(false);
+    expect(showsInspectedBadge([], ON)).toBe(false);
   });
 });

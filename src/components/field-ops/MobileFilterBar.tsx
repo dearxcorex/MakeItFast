@@ -3,6 +3,8 @@
 import { useEffect, useState } from "react";
 import {
   DEFAULT_FILTERS,
+  STATUS_LABEL,
+  TYPE_LABEL,
   type FieldFilters,
   type StatusFilter,
   type TypeFilter,
@@ -12,18 +14,6 @@ import { MobileFilterSheet } from "./MobileFilterSheet";
 const SS_KEY = "fo:filterSheetOpen";
 const TYPES: TypeFilter[] = ["ALL", "FM", "INT"];
 const STATUSES: StatusFilter[] = ["ALL", "PENDING", "INSPECTED"];
-
-const TYPE_LABEL: Record<TypeFilter, string> = {
-  ALL: "All",
-  FM: "FM",
-  INT: "INT",
-};
-
-const STATUS_LABEL: Record<StatusFilter, string> = {
-  ALL: "All",
-  PENDING: "Pending",
-  INSPECTED: "Inspected",
-};
 
 export function MobileFilterBar({
   filters,
@@ -123,8 +113,8 @@ export function MobileFilterBar({
             className="fo-mono"
             aria-label={
               advancedCount > 0
-                ? `More filters (${advancedCount} active)`
-                : "More filters"
+                ? `ตัวกรองเพิ่มเติม (ใช้อยู่ ${advancedCount})`
+                : "ตัวกรองเพิ่มเติม"
             }
             style={{
               display: "inline-flex",
@@ -142,7 +132,7 @@ export function MobileFilterBar({
             }}
           >
             <span aria-hidden>⇅</span>
-            <span>More{advancedCount > 0 ? ` · ${advancedCount}` : ""}</span>
+            <span>เพิ่มเติม{advancedCount > 0 ? ` · ${advancedCount}` : ""}</span>
           </button>
           {anyFilterActive && (
             <button
@@ -161,7 +151,7 @@ export function MobileFilterBar({
                 letterSpacing: "0.04em",
               }}
             >
-              Reset
+              ล้าง
             </button>
           )}
         </div>

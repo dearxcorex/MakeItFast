@@ -46,9 +46,9 @@ describe("CopyablePassword", () => {
       configurable: true,
     });
     render(<CopyablePassword value="Qw3!rtyUiop" />);
-    fireEvent.click(screen.getByRole("button", { name: "Copy" }));
+    fireEvent.click(screen.getByRole("button", { name: "คัดลอก" }));
     await waitFor(() =>
-      expect(screen.getByRole("button", { name: "Copied" })).toBeInTheDocument()
+      expect(screen.getByRole("button", { name: "คัดลอกแล้ว" })).toBeInTheDocument()
     );
     expect(writeText).toHaveBeenCalledWith("Qw3!rtyUiop");
   });
@@ -63,14 +63,14 @@ describe("CopyablePassword", () => {
       configurable: true,
     });
     render(<CopyablePassword value="Qw3!rtyUiop" />);
-    fireEvent.click(screen.getByRole("button", { name: "Copy" }));
+    fireEvent.click(screen.getByRole("button", { name: "คัดลอก" }));
     // A silent failure reads as "not clicked yet", so the admin pastes stale
     // clipboard contents and then dismisses the only copy of the password.
     await waitFor(() =>
       expect(screen.getByTestId("copy-failed")).toBeInTheDocument()
     );
-    expect(screen.getByRole("alert").textContent).toMatch(/by hand/i);
-    expect(screen.queryByRole("button", { name: "Copied" })).toBeNull();
+    expect(screen.getByRole("alert").textContent).toMatch(/คัดลอกเอง/);
+    expect(screen.queryByRole("button", { name: "คัดลอกแล้ว" })).toBeNull();
     expect(screen.getByTestId("handover-password").textContent).toBe(
       "Qw3!rtyUiop"
     );
@@ -84,13 +84,13 @@ describe("ResetPasswordModal", () => {
     );
     fireEvent.click(screen.getByTestId("generate-password"));
     // Generating reveals the field, so it is readable as a text input.
-    expect(screen.getByRole("button", { name: "Hide" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "ซ่อน" })).toBeInTheDocument();
     const pw = document.querySelector(
       'input[type="text"]'
     ) as HTMLInputElement | null;
     expect(pw?.value.length).toBeGreaterThanOrEqual(8);
     expect(
-      screen.getByRole("button", { name: "Reset" }).hasAttribute("disabled")
+      screen.getByRole("button", { name: "รีเซ็ต" }).hasAttribute("disabled")
     ).toBe(false);
   });
 
@@ -103,13 +103,13 @@ describe("ResetPasswordModal", () => {
     const generated = (
       document.querySelector('input[type="text"]') as HTMLInputElement
     ).value;
-    fireEvent.click(screen.getByRole("button", { name: "Reset" }));
+    fireEvent.click(screen.getByRole("button", { name: "รีเซ็ต" }));
     await waitFor(() =>
       expect(screen.getByTestId("handover-password").textContent).toBe(
         generated
       )
     );
-    expect(document.body.textContent).toContain("only time it is shown");
+    expect(document.body.textContent).toContain("แสดงเพียงครั้งนี้ครั้งเดียว");
   });
 
   it("does not close on its own — the admin must dismiss it", async () => {
@@ -119,12 +119,12 @@ describe("ResetPasswordModal", () => {
       <ResetPasswordModal user={target} onClose={() => {}} onDone={onDone} />
     );
     fireEvent.click(screen.getByTestId("generate-password"));
-    fireEvent.click(screen.getByRole("button", { name: "Reset" }));
+    fireEvent.click(screen.getByRole("button", { name: "รีเซ็ต" }));
     await waitFor(() =>
       expect(screen.getByTestId("handover-password")).toBeInTheDocument()
     );
     expect(onDone).not.toHaveBeenCalled();
-    fireEvent.click(screen.getByRole("button", { name: "Done" }));
+    fireEvent.click(screen.getByRole("button", { name: "เสร็จ" }));
     expect(onDone).toHaveBeenCalled();
   });
 
@@ -134,9 +134,9 @@ describe("ResetPasswordModal", () => {
       <ResetPasswordModal user={target} onClose={() => {}} onDone={() => {}} />
     );
     fireEvent.click(screen.getByTestId("generate-password"));
-    fireEvent.click(screen.getByRole("button", { name: "Reset" }));
+    fireEvent.click(screen.getByRole("button", { name: "รีเซ็ต" }));
     await waitFor(() =>
-      expect(screen.getByRole("alert").textContent).toMatch(/Failed/i)
+      expect(screen.getByRole("alert").textContent).toMatch(/ไม่สำเร็จ/)
     );
     expect(screen.queryByTestId("handover-password")).toBeNull();
   });
@@ -144,10 +144,10 @@ describe("ResetPasswordModal", () => {
 
 describe("CreateUserModal", () => {
   function fillForm() {
-    fireEvent.change(screen.getByLabelText(/Username/), {
+    fireEvent.change(screen.getByLabelText(/ชื่อผู้ใช้/), {
       target: { value: "carol" },
     });
-    fireEvent.change(screen.getByLabelText(/Display name/), {
+    fireEvent.change(screen.getByLabelText(/ชื่อที่แสดง/), {
       target: { value: "Carol" },
     });
     fireEvent.click(screen.getByTestId("generate-password"));
@@ -163,14 +163,14 @@ describe("CreateUserModal", () => {
     const generated = (
       document.querySelector('input[type="text"]') as HTMLInputElement
     ).value;
-    fireEvent.click(screen.getByRole("button", { name: "Create" }));
+    fireEvent.click(screen.getByRole("button", { name: "สร้าง" }));
     await waitFor(() =>
       expect(screen.getByTestId("handover-password").textContent).toBe(
         generated
       )
     );
     expect(onCreated).not.toHaveBeenCalled();
-    fireEvent.click(screen.getByRole("button", { name: "Done" }));
+    fireEvent.click(screen.getByRole("button", { name: "เสร็จ" }));
     expect(onCreated).toHaveBeenCalled();
   });
 
@@ -178,11 +178,11 @@ describe("CreateUserModal", () => {
     vi.stubGlobal("fetch", okFetch(409));
     render(<CreateUserModal onClose={() => {}} onCreated={() => {}} />);
     fillForm();
-    fireEvent.click(screen.getByRole("button", { name: "Create" }));
+    fireEvent.click(screen.getByRole("button", { name: "สร้าง" }));
     await waitFor(() =>
-      expect(screen.getByRole("alert").textContent).toMatch(/taken/i)
+      expect(screen.getByRole("alert").textContent).toMatch(/ถูกใช้แล้ว/)
     );
     expect(screen.queryByTestId("handover-password")).toBeNull();
-    expect(screen.getByRole("button", { name: "Create" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "สร้าง" })).toBeInTheDocument();
   });
 });
