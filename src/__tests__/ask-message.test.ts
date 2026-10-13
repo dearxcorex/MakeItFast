@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { buildAskMessage, askErrorMessage, truncate } from '@/utils/askMessage';
-import { BACKED_BAND, DISCLAIMER, FIELD_KIT, buildSystemPrompt } from '@/utils/askPrompt';
+import { BACKED_BAND, DISCLAIMER, FIELD_KIT, FM_RELEVANT_RANGE, buildSystemPrompt } from '@/utils/askPrompt';
 
 const result = (over: Partial<{ answer: string; toolsUsed: string[]; truncated: boolean }> = {}) => ({
   answer: 'ลองดูที่ย่าน 122 MHz ก่อน',
@@ -88,6 +88,19 @@ describe('buildSystemPrompt', () => {
   it('lists the direction-finding kit', () => {
     expect(prompt).toContain(FIELD_KIT);
     for (const model of ['HE300', 'HE400', 'DDF550']) expect(prompt).toContain(model);
+  });
+
+  it('keeps the FM tools to the range where FM stations can matter', () => {
+    expect(prompt).toContain(FM_RELEVANT_RANGE);
+    expect(prompt).toContain('ไม่ต้องพูดถึงฐานข้อมูล FM เลย');
+  });
+
+  it('caps web search to save tokens', () => {
+    expect(prompt).toContain('ไม่เกิน 1 ครั้งต่อคำถาม');
+  });
+
+  it('leaves the disclaimer to the embed builder instead of the model', () => {
+    expect(prompt).toContain('ระบบใส่ให้แล้ว');
   });
 
   it('frames the bot as a recommender, not an authority', () => {

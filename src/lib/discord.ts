@@ -3,11 +3,12 @@ import { createPublicKey, verify } from 'node:crypto';
 export const DISCORD_API = 'https://discord.com/api/v10';
 
 // https://discord.com/developers/docs/interactions/receiving-and-responding
-export const InteractionType = { PING: 1, APPLICATION_COMMAND: 2 } as const;
+export const InteractionType = { PING: 1, APPLICATION_COMMAND: 2, MESSAGE_COMPONENT: 3, MODAL_SUBMIT: 5 } as const;
 export const InteractionResponseType = {
   PONG: 1,
   CHANNEL_MESSAGE_WITH_SOURCE: 4,
   DEFERRED_CHANNEL_MESSAGE_WITH_SOURCE: 5,
+  MODAL: 9,
 } as const;
 export const EPHEMERAL = 1 << 6;
 // Posts without pushing a notification to members' phones.
@@ -27,7 +28,10 @@ export interface Interaction {
   /** Present for a guild command; `user` is only populated in DMs. */
   member?: { user?: { id?: string } };
   user?: { id?: string };
-  data?: { name: string; options?: InteractionOption[] };
+  /** `name` for a command; `custom_id` (and `components` for a modal) for a button or modal submit. */
+  data?: { name?: string; options?: InteractionOption[]; custom_id?: string; components?: unknown[] };
+  /** The message a button was pressed on. */
+  message?: { id: string };
 }
 
 /** The invoking user's id, wherever Discord happened to put it. */
@@ -39,6 +43,28 @@ export function interactionUserId(interaction: Interaction): string | undefined 
 export function stringOption(interaction: Interaction, name: string): string | undefined {
   const value = interaction.data?.options?.find((o) => o.name === name)?.value;
   return typeof value === 'string' && value.trim() ? value.trim() : undefined;
+}
+
+/**
+ * A text input's value from a modal submit. Walks the component tree, so it
+ * reads both the action-row layout and the newer label layout.
+ */
+export function modalTextValue(interaction: Interaction, customId: string): string | undefined {
+  const stack: unknown[] = [...(interaction.data?.components ?? [])];
+  while (stack.length) {
+    const node = stack.pop();
+    if (!node || typeof node !== 'object') continue;
+    const c = node as { custom_id?: unknown; value?: unknown; components?: unknown[]; component?: unknown };
+    if (c.custom_id === customId && typeof c.value === 'string') return c.value.trim() || undefined;
+    if (Array.isArray(c.components)) stack.push(...c.components);
+    if (c.component) stack.push(c.component);
+  }
+  return undefined;
+}
+
+/** Link that opens a message in the Discord client. */
+export function messageUrl(guildId: string, channelId: string, messageId: string): string {
+  return `https://discord.com/channels/${guildId}/${channelId}/${messageId}`;
 }
 
 /**
@@ -77,12 +103,15 @@ export function verifyDiscordSignature(
   }
 }
 
-/** Replace the deferred "thinking…" reply. No bot token needed: the interaction token authorises it. */
+/**
+ * Replace the deferred "thinking…" reply and return the message's id. No bot
+ * token needed: the interaction token authorises it.
+ */
 export async function editOriginalResponse(
   applicationId: string,
   interactionToken: string,
   body: object,
-): Promise<void> {
+): Promise<string> {
   const res = await fetch(
     `${DISCORD_API}/webhooks/${applicationId}/${interactionToken}/messages/@original`,
     {
@@ -94,6 +123,8 @@ export async function editOriginalResponse(
   if (!res.ok) {
     throw new Error(`Discord edit returned ${res.status}: ${await res.text()}`);
   }
+  const message = (await res.json()) as { id: string };
+  return message.id;
 }
 
 /** Post through a channel webhook and return the new message's id. */

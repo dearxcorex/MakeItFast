@@ -1,16 +1,14 @@
 // Thin client for DeepSeek, used by the /ask bot.
 //
-// Two endpoints, on purpose:
-//  - the Anthropic-compatible Messages API drives the tool loop, because its
-//    tool_use / tool_result shape is the one askAgent is written against;
-//  - the OpenAI-compatible Chat Completions API serves web search, because the
-//    server-side `web_search` tool is offered there.
+// Everything goes through the Anthropic-compatible Messages API: its
+// tool_use / tool_result shape is the one askAgent is written against, and it is
+// the only endpoint that offers the server-side `web_search` tool. The
+// OpenAI-compatible Chat Completions API rejects it (422, "expected `function`").
 //
 // Model ids are env-overridable: DeepSeek renames models faster than this repo
 // gets deployed, and a rename should be a Vercel env edit, not a code change.
 
 export const DEEPSEEK_ANTHROPIC_BASE = 'https://api.deepseek.com/anthropic';
-export const DEEPSEEK_OPENAI_BASE = 'https://api.deepseek.com';
 
 /** Routes tools and writes the final Thai answer. */
 export function routerModel(): string {
@@ -41,6 +39,7 @@ export interface ChatMessage {
 export interface MessageResponse {
   stop_reason: string | null;
   content: ContentBlock[];
+  usage?: { input_tokens: number; output_tokens: number };
 }
 
 export class DeepSeekError extends Error {}
@@ -95,47 +94,67 @@ export async function createMessage(
   return {
     stop_reason: json.stop_reason ?? null,
     content: Array.isArray(json.content) ? json.content : [],
+    ...(json.usage && { usage: json.usage }),
   };
 }
 
-interface SearchChoice {
-  message?: {
-    content?: string | null;
-    annotations?: Array<{ url_citation?: { url?: string; title?: string } }>;
-  };
+interface SearchBlock {
+  type: string;
+  text?: string;
+  content?: unknown;
+}
+
+/**
+ * Citation URLs out of the `web_search_tool_result` blocks. A failed search
+ * (e.g. max_uses_exceeded) carries an error object instead of a result list.
+ */
+function resultUrls(blocks: SearchBlock[]): string[] {
+  return blocks
+    .filter((b) => b.type === 'web_search_tool_result' && Array.isArray(b.content))
+    .flatMap((b) => b.content as Array<{ url?: unknown }>)
+    .map((r) => r.url)
+    .filter((u): u is string => typeof u === 'string' && u.length > 0);
+}
+
+/**
+ * The answer is the trailing run of text blocks. Earlier text blocks are the
+ * model narrating between searches ("Let me check another source").
+ */
+function finalText(blocks: SearchBlock[]): string {
+  const tail: string[] = [];
+  for (let i = blocks.length - 1; i >= 0; i--) {
+    const b = blocks[i];
+    if (b.type === 'thinking') continue;
+    if (b.type !== 'text') break;
+    tail.unshift(b.text ?? '');
+  }
+  return tail.join('').trim();
 }
 
 /**
  * One-shot web search. DeepSeek runs the search server-side and answers with
- * prose, so this returns text the agent can quote, plus whatever citation URLs
+ * prose, so this returns text the agent can quote, plus whatever result URLs
  * came back — the bot is expected to show its sources.
  */
-export async function searchWeb(query: string, timeoutMs = 25_000): Promise<string> {
+export async function searchWeb(query: string, timeoutMs = 30_000): Promise<string> {
   const json = (await postJson(
-    `${DEEPSEEK_OPENAI_BASE}/chat/completions`,
-    { Authorization: `Bearer ${apiKey()}` },
+    `${DEEPSEEK_ANTHROPIC_BASE}/v1/messages`,
+    { 'x-api-key': apiKey(), 'anthropic-version': '2023-06-01' },
     {
       model: searchModel(),
-      tools: [{ type: 'web_search' }],
-      messages: [
-        {
-          role: 'system',
-          content:
-            'Answer the search query factually and briefly. Prefer official regulator, ' +
-            'standards-body and equipment-manufacturer sources. Always state the source.',
-        },
-        { role: 'user', content: query },
-      ],
+      max_tokens: 1500,
+      tools: [{ type: 'web_search_20250305', name: 'web_search', max_uses: 3 }],
+      system:
+        'Answer the search query factually and briefly. Prefer official regulator, ' +
+        'standards-body and equipment-manufacturer sources. Always state the source.',
+      messages: [{ role: 'user', content: query }],
     },
     timeoutMs,
-  )) as { choices?: SearchChoice[] };
+  )) as { content?: SearchBlock[] };
 
-  const message = json.choices?.[0]?.message;
-  const text = message?.content?.trim() || '';
-  const urls = (message?.annotations ?? [])
-    .map((a) => a.url_citation?.url)
-    .filter((u): u is string => Boolean(u));
-  const unique = [...new Set(urls)].slice(0, 5);
+  const blocks = Array.isArray(json.content) ? json.content : [];
+  const text = finalText(blocks);
+  const unique = [...new Set(resultUrls(blocks))].slice(0, 5);
 
   if (!text && !unique.length) return 'ค้นหาไม่พบข้อมูล';
   return unique.length ? `${text}\n\nแหล่งอ้างอิง:\n${unique.map((u) => `- ${u}`).join('\n')}` : text;

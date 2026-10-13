@@ -20,11 +20,23 @@ vi.mock('@/lib/prisma', () => ({
 
 // The LLM loop has its own tests; here we only care that the route defers,
 // hands the question over, and formats whatever comes back.
-vi.mock('@/services/askAgent', () => ({ askAgent: vi.fn() }));
+vi.mock('@/services/askAgent', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('@/services/askAgent')>()),
+  askAgent: vi.fn(),
+}));
+
+// Thread memory is Upstash-backed; the store has its own tests.
+vi.mock('@/lib/askThread', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('@/lib/askThread')>()),
+  loadThread: vi.fn(),
+  saveThread: vi.fn(),
+  canFollowUp: vi.fn(() => false),
+}));
 
 import { NextRequest } from 'next/server';
 import prisma from '@/lib/prisma';
 import { askAgent } from '@/services/askAgent';
+import { canFollowUp, loadThread, saveThread, MAX_FOLLOW_UPS, type AskTurn } from '@/lib/askThread';
 import { __resetAskQuotaForTests } from '@/lib/askQuota';
 import { POST } from '@/app/api/discord/interactions/route';
 
@@ -67,7 +79,8 @@ const groups = [
   { province: 'นครราชสีมา', inspection_69: true, revoked: true, on_air: true, _count: { _all: 2 } },
   // nulls read as not revoked, off air, not inspected → grey
   { province: 'นครราชสีมา', inspection_69: null, revoked: null, on_air: null, _count: { _all: 6 } },
-  { province: 'นครราชสีมา', inspection_69: false, revoked: true, on_air: false, _count: { _all: 4 } },
+  // revoked with a permit → violet, counted apart from plain revoked
+  { province: 'นครราชสีมา', inspection_69: false, revoked: true, on_air: false, permit: 'หจก. ก', _count: { _all: 4 } },
   { province: 'นครราชสีมา', inspection_69: false, revoked: false, on_air: true, _count: { _all: 70 } },
   { province: 'ชัยภูมิ', inspection_69: false, revoked: false, on_air: true, _count: { _all: 10 } },
 ];
@@ -92,7 +105,16 @@ beforeEach(() => {
   process.env.DEEPSEEK_API_KEY = 'test-key';
   delete process.env.ASK_DAILY_LIMIT;
   __resetAskQuotaForTests();
-  vi.mocked(askAgent).mockResolvedValue({ answer: 'ลองสแกน 122 MHz', toolsUsed: ['scan_intermod'], truncated: false });
+  vi.mocked(askAgent).mockResolvedValue({
+    answer: 'ลองสแกน 122 MHz',
+    toolsUsed: ['scan_intermod'],
+    truncated: false,
+    calls: [],
+    rounds: 2,
+    ms: 1000,
+    deadlineHit: false,
+    usage: { inputTokens: 0, outputTokens: 0 },
+  });
 });
 
 afterEach(() => {
@@ -154,9 +176,9 @@ describe('POST /api/discord/interactions — /stat', () => {
     const { description, url: link } = body.embeds[0];
     expect(link).toBe('https://fm.example.com');
     expect(description).toContain('**นครราชสีมา** (144)');
-    expect(description).toContain('🟢 ตรวจแล้ว 58 · 🟡 ยังไม่ตรวจ 70 · ⚫ ไม่ออกอากาศ 10 · 🔴 เพิกถอน 6');
+    expect(description).toContain('🟢 ตรวจแล้ว 58 · 🟡 ยังไม่ตรวจ 70 · ⚫ ไม่ออกอากาศ 10 · 🔴 เพิกถอน 2 · 🟣 เพิกถอน (มีผู้รับรายใหม่) 4');
     expect(description).toContain('ความคืบหน้า ตรวจแล้ว 64/144 (44%)');
-    expect(description).toContain('รวม 154 — 🟢 58 · 🟡 80 · ⚫ 10 · 🔴 6');
+    expect(description).toContain('รวม 154 — 🟢 58 · 🟡 80 · ⚫ 10 · 🔴 2 · 🟣 4');
     expect(description).not.toContain('วันนี้');
   });
 
@@ -218,7 +240,8 @@ describe('POST /api/discord/interactions — /stat', () => {
   });
 
   it('rejects unsupported interaction types', async () => {
-    const res = await POST(signedReq({ type: 3, token: 't', guild_id: GUILD }));
+    // 4 = autocomplete; buttons (3) and modal submits (5) are served now.
+    const res = await POST(signedReq({ type: 4, token: 't', guild_id: GUILD }));
     expect(res.status).toBe(400);
   });
 });
@@ -247,11 +270,21 @@ describe('POST /api/discord/interactions — /ask', () => {
 
     await runAfter();
 
-    expect(askAgent).toHaveBeenCalledWith('ร้องเรียนคลื่นรบกวน 122.5 MHz มาจากอะไรได้บ้าง', expect.any(String));
+    expect(askAgent).toHaveBeenCalledWith('ร้องเรียนคลื่นรบกวน 122.5 MHz มาจากอะไรได้บ้าง', expect.any(String), { history: [] });
     const body = editedBody();
     expect(body.embeds[0].title).toContain('122.5 MHz');
     expect(body.embeds[0].description).toBe('ลองสแกน 122 MHz');
     expect(body.allowed_mentions).toEqual({ parse: [] });
+  });
+
+  it('logs one JSON trace line per answer', async () => {
+    const log = vi.spyOn(console, 'log').mockImplementation(() => {});
+    await POST(signedReq(askCommand));
+    await runAfter();
+    const lines = log.mock.calls.map((c) => String(c[0])).filter((l) => l.startsWith('{"event":"ask"'));
+    expect(lines).toHaveLength(1);
+    expect(JSON.parse(lines[0])).toMatchObject({ rounds: 2, ms: 1000, truncated: false, tools: [] });
+    log.mockRestore();
   });
 
   it('always stamps the recommendation disclaimer on the reply', async () => {
@@ -331,3 +364,123 @@ describe('POST /api/discord/interactions — channel allowlist', () => {
     expect((await res.json()).data.content).toBe('ไม่รู้จักคำสั่งนี้');
   });
 });
+
+describe('POST /api/discord/interactions — ถามต่อ follow-ups', () => {
+  const ASK_MESSAGE = '444444444444444444';
+  const turn: AskTurn = { question: 'ร้องเรียน 122.5 MHz', answer: 'ลองสแกน', tools: [{ name: 'scan_intermod', input: { targetFrequency: 122.5 } }] };
+
+  const button = {
+    type: 3,
+    token: 'button-token',
+    guild_id: GUILD,
+    channel_id: CHANNEL,
+    member: { user: { id: 'user-2' } },
+    message: { id: ASK_MESSAGE },
+    data: { custom_id: 'ask_followup', component_type: 2 },
+  };
+
+  const submit = (value: string, parent = ASK_MESSAGE) => ({
+    type: 5,
+    token: 'modal-token',
+    guild_id: GUILD,
+    channel_id: CHANNEL,
+    member: { user: { id: 'user-2' } },
+    data: {
+      custom_id: `ask_followup_modal:${parent}`,
+      components: [{ type: 1, components: [{ type: 4, custom_id: 'question', value }] }],
+    },
+  });
+
+  beforeEach(() => {
+    vi.mocked(canFollowUp).mockReturnValue(false);
+    fetchMock.mockImplementation(async () => new Response(JSON.stringify({ id: '555555555555555555' }), { status: 200 }));
+  });
+
+  it('offers the button on an /ask answer and saves the turn under the posted message', async () => {
+    vi.mocked(canFollowUp).mockReturnValue(true);
+    await POST(signedReq(askCommand));
+    await runAfter();
+
+    expect(editedBody().components[0].components[0]).toMatchObject({ custom_id: 'ask_followup', label: 'ถามต่อ' });
+    expect(saveThread).toHaveBeenCalledWith('555555555555555555', [
+      { question: 'ร้องเรียนคลื่นรบกวน 122.5 MHz มาจากอะไรได้บ้าง', answer: 'ลองสแกน 122 MHz', tools: [] },
+    ]);
+  });
+
+  it('shows no button and saves nothing when thread memory is unavailable', async () => {
+    await POST(signedReq(askCommand));
+    await runAfter();
+    expect(editedBody().components).toEqual([]);
+    expect(saveThread).not.toHaveBeenCalled();
+  });
+
+  it('opens a one-field modal tied to the answer the button was on', async () => {
+    vi.mocked(loadThread).mockResolvedValue([turn]);
+    const res = await (await POST(signedReq(button))).json();
+    expect(loadThread).toHaveBeenCalledWith(ASK_MESSAGE);
+    expect(res.type).toBe(9);
+    expect(res.data.custom_id).toBe(`ask_followup_modal:${ASK_MESSAGE}`);
+    expect(res.data.components[0].components[0]).toMatchObject({ type: 4, custom_id: 'question', required: true });
+  });
+
+  it('says privately that an expired thread is gone, instead of opening the modal', async () => {
+    vi.mocked(loadThread).mockResolvedValue(null);
+    const res = await (await POST(signedReq(button))).json();
+    expect(res.type).toBe(4);
+    expect(res.data.flags).toBe(64);
+    expect(res.data.content).toContain('หมดอายุ');
+  });
+
+  it('answers privately, not with a 500, when Redis is down', async () => {
+    vi.spyOn(console, 'error').mockImplementation(() => {});
+    vi.mocked(loadThread).mockRejectedValue(new Error('ECONNRESET'));
+    const res = await POST(signedReq(button));
+    expect(res.status).toBe(200);
+    expect((await res.json()).data.content).toContain('ไม่สำเร็จ');
+  });
+
+  it('refuses a follow-up once the chain is full', async () => {
+    vi.mocked(loadThread).mockResolvedValue(Array(MAX_FOLLOW_UPS + 1).fill(turn));
+    const res = await (await POST(signedReq(button))).json();
+    expect(res.data.content).toContain('ครบ');
+  });
+
+  it('answers a submitted follow-up with the earlier turns, a link back, and saves the longer chain', async () => {
+    vi.mocked(loadThread).mockResolvedValue([turn]);
+    vi.mocked(canFollowUp).mockReturnValue(true);
+
+    const res = await (await POST(signedReq(submit('แล้วคู่ที่ใกล้ที่สุดอยู่อำเภอไหน')))).json();
+    expect(res).toEqual({ type: 5 });
+    await runAfter();
+
+    expect(askAgent).toHaveBeenCalledWith('แล้วคู่ที่ใกล้ที่สุดอยู่อำเภอไหน', expect.any(String), { history: [turn] });
+    const body = editedBody();
+    expect(body.embeds[0].description).toContain(`https://discord.com/channels/${GUILD}/${CHANNEL}/${ASK_MESSAGE}`);
+    expect(fetchMock.mock.calls[0][0]).toContain('/modal-token/messages/@original');
+    expect(saveThread).toHaveBeenCalledWith('555555555555555555', [
+      turn,
+      { question: 'แล้วคู่ที่ใกล้ที่สุดอยู่อำเภอไหน', answer: 'ลองสแกน 122 MHz', tools: [] },
+    ]);
+  });
+
+  it('checks expiry before spending quota on a follow-up', async () => {
+    vi.mocked(loadThread).mockResolvedValue(null);
+    process.env.ASK_DAILY_LIMIT = '1';
+    try {
+      const expired = await (await POST(signedReq(submit('ต่อ')))).json();
+      expect(expired.data.content).toContain('หมดอายุ');
+
+      vi.mocked(loadThread).mockResolvedValue([turn]);
+      expect(await (await POST(signedReq(submit('ต่อ')))).json()).toEqual({ type: 5 });
+    } finally {
+      delete process.env.ASK_DAILY_LIMIT;
+    }
+  });
+
+  it('rejects a blank follow-up question', async () => {
+    const res = await (await POST(signedReq(submit('   ')))).json();
+    expect(res.data.content).toContain('พิมพ์คำถาม');
+    expect(loadThread).not.toHaveBeenCalled();
+  });
+});
+

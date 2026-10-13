@@ -7,15 +7,18 @@ import {
   channelAllowed,
   editOriginalResponse,
   interactionUserId,
+  messageUrl,
+  modalTextValue,
   stringOption,
   verifyDiscordSignature,
   type Interaction,
 } from '@/lib/discord';
 import { isDeepSeekConfigured } from '@/lib/deepseek';
 import { consumeAskQuota } from '@/lib/askQuota';
-import { askAgent } from '@/services/askAgent';
+import { MAX_FOLLOW_UPS, canFollowUp, loadThread, saveThread, type AskTurn } from '@/lib/askThread';
+import { askAgent, askTraceLine } from '@/services/askAgent';
 import { bangkokToday } from '@/utils/bangkokDate';
-import { askErrorMessage, buildAskMessage } from '@/utils/askMessage';
+import { FOLLOW_UP_BUTTON_ID, askErrorMessage, buildAskMessage } from '@/utils/askMessage';
 import { bucketForStation } from '@/utils/pinBucket';
 import { buildStatMessage, emptyBuckets, type ProvinceStat } from '@/utils/fmStat';
 
@@ -23,7 +26,14 @@ import { buildStatMessage, emptyBuckets, type ProvinceStat } from '@/utils/fmSta
 // reply, but the function itself has to live long enough to finish the loop.
 export const maxDuration = 60;
 
-// Discord posts every slash-command use here. There is no session: the Ed25519
+const FOLLOW_UP_MODAL_PREFIX = 'ask_followup_modal:';
+const FOLLOW_UP_INPUT_ID = 'question';
+const THREAD_EXPIRED = 'คำถามนี้หมดอายุแล้ว (เก็บไว้ 24 ชั่วโมง) ใช้ /ask เพื่อถามใหม่';
+const THREAD_FULL = `ถามต่อครบ ${MAX_FOLLOW_UPS} ครั้งแล้ว ใช้ /ask เพื่อเริ่มคำถามใหม่`;
+const THREAD_UNREACHABLE = 'ดึงบทสนทนาเดิมไม่สำเร็จ ลองใหม่อีกครั้ง หรือใช้ /ask';
+
+// Discord posts every slash-command use here, plus the "ถามต่อ" button press
+// and the follow-up modal it opens. There is no session: the Ed25519
 // signature is the auth, and only commands from DISCORD_GUILD_ID are served.
 export async function POST(request: NextRequest) {
   const publicKey = process.env.DISCORD_PUBLIC_KEY;
@@ -51,7 +61,8 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ type: InteractionResponseType.PONG });
   }
 
-  if (interaction.type !== InteractionType.APPLICATION_COMMAND) {
+  const served: number[] = [InteractionType.APPLICATION_COMMAND, InteractionType.MESSAGE_COMPONENT, InteractionType.MODAL_SUBMIT];
+  if (!served.includes(interaction.type)) {
     return NextResponse.json({ error: 'unsupported interaction type' }, { status: 400 });
   }
 
@@ -73,6 +84,9 @@ export async function POST(request: NextRequest) {
     console.error('DISCORD_APPLICATION_ID is not set; cannot answer slash commands');
     return ephemeral('บอทยังตั้งค่าไม่ครบ');
   }
+
+  if (interaction.type === InteractionType.MESSAGE_COMPONENT) return openFollowUp(interaction);
+  if (interaction.type === InteractionType.MODAL_SUBMIT) return startFollowUp(applicationId, guildId, interaction);
 
   switch (interaction.data?.name) {
     case 'stat':
@@ -98,38 +112,141 @@ function ephemeral(content: string) {
   });
 }
 
-async function startAsk(applicationId: string, interaction: Interaction) {
+/**
+ * The checks every question passes before it costs anything, /ask and
+ * follow-up alike. Refused before deferring, so the user sees the reason
+ * privately and the channel stays clean. Null means go ahead.
+ */
+async function askRefusal(interaction: Interaction) {
   if (!isDeepSeekConfigured()) {
     console.error('DEEPSEEK_API_KEY is not set; cannot answer /ask');
     return ephemeral('ยังไม่ได้ตั้งค่า DEEPSEEK_API_KEY บอทจึงตอบไม่ได้');
   }
-
-  const question = stringOption(interaction, 'question');
-  if (!question) return ephemeral('พิมพ์คำถามต่อท้ายคำสั่งด้วย');
-
-  // Refused before deferring, so the user sees the reason privately and the
-  // channel stays clean. Anonymous callers share one bucket rather than none.
+  // Anonymous callers share one bucket rather than none. A follow-up counts
+  // against whoever pressed the button, not whoever asked first.
   const quota = await consumeAskQuota(interactionUserId(interaction) ?? 'unknown', bangkokToday());
   if (!quota.allowed) {
     return ephemeral(`ใช้ครบโควตาวันนี้แล้ว (${quota.limit} ครั้ง/วัน) พรุ่งนี้เริ่มนับใหม่`);
   }
+  return null;
+}
 
-  after(() => answerAsk(applicationId, interaction.token, question));
+async function startAsk(applicationId: string, interaction: Interaction) {
+  const question = stringOption(interaction, 'question');
+  if (!question) return ephemeral('พิมพ์คำถามต่อท้ายคำสั่งด้วย');
+
+  const refusal = await askRefusal(interaction);
+  if (refusal) return refusal;
+
+  after(() => answerAsk(applicationId, interaction.token, question, []));
   return deferred();
 }
 
-async function answerAsk(applicationId: string, token: string, question: string): Promise<void> {
-  let body: object;
+/**
+ * The turns behind an answer, or the ephemeral reply to send instead. Redis
+ * failing must still get an answer inside Discord's 3 s, not a 500.
+ */
+async function threadOrRefusal(messageId: string): Promise<{ turns: AskTurn[] } | { refusal: NextResponse }> {
+  let turns: AskTurn[] | null;
   try {
-    body = buildAskMessage(question, await askAgent(question, bangkokToday()));
+    turns = await loadThread(messageId);
+  } catch (error) {
+    console.error('/ask thread load failed:', error);
+    return { refusal: ephemeral(THREAD_UNREACHABLE) };
+  }
+  if (!turns) return { refusal: ephemeral(THREAD_EXPIRED) };
+  if (turns.length > MAX_FOLLOW_UPS) return { refusal: ephemeral(THREAD_FULL) };
+  return { turns };
+}
+
+/** "ถามต่อ" pressed: open a one-field modal, if the thread behind that answer is still alive. */
+async function openFollowUp(interaction: Interaction) {
+  const messageId = interaction.message?.id;
+  if (interaction.data?.custom_id !== FOLLOW_UP_BUTTON_ID || !messageId) return ephemeral('ไม่รู้จักปุ่มนี้');
+
+  const thread = await threadOrRefusal(messageId);
+  if ('refusal' in thread) return thread.refusal;
+
+  return NextResponse.json({
+    type: InteractionResponseType.MODAL,
+    data: {
+      custom_id: `${FOLLOW_UP_MODAL_PREFIX}${messageId}`,
+      title: 'ถามต่อ',
+      components: [
+        {
+          type: 1,
+          components: [
+            {
+              type: 4,
+              custom_id: FOLLOW_UP_INPUT_ID,
+              style: 2,
+              label: 'คำถามต่อจากคำตอบนี้',
+              required: true,
+              max_length: 1000,
+            },
+          ],
+        },
+      ],
+    },
+  });
+}
+
+/** The follow-up modal was submitted: answer it with the earlier turns, as a new public message. */
+async function startFollowUp(applicationId: string, guildId: string, interaction: Interaction) {
+  const customId = interaction.data?.custom_id ?? '';
+  if (!customId.startsWith(FOLLOW_UP_MODAL_PREFIX)) return ephemeral('ไม่รู้จักฟอร์มนี้');
+  const parentId = customId.slice(FOLLOW_UP_MODAL_PREFIX.length);
+
+  const question = modalTextValue(interaction, FOLLOW_UP_INPUT_ID);
+  if (!question) return ephemeral('พิมพ์คำถามด้วย');
+
+  // Expiry is checked before the quota, so a dead thread costs nothing.
+  const thread = await threadOrRefusal(parentId);
+  if ('refusal' in thread) return thread.refusal;
+  const history = thread.turns;
+
+  const refusal = await askRefusal(interaction);
+  if (refusal) return refusal;
+
+  const parentUrl = interaction.channel_id ? messageUrl(guildId, interaction.channel_id, parentId) : undefined;
+  after(() => answerAsk(applicationId, interaction.token, question, history, parentUrl));
+  return deferred();
+}
+
+async function answerAsk(
+  applicationId: string,
+  token: string,
+  question: string,
+  history: AskTurn[],
+  parentUrl?: string,
+): Promise<void> {
+  let body: object;
+  let turns: AskTurn[] | null = null;
+  try {
+    const result = await askAgent(question, bangkokToday(), { history });
+    console.log(askTraceLine(question, result));
+    const chain = [...history, { question, answer: result.answer, tools: result.calls.map(({ name, input }) => ({ name, input })) }];
+    const followUp = canFollowUp(chain.length);
+    if (followUp) turns = chain;
+    body = buildAskMessage(question, result, { followUp, parentUrl });
   } catch (error) {
     console.error('/ask failed:', error);
     body = askErrorMessage('ตอบคำถามไม่สำเร็จ ลองใหม่อีกครั้ง');
   }
+
+  let messageId: string;
   try {
-    await editOriginalResponse(applicationId, token, body);
+    messageId = await editOriginalResponse(applicationId, token, body);
   } catch (error) {
     console.error('/ask reply failed:', error);
+    return;
+  }
+  if (!turns) return;
+  try {
+    await saveThread(messageId, turns);
+  } catch (error) {
+    // The answer is already up; its button will just report the thread as expired.
+    console.error('/ask thread save failed:', error);
   }
 }
 
@@ -150,17 +267,23 @@ async function answerStat(applicationId: string, token: string): Promise<void> {
 
 // Nulls are read the way convertToFMStation reads them, so each station lands
 // in the same bucket as its pin on the map.
-function stationBucket(s: { on_air: boolean | null; revoked: boolean | null; inspection_69: boolean | null }) {
+function stationBucket(s: {
+  on_air: boolean | null;
+  revoked: boolean | null;
+  inspection_69: boolean | null;
+  permit: string | null;
+}) {
   return bucketForStation({
     onAir: s.on_air || false,
     revoked: s.revoked === true,
     inspection69: s.inspection_69 ? 'ตรวจแล้ว' : 'ยังไม่ตรวจ',
+    permit: s.permit ?? undefined,
   });
 }
 
 async function loadProvinceStats(): Promise<ProvinceStat[]> {
   const groups = await prisma.fm_station.groupBy({
-    by: ['province', 'inspection_69', 'revoked', 'on_air'],
+    by: ['province', 'inspection_69', 'revoked', 'on_air', 'permit'],
     _count: { _all: true },
   });
   const byProvince = new Map<string, ProvinceStat>();

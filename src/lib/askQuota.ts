@@ -1,4 +1,4 @@
-import { Redis } from '@upstash/redis';
+import { redis } from '@/lib/redis';
 
 // Per-user daily cap on /ask. Unlike /stat, every call costs money at DeepSeek,
 // and a slash command is trivially repeatable — the cap is the spend limit.
@@ -12,11 +12,6 @@ const KEY_PREFIX = 'ask_quota:';
 // A day key is dead 24 h after it is written; 26 h covers the timezone offset.
 const TTL_SECONDS = 26 * 60 * 60;
 const DEFAULT_LIMIT = 30;
-
-const upstashUrl = process.env.UPSTASH_REDIS_REST_URL;
-const upstashToken = process.env.UPSTASH_REDIS_REST_TOKEN;
-
-const redis = upstashUrl && upstashToken ? new Redis({ url: upstashUrl, token: upstashToken }) : null;
 
 const fallback = new Map<string, number>();
 

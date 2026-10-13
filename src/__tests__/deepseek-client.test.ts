@@ -101,34 +101,51 @@ describe('createMessage', () => {
 });
 
 describe('searchWeb', () => {
-  it('asks the OpenAI-compatible endpoint with the server-side search tool', async () => {
-    fetchMock.mockResolvedValue(jsonResponse({ choices: [{ message: { content: 'found it' } }] }));
+  it('asks the Anthropic-compatible endpoint with the server-side search tool', async () => {
+    fetchMock.mockResolvedValue(jsonResponse({ content: [{ type: 'text', text: 'found it' }] }));
     const out = await searchWeb('Thailand 145 MHz allocation');
 
     const { url, headers, body } = lastCall();
-    expect(url).toBe('https://api.deepseek.com/chat/completions');
-    expect(headers.Authorization).toBe('Bearer sk-test');
+    // Chat Completions rejects a web_search tool with a 422; only this endpoint takes it.
+    expect(url).toBe('https://api.deepseek.com/anthropic/v1/messages');
+    expect(headers['x-api-key']).toBe('sk-test');
     expect(body.model).toBe('deepseek-v4-flash');
-    expect(body.tools).toEqual([{ type: 'web_search' }]);
-    expect(body.messages.at(-1)).toEqual({ role: 'user', content: 'Thailand 145 MHz allocation' });
+    expect(body.tools).toEqual([{ type: 'web_search_20250305', name: 'web_search', max_uses: 3 }]);
+    expect(body.messages).toEqual([{ role: 'user', content: 'Thailand 145 MHz allocation' }]);
     expect(out).toBe('found it');
   });
 
-  it('appends citation URLs, deduplicated', async () => {
+  it('keeps only the final answer, not the narration between searches', async () => {
     fetchMock.mockResolvedValue(
       jsonResponse({
-        choices: [
+        content: [
+          { type: 'thinking', thinking: 'hmm' },
+          { type: 'text', text: 'Let me look.' },
+          { type: 'server_tool_use', id: 's1', name: 'web_search', input: { query: 'q' } },
+          { type: 'web_search_tool_result', tool_use_id: 's1', content: [] },
+          { type: 'thinking', thinking: 'ok' },
+          { type: 'text', text: 'The band is ' },
+          { type: 'text', text: 'land mobile.' },
+        ],
+      }),
+    );
+    expect(await searchWeb('q')).toBe('The band is land mobile.');
+  });
+
+  it('appends result URLs, deduplicated, and skips a failed search', async () => {
+    fetchMock.mockResolvedValue(
+      jsonResponse({
+        content: [
           {
-            message: {
-              content: 'answer',
-              annotations: [
-                { url_citation: { url: 'https://nbtc.go.th/a' } },
-                { url_citation: { url: 'https://nbtc.go.th/a' } },
-                { url_citation: { url: 'https://itu.int/b' } },
-                { somethingElse: true },
-              ],
-            },
+            type: 'web_search_tool_result',
+            content: [
+              { type: 'web_search_result', url: 'https://nbtc.go.th/a' },
+              { type: 'web_search_result', url: 'https://nbtc.go.th/a' },
+            ],
           },
+          { type: 'web_search_tool_result', content: [{ type: 'web_search_result', url: 'https://itu.int/b' }] },
+          { type: 'web_search_tool_result', content: { type: 'web_search_tool_result_error', error_code: 'max_uses_exceeded' } },
+          { type: 'text', text: 'answer' },
         ],
       }),
     );
@@ -139,11 +156,11 @@ describe('searchWeb', () => {
   });
 
   it('says it found nothing rather than returning an empty string', async () => {
-    fetchMock.mockResolvedValue(jsonResponse({ choices: [{ message: { content: '' } }] }));
+    fetchMock.mockResolvedValue(jsonResponse({ content: [{ type: 'text', text: '' }] }));
     expect(await searchWeb('q')).toBe('ค้นหาไม่พบข้อมูล');
   });
 
-  it('handles a response with no choices at all', async () => {
+  it('handles a response with no content at all', async () => {
     fetchMock.mockResolvedValue(jsonResponse({}));
     expect(await searchWeb('q')).toBe('ค้นหาไม่พบข้อมูล');
   });
