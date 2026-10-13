@@ -100,3 +100,18 @@ export function showsInspectedBadge(
   if (bucketForStation(group[0]) !== "offair" || !gates.offAir) return false;
   return group.every((s) => s.inspection69 === "ตรวจแล้ว");
 }
+
+/**
+ * Does this stack hold both inspected and uninspected stations?
+ *
+ * One pin stands for every station at its coordinates but draws only the
+ * head's bucket, and the head sorts inspected-first — so a green tick can sit
+ * on top of a station nobody has visited. The mixed badge flags exactly that.
+ * Unlike the inspected badge it is never filter-gated: it reports open work.
+ */
+export function hasMixedInspection(
+  group: Pick<FMStation, "inspection69">[]
+): boolean {
+  const inspected = group.filter((s) => s.inspection69 === "ตรวจแล้ว").length;
+  return inspected > 0 && inspected < group.length;
+}

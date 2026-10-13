@@ -4,6 +4,7 @@ import {
   bucketForSite,
   isRelicensed,
   showsInspectedBadge,
+  hasMixedInspection,
   NO_INSPECTED_BADGES,
 } from "@/utils/pinBucket";
 import type { FMStation } from "@/types/station";
@@ -155,5 +156,22 @@ describe("showsInspectedBadge", () => {
 
   it("handles an empty group", () => {
     expect(showsInspectedBadge([], ON)).toBe(false);
+  });
+});
+
+describe("hasMixedInspection", () => {
+  const done = makeFM({ inspection69: "ตรวจแล้ว" });
+  const open = makeFM({ id: 2 });
+
+  it("is true only when a stack holds both inspected and uninspected stations", () => {
+    expect(hasMixedInspection([done, open])).toBe(true);
+    expect(hasMixedInspection([open, done, makeFM({ id: 3 })])).toBe(true);
+  });
+
+  it("is false when the stack agrees, for a lone station and for an empty group", () => {
+    expect(hasMixedInspection([done, makeFM({ id: 2, inspection69: "ตรวจแล้ว" })])).toBe(false);
+    expect(hasMixedInspection([open, makeFM({ id: 3 })])).toBe(false);
+    expect(hasMixedInspection([done])).toBe(false);
+    expect(hasMixedInspection([])).toBe(false);
   });
 });

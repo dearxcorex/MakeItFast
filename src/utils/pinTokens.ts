@@ -89,6 +89,12 @@ export const BADGE_LAW = "#e6ecf0";
 export const BADGE_INSPECTED = PIN_COLORS.inspected;
 
 /**
+ * Badge: a stack where some stations are inspected and some are not. The
+ * pending amber, so "amber = still to inspect" holds everywhere.
+ */
+export const BADGE_MIXED = PIN_COLORS.pending;
+
+/**
  * Cell Sites map: pin, cluster-ring and chip colour per operator. A separate
  * tab from Field Ops, so these never share a map with the bucket colours
  * above — green here is AWN, not "inspected".

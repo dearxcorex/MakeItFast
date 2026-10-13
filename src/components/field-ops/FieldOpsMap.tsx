@@ -15,12 +15,14 @@ import {
   bucketForStation,
   bucketForSite,
   showsInspectedBadge,
+  hasMixedInspection,
   NO_INSPECTED_BADGES,
 } from "@/utils/pinBucket";
 import {
   BADGE_INSPECTED,
   BADGE_LAW,
   BADGE_MAIN,
+  BADGE_MIXED,
   PIN_COLORS,
   PIN_GLYPHS,
   PIN_INK,
@@ -59,12 +61,16 @@ function isMainStation(s: FMStation): boolean {
  *    `showsInspectedBadge`. All three badges
  *    can appear at once; they are three independent facts, and suppressing one
  *    to save room would make the pin lie.
+ *  - PARTLY INSPECTED: amber "!", lower-right. A stack where some stations
+ *    are inspected and some are not — see `hasMixedInspection`. Shares the
+ *    corner with the inspected badge; the two can never both be true.
  */
 function fmIcon(
   station: FMStation,
   selected: boolean,
   stackCount: number,
-  inspectedBadge: boolean
+  inspectedBadge: boolean,
+  mixedBadge: boolean
 ) {
   const bucket = bucketForStation(station);
   const main = isMainStation(station);
@@ -109,6 +115,15 @@ function fmIcon(
        </g>`
     : "";
 
+  // Same corner as the inspected badge — that one needs every station in the
+  // stack inspected, this one needs at least one that is not.
+  const mixedBadgeMark = mixedBadge
+    ? `<g transform="translate(16, 13)">
+         <circle cx="6" cy="6" r="6" fill="${BADGE_MIXED}" stroke="${PIN_STROKE}" stroke-width="1.2"/>
+         <path d="M6 2.8 L6 6.8 M6 9 L6 9.3" stroke="${PIN_INK}" stroke-width="1.8" stroke-linecap="round"/>
+       </g>`
+    : "";
+
   const html = `<div style="position:relative;width:${wrapW}px;height:${wrapH}px;transition:all 120ms ease;">
     <svg width="${wrapW}" height="${wrapH}" viewBox="-7 -3 ${24 + 14} ${32 + 6}" style="position:absolute;left:0;top:0;overflow:visible;">
       ${haloRing}
@@ -117,11 +132,12 @@ function fmIcon(
       ${starBadge}
       ${stackBadge}
       ${inspectedBadgeMark}
+      ${mixedBadgeMark}
     </svg>
   </div>`;
 
   return L.divIcon({
-    className: `fo-marker fo-marker--fm fo-bucket--${bucket} ${main ? "is-main" : ""} ${selected ? "is-selected" : ""} ${inspectedBadge ? "is-inspected-badge" : ""}`,
+    className: `fo-marker fo-marker--fm fo-bucket--${bucket} ${main ? "is-main" : ""} ${selected ? "is-selected" : ""} ${inspectedBadge ? "is-inspected-badge" : ""} ${mixedBadge ? "is-mixed-inspection" : ""}`,
     html,
     iconSize: [wrapW, wrapH],
     iconAnchor: [wrapW / 2, wrapH - 3],
@@ -563,11 +579,12 @@ export function FieldOpsMap({
         // and on siblings, neither of which appears anywhere else in it, so
         // without it a cached pin survives an OFF AIR toggle and renders stale.
         const inspectedBadge = showsInspectedBadge(group, inspectedBadges);
-        const cacheKey = `${head.id}-${isSelected}-${head.inspection69}-${head.onAir}-${bucketForStation(head)}-${isMainStation(head) ? "M" : "x"}-${stackCount}-${inspectedBadge ? "I" : "x"}`;
+        const mixedBadge = hasMixedInspection(group);
+        const cacheKey = `${head.id}-${isSelected}-${head.inspection69}-${head.onAir}-${bucketForStation(head)}-${isMainStation(head) ? "M" : "x"}-${stackCount}-${inspectedBadge ? "I" : "x"}-${mixedBadge ? "P" : "x"}`;
         if (!fmIconCache.current.has(cacheKey)) {
           fmIconCache.current.set(
             cacheKey,
-            fmIcon(head, isSelected, stackCount, inspectedBadge)
+            fmIcon(head, isSelected, stackCount, inspectedBadge, mixedBadge)
           );
         }
         return (

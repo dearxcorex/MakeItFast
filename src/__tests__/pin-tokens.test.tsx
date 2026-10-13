@@ -7,6 +7,7 @@ import {
   BADGE_MAIN,
   BADGE_LAW,
   BADGE_INSPECTED,
+  BADGE_MIXED,
   PIN_SELECTION,
 } from "@/utils/pinTokens";
 import type { InspectedBadgeGates, PinBucket } from "@/utils/pinBucket";
@@ -215,6 +216,43 @@ describe("pin tokens — the inspected badge is gated by the OFF AIR chip", () =
     const [pin] = draw([station], [], OFFAIR_ON);
     expect(pin.html).toContain(BADGE_MAIN);
     expect(pin.html).toContain(BADGE_INSPECTED);
+  });
+});
+
+describe("pin tokens — a partly inspected stack is flagged", () => {
+  it("a green head with an uninspected station beneath it gains the amber alert", () => {
+    const [pin] = draw([
+      makeFM({ id: 1, inspection69: "ตรวจแล้ว" }),
+      makeFM({ id: 2 }),
+    ]);
+    expect(bodyFill(pin.html)).toBe(PIN_COLORS.inspected);
+    expect(pin.className).toContain("is-mixed-inspection");
+    expect(pin.html).toContain(BADGE_MIXED);
+  });
+
+  it("a stack that agrees wears no alert", () => {
+    const [done] = draw([
+      makeFM({ id: 1, inspection69: "ตรวจแล้ว" }),
+      makeFM({ id: 2, inspection69: "ตรวจแล้ว" }),
+    ]);
+    expect(done.className).not.toContain("is-mixed-inspection");
+    expect(done.html).not.toContain(BADGE_MIXED);
+
+    const [open] = draw([makeFM({ id: 1 }), makeFM({ id: 2 })]);
+    expect(open.className).not.toContain("is-mixed-inspection");
+  });
+
+  it("never shares a pin with the inspected badge", () => {
+    const [pin] = draw(
+      [
+        makeFM({ id: 1, onAir: false, inspection69: "ตรวจแล้ว" }),
+        makeFM({ id: 2, onAir: false }),
+      ],
+      [],
+      { offAir: true }
+    );
+    expect(pin.className).toContain("is-mixed-inspection");
+    expect(pin.className).not.toContain("is-inspected-badge");
   });
 });
 

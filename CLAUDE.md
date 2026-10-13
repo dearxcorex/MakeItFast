@@ -65,7 +65,7 @@ FM radio station tracker for NBTC (Thailand), built with Next.js 15, TypeScript,
 ## Testing
 
 - Vitest with jsdom environment, `@testing-library/react` for components
-- Tests in `src/__tests__/`, 799 tests across 87 files
+- Tests in `src/__tests__/`, 804 tests across 87 files
 - Leaflet requires mocking: `vi.mock('leaflet')` and `vi.mock('react-leaflet')` with divIcon/icon stubs
 - CSS stub at `src/__tests__/css-stub.js` handles `leaflet/dist/leaflet.css` imports (aliased in `vitest.config.ts`)
 - API route tests mock Prisma via `vi.mock('@/lib/prisma')` with method stubs (findMany, findFirst, etc.)
