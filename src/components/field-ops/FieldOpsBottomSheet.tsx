@@ -828,7 +828,7 @@ function CoLocatedStrip({
                   width: 6,
                   height: 6,
                   borderRadius: 999,
-                  background: inspected ? "var(--fo-accent-2)" : "var(--fo-accent)",
+                  background: inspected ? "var(--fo-accent-2)" : "var(--fo-warn)",
                   flexShrink: 0,
                 }}
               />
@@ -841,6 +841,9 @@ function CoLocatedStrip({
               >
                 {label}
               </span>
+              {!inspected && (
+                <span style={{ color: "var(--fo-warn)", flexShrink: 0 }}>ยังไม่ตรวจ</span>
+              )}
             </button>
           );
         })}

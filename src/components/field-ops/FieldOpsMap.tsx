@@ -10,19 +10,20 @@ import "leaflet.markercluster/dist/MarkerCluster.Default.css";
 import type { FMStation, UserLocation } from "@/types/station";
 import type { InterferenceSite } from "@/types/interference";
 import { makeClusterIcon } from "@/utils/clusterIcon";
-import type { InspectedBadgeGates, PinBucket } from "@/utils/pinBucket";
+import type { CornerBadge, InspectedBadgeGates, PinBucket } from "@/utils/pinBucket";
 import {
   bucketForStation,
   bucketForSite,
-  showsInspectedBadge,
-  hasMixedInspection,
+  cornerBadgeFor,
   NO_INSPECTED_BADGES,
 } from "@/utils/pinBucket";
+import { coordKey } from "@/utils/coordKey";
 import {
   BADGE_INSPECTED,
   BADGE_LAW,
   BADGE_MAIN,
-  BADGE_MIXED,
+  BADGE_PARTLY_GLYPH,
+  BADGE_PARTLY_TITLE,
   PIN_COLORS,
   PIN_GLYPHS,
   PIN_INK,
@@ -56,21 +57,20 @@ function isMainStation(s: FMStation): boolean {
  * *is*, not what state it is in:
  *  - MAIN STATION (สถานีหลัก): gold star, upper-right
  *  - STACKED (multiple stations at the same coords): "+N", upper-left
- *  - ALREADY INSPECTED: green check, lower-right. Only ever appears on
- *    off-air pins and only while the OFF AIR filter chip is on — see
- *    `showsInspectedBadge`. All three badges
- *    can appear at once; they are three independent facts, and suppressing one
- *    to save room would make the pin lie.
- *  - PARTLY INSPECTED: amber "!", lower-right. A stack where some stations
- *    are inspected and some are not — see `hasMixedInspection`. Shares the
- *    corner with the inspected badge; the two can never both be true.
+ *  - LOWER-RIGHT CORNER, one of two — `cornerBadgeFor` picks:
+ *    - ALREADY INSPECTED: green check. Only ever appears on off-air pins and
+ *      only while the OFF AIR filter chip is on.
+ *    - PARTLY INSPECTED: green/amber split disc. Some stations at these
+ *      coordinates are inspected and some are not.
+ *
+ * The star, "+N" and the corner badge can all appear at once; they are
+ * independent facts, and suppressing one to save room would make the pin lie.
  */
 function fmIcon(
   station: FMStation,
   selected: boolean,
   stackCount: number,
-  inspectedBadge: boolean,
-  mixedBadge: boolean
+  cornerBadge: CornerBadge
 ) {
   const bucket = bucketForStation(station);
   const main = isMainStation(station);
@@ -108,21 +108,22 @@ function fmIcon(
 
   // Lower-right: the only free corner (star owns upper-right, "+N" upper-left).
   // White keyline so the dark green disc survives the grey off-air body.
-  const inspectedBadgeMark = inspectedBadge
-    ? `<g transform="translate(16, 13)">
-         <circle cx="6" cy="6" r="6" fill="${BADGE_INSPECTED}" stroke="${PIN_STROKE}" stroke-width="1.2"/>
-         <path d="M3.2 6.2 l2 2 l3.6 -3.8" stroke="${PIN_STROKE}" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
-       </g>`
+  const cornerBadgeGlyph =
+    cornerBadge === "inspected"
+      ? `<circle cx="6" cy="6" r="6" fill="${BADGE_INSPECTED}" stroke="${PIN_STROKE}" stroke-width="1.2"/>
+         <path d="M3.2 6.2 l2 2 l3.6 -3.8" stroke="${PIN_STROKE}" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" fill="none"/>`
+      : cornerBadge === "partlyInspected"
+        ? `<title>${BADGE_PARTLY_TITLE}</title>${BADGE_PARTLY_GLYPH}`
+        : "";
+  const cornerBadgeMark = cornerBadgeGlyph
+    ? `<g transform="translate(16, 13)">${cornerBadgeGlyph}</g>`
     : "";
-
-  // Same corner as the inspected badge — that one needs every station in the
-  // stack inspected, this one needs at least one that is not.
-  const mixedBadgeMark = mixedBadge
-    ? `<g transform="translate(16, 13)">
-         <circle cx="6" cy="6" r="6" fill="${BADGE_MIXED}" stroke="${PIN_STROKE}" stroke-width="1.2"/>
-         <path d="M6 2.8 L6 6.8 M6 9 L6 9.3" stroke="${PIN_INK}" stroke-width="1.8" stroke-linecap="round"/>
-       </g>`
-    : "";
+  const cornerBadgeClass =
+    cornerBadge === "inspected"
+      ? "is-inspected-badge"
+      : cornerBadge === "partlyInspected"
+        ? "is-partly-inspected-badge"
+        : "";
 
   const html = `<div style="position:relative;width:${wrapW}px;height:${wrapH}px;transition:all 120ms ease;">
     <svg width="${wrapW}" height="${wrapH}" viewBox="-7 -3 ${24 + 14} ${32 + 6}" style="position:absolute;left:0;top:0;overflow:visible;">
@@ -131,13 +132,12 @@ function fmIcon(
       ${innerGlyph}
       ${starBadge}
       ${stackBadge}
-      ${inspectedBadgeMark}
-      ${mixedBadgeMark}
+      ${cornerBadgeMark}
     </svg>
   </div>`;
 
   return L.divIcon({
-    className: `fo-marker fo-marker--fm fo-bucket--${bucket} ${main ? "is-main" : ""} ${selected ? "is-selected" : ""} ${inspectedBadge ? "is-inspected-badge" : ""} ${mixedBadge ? "is-mixed-inspection" : ""}`,
+    className: `fo-marker fo-marker--fm fo-bucket--${bucket} ${main ? "is-main" : ""} ${selected ? "is-selected" : ""} ${cornerBadgeClass}`,
     html,
     iconSize: [wrapW, wrapH],
     iconAnchor: [wrapW / 2, wrapH - 3],
@@ -379,6 +379,7 @@ export function RecenterButton({ location }: { location: UserLocation }) {
 
 export function FieldOpsMap({
   stations,
+  allStations = stations,
   interference,
   selection,
   onSelect,
@@ -390,6 +391,12 @@ export function FieldOpsMap({
   inspectedBadges = NO_INSPECTED_BADGES,
 }: {
   stations: FMStation[];
+  /**
+   * Every FM station, ignoring the filter chips. Only used to judge a stack
+   * as a whole — the partly-inspected badge and the selection halo — so a
+   * filter that hides one sibling cannot make the pin lie about the rest.
+   */
+  allStations?: FMStation[];
   interference: InterferenceSite[];
   selection: FieldSelection;
   onSelect: (sel: FieldSelection) => void;
@@ -438,7 +445,7 @@ export function FieldOpsMap({
   const fmGroups = useMemo(() => {
     const groups = new Map<string, FMStation[]>();
     for (const s of fmMarkers) {
-      const key = `${s.latitude.toFixed(5)},${s.longitude.toFixed(5)}`;
+      const key = coordKey(s.latitude, s.longitude);
       const arr = groups.get(key);
       if (arr) arr.push(s);
       else groups.set(key, [s]);
@@ -458,15 +465,26 @@ export function FieldOpsMap({
     return groups;
   }, [fmMarkers]);
 
+  // Every station at each coordinate, filtered out or not.
+  const fmStacks = useMemo(() => {
+    const stacks = new Map<string, FMStation[]>();
+    for (const s of allStations) {
+      if (!Number.isFinite(s.latitude) || !Number.isFinite(s.longitude)) continue;
+      const key = coordKey(s.latitude, s.longitude);
+      const arr = stacks.get(key);
+      if (arr) arr.push(s);
+      else stacks.set(key, [s]);
+    }
+    return stacks;
+  }, [allStations]);
+
   // Group INT rows by identical coordinates — multi-sector cellsites have
   // separate rows per sector at the same lat/long, which would otherwise stack
   // as overlapping pins.
   const intGroups = useMemo(() => {
     const groups = new Map<string, InterferenceSite[]>();
     for (const s of intMarkers) {
-      const lat = (s.lat as number).toFixed(5);
-      const lng = (s.long as number).toFixed(5);
-      const key = `${lat},${lng}`;
+      const key = coordKey(s.lat as number, s.long as number);
       const arr = groups.get(key);
       if (arr) arr.push(s);
       else groups.set(key, [s]);
@@ -560,31 +578,35 @@ export function FieldOpsMap({
           getAllChildMarkers: () => Array<{ options: { icon?: { options?: { className?: string } } } }>;
         }) => {
           const buckets: Partial<Record<PinBucket, number>> = {};
+          let partlyInspected = false;
           for (const m of c.getAllChildMarkers()) {
             const cn = m.options.icon?.options?.className ?? "";
+            if (cn.includes("is-partly-inspected-badge")) partlyInspected = true;
             const match = cn.match(/fo-bucket--(\w+)/);
             if (match && match[1] in PIN_COLORS) {
               const b = match[1] as PinBucket;
               buckets[b] = (buckets[b] ?? 0) + 1;
             }
           }
-          return makeClusterIcon(c.getChildCount(), buckets);
+          return makeClusterIcon(c.getChildCount(), buckets, partlyInspected);
         }}
       >
       {Array.from(fmGroups.entries()).map(([coordKey, group]) => {
         const head = group[0];
         const stackCount = group.length;
-        const isSelected = selection?.kind === "fm" && group.some((s) => s.id === selection.id);
-        // `inspectedBadge` belongs in the key: it depends on the filter chips
+        const stack = fmStacks.get(coordKey) ?? group;
+        // The stack, not the group: selecting a sibling the filters hid still
+        // halos the pin that stands for it.
+        const isSelected = selection?.kind === "fm" && stack.some((s) => s.id === selection.id);
+        // `cornerBadge` belongs in the key: it depends on the filter chips
         // and on siblings, neither of which appears anywhere else in it, so
         // without it a cached pin survives an OFF AIR toggle and renders stale.
-        const inspectedBadge = showsInspectedBadge(group, inspectedBadges);
-        const mixedBadge = hasMixedInspection(group);
-        const cacheKey = `${head.id}-${isSelected}-${head.inspection69}-${head.onAir}-${bucketForStation(head)}-${isMainStation(head) ? "M" : "x"}-${stackCount}-${inspectedBadge ? "I" : "x"}-${mixedBadge ? "P" : "x"}`;
+        const cornerBadge = cornerBadgeFor(group, stack, inspectedBadges);
+        const cacheKey = `${head.id}-${isSelected}-${head.inspection69}-${head.onAir}-${bucketForStation(head)}-${isMainStation(head) ? "M" : "x"}-${stackCount}-${cornerBadge ?? "x"}`;
         if (!fmIconCache.current.has(cacheKey)) {
           fmIconCache.current.set(
             cacheKey,
-            fmIcon(head, isSelected, stackCount, inspectedBadge, mixedBadge)
+            fmIcon(head, isSelected, stackCount, cornerBadge)
           );
         }
         return (

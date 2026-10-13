@@ -89,10 +89,23 @@ export const BADGE_LAW = "#e6ecf0";
 export const BADGE_INSPECTED = PIN_COLORS.inspected;
 
 /**
- * Badge: a stack where some stations are inspected and some are not. The
- * pending amber, so "amber = still to inspect" holds everywhere.
+ * Badge: a stack where some stations are inspected and some are not. A disc
+ * split down the middle, inspected green beside pending amber, so both
+ * colours keep the meaning they have everywhere else and one half always
+ * contrasts with the pin body, whatever bucket the head is in. Deliberately
+ * not an amber "!" — that pairing was retired from the pending pin because it
+ * is one hue away from the critical red "!".
  */
-export const BADGE_MIXED = PIN_COLORS.pending;
+export const BADGE_PARTLY = {
+  inspected: PIN_COLORS.inspected,
+  pending: PIN_COLORS.pending,
+} as const;
+
+/** The partly-inspected disc, drawn in a 12x12 box. Shared by pins and clusters. */
+export const BADGE_PARTLY_GLYPH = `<path d="M6 0 A6 6 0 0 0 6 12 Z" fill="${BADGE_PARTLY.inspected}"/><path d="M6 0 A6 6 0 0 1 6 12 Z" fill="${BADGE_PARTLY.pending}"/><circle cx="6" cy="6" r="6" fill="none" stroke="${PIN_STROKE}" stroke-width="1.2"/>`;
+
+/** Hover text for the partly-inspected badge. */
+export const BADGE_PARTLY_TITLE = "มีทั้งสถานีที่ตรวจแล้วและยังไม่ตรวจที่ตำแหน่งนี้";
 
 /**
  * Cell Sites map: pin, cluster-ring and chip colour per operator. A separate

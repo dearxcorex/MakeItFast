@@ -1,6 +1,12 @@
 import L from "leaflet";
 import type { PinBucket } from "./pinBucket";
-import { PIN_BUCKET_ORDER, PIN_COLORS, PIN_INK } from "./pinTokens";
+import {
+  BADGE_PARTLY_GLYPH,
+  BADGE_PARTLY_TITLE,
+  PIN_BUCKET_ORDER,
+  PIN_COLORS,
+  PIN_INK,
+} from "./pinTokens";
 
 /**
  * Per-bucket child counts. Partial so callers can pass only the buckets they
@@ -80,18 +86,24 @@ export function computeSegmentArcs(segments: RingSegment[]): RingArc[] {
 /**
  * Build the Leaflet divIcon for a cluster bubble:
  *   inner disc (count) + 5px segmented outer ring (status mix).
+ *
+ * `partlyInspected` adds the partly-inspected badge at the upper-right: a pin
+ * inside wears it, and the ring alone cannot say so because it counts each
+ * stack as its head station.
  */
 export function makeClusterIcon(
   count: number,
-  buckets: BucketCounts
+  buckets: BucketCounts,
+  partlyInspected = false
 ): L.DivIcon {
-  return makeSegmentClusterIcon(count, bucketSegments(buckets));
+  return makeSegmentClusterIcon(count, bucketSegments(buckets), partlyInspected);
 }
 
 /** `makeClusterIcon` with the ring split by arbitrary coloured segments. */
 export function makeSegmentClusterIcon(
   count: number,
-  segments: RingSegment[]
+  segments: RingSegment[],
+  partlyInspected = false
 ): L.DivIcon {
   const size = sizeForCount(count);
   const ringStroke = 5;
@@ -115,6 +127,9 @@ export function makeSegmentClusterIcon(
     .join("");
 
   const innerR = r - ringStroke;
+  const partlyBadge = partlyInspected
+    ? `<g transform="translate(${size - 13}, 1)"><title>${BADGE_PARTLY_TITLE}</title>${BADGE_PARTLY_GLYPH}</g>`
+    : "";
   const html = `
     <div style="width:${size}px;height:${size}px;position:relative;">
       <svg width="${size}" height="${size}" viewBox="0 0 ${size} ${size}"
@@ -126,12 +141,13 @@ export function makeSegmentClusterIcon(
           fill="#ffffff" font-family="'Source Code Pro', ui-monospace, monospace"
           font-weight="700" font-size="${fontSize}"
           style="letter-spacing:0.04em;">${count}</text>
+        ${partlyBadge}
       </svg>
     </div>
   `;
 
   return L.divIcon({
-    className: `fo-cluster`,
+    className: `fo-cluster${partlyInspected ? " is-partly-inspected-badge" : ""}`,
     html,
     iconSize: [size, size],
     iconAnchor: [size / 2, size / 2],

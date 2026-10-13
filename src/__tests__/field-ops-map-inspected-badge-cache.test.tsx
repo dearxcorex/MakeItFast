@@ -2,7 +2,7 @@ import { describe, it, expect, vi } from "vitest";
 import { render } from "@testing-library/react";
 import type { ReactNode } from "react";
 import { FieldOpsMap } from "@/components/field-ops/FieldOpsMap";
-import { BADGE_INSPECTED } from "@/utils/pinTokens";
+import { BADGE_INSPECTED, BADGE_PARTLY_GLYPH } from "@/utils/pinTokens";
 import type { InspectedBadgeGates } from "@/utils/pinBucket";
 import type { FMStation } from "@/types/station";
 
@@ -97,5 +97,28 @@ describe("FieldOpsMap — inspected badge survives the icon cache", () => {
       />
     );
     expect(captured.at(-1)).not.toContain(BADGE_INSPECTED);
+  });
+
+  it("re-renders the pin when a sibling's inspection flips, the head unchanged", () => {
+    const head = makeFM({ id: 1, onAir: true });
+    const draw = (sibling: FMStation) => (
+      <FieldOpsMap
+        stations={[head, sibling]}
+        interference={[]}
+        selection={null}
+        onSelect={() => {}}
+        flyTarget={null}
+      />
+    );
+
+    captured.length = 0;
+    const { rerender } = render(draw(makeFM({ id: 2, onAir: true })));
+    expect(captured.at(-1)).not.toContain(BADGE_PARTLY_GLYPH);
+
+    rerender(draw(makeFM({ id: 2, onAir: true, inspection69: "ยังไม่ตรวจ" })));
+    expect(captured.at(-1)).toContain(BADGE_PARTLY_GLYPH);
+
+    rerender(draw(makeFM({ id: 2, onAir: true })));
+    expect(captured.at(-1)).not.toContain(BADGE_PARTLY_GLYPH);
   });
 });

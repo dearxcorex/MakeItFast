@@ -4,7 +4,8 @@ import {
   bucketForSite,
   isRelicensed,
   showsInspectedBadge,
-  hasMixedInspection,
+  isPartlyInspected,
+  cornerBadgeFor,
   NO_INSPECTED_BADGES,
 } from "@/utils/pinBucket";
 import type { FMStation } from "@/types/station";
@@ -159,19 +160,43 @@ describe("showsInspectedBadge", () => {
   });
 });
 
-describe("hasMixedInspection", () => {
+describe("isPartlyInspected", () => {
   const done = makeFM({ inspection69: "ตรวจแล้ว" });
   const open = makeFM({ id: 2 });
 
   it("is true only when a stack holds both inspected and uninspected stations", () => {
-    expect(hasMixedInspection([done, open])).toBe(true);
-    expect(hasMixedInspection([open, done, makeFM({ id: 3 })])).toBe(true);
+    expect(isPartlyInspected([done, open])).toBe(true);
+    expect(isPartlyInspected([open, done, makeFM({ id: 3 })])).toBe(true);
   });
 
   it("is false when the stack agrees, for a lone station and for an empty group", () => {
-    expect(hasMixedInspection([done, makeFM({ id: 2, inspection69: "ตรวจแล้ว" })])).toBe(false);
-    expect(hasMixedInspection([open, makeFM({ id: 3 })])).toBe(false);
-    expect(hasMixedInspection([done])).toBe(false);
-    expect(hasMixedInspection([])).toBe(false);
+    expect(isPartlyInspected([done, makeFM({ id: 2, inspection69: "ตรวจแล้ว" })])).toBe(false);
+    expect(isPartlyInspected([open, makeFM({ id: 3 })])).toBe(false);
+    expect(isPartlyInspected([done])).toBe(false);
+    expect(isPartlyInspected([])).toBe(false);
+  });
+});
+
+describe("cornerBadgeFor", () => {
+  const ON = { offAir: true };
+  const doneOffAir = makeFM({ onAir: false, inspection69: "ตรวจแล้ว" });
+  const open = makeFM({ id: 2 });
+
+  it("is partly inspected when the whole stack is mixed", () => {
+    expect(cornerBadgeFor([doneOffAir, open], [doneOffAir, open], NO_INSPECTED_BADGES)).toBe(
+      "partlyInspected"
+    );
+  });
+
+  it("judges the stack, not the visible group — a filter cannot hide the warning", () => {
+    // OFF AIR chip on: the uninspected on-air sibling is filtered out, and the
+    // visible group alone would earn the green tick.
+    expect(cornerBadgeFor([doneOffAir], [doneOffAir, open], ON)).toBe("partlyInspected");
+  });
+
+  it("falls back to the inspected badge, then to none", () => {
+    expect(cornerBadgeFor([doneOffAir], [doneOffAir], ON)).toBe("inspected");
+    expect(cornerBadgeFor([doneOffAir], [doneOffAir], NO_INSPECTED_BADGES)).toBeNull();
+    expect(cornerBadgeFor([open], [open], ON)).toBeNull();
   });
 });

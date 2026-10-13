@@ -106,12 +106,36 @@ export function showsInspectedBadge(
  *
  * One pin stands for every station at its coordinates but draws only the
  * head's bucket, and the head sorts inspected-first — so a green tick can sit
- * on top of a station nobody has visited. The mixed badge flags exactly that.
- * Unlike the inspected badge it is never filter-gated: it reports open work.
+ * on top of a station nobody has visited. The partly-inspected badge flags
+ * exactly that.
+ *
+ * Pass *every* station at the coordinates, not just the ones the filter chips
+ * left visible: a filter that hides the uninspected sibling must not hide the
+ * warning about it.
  */
-export function hasMixedInspection(
-  group: Pick<FMStation, "inspection69">[]
+export function isPartlyInspected(
+  stack: Pick<FMStation, "inspection69">[]
 ): boolean {
-  const inspected = group.filter((s) => s.inspection69 === "ตรวจแล้ว").length;
-  return inspected > 0 && inspected < group.length;
+  const inspected = stack.filter((s) => s.inspection69 === "ตรวจแล้ว").length;
+  return inspected > 0 && inspected < stack.length;
+}
+
+/** The one badge an FM pin can wear in its lower-right corner. */
+export type CornerBadge = "inspected" | "partlyInspected" | null;
+
+/**
+ * Pick the lower-right badge for an FM pin.
+ *
+ * `visible` is the group the pin is drawn from (after filters); `stack` is
+ * every station at those coordinates. Partly inspected wins: it is open work,
+ * and it can only disagree with the inspected badge when a filter has hidden
+ * the uninspected sibling — the case where the tick would mislead most.
+ */
+export function cornerBadgeFor(
+  visible: FMStation[],
+  stack: Pick<FMStation, "inspection69">[],
+  gates: InspectedBadgeGates
+): CornerBadge {
+  if (isPartlyInspected(stack)) return "partlyInspected";
+  return showsInspectedBadge(visible, gates) ? "inspected" : null;
 }

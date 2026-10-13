@@ -7,7 +7,8 @@ import {
   BADGE_MAIN,
   BADGE_LAW,
   BADGE_INSPECTED,
-  BADGE_MIXED,
+  BADGE_PARTLY_GLYPH,
+  BADGE_PARTLY_TITLE,
   PIN_SELECTION,
 } from "@/utils/pinTokens";
 import type { InspectedBadgeGates, PinBucket } from "@/utils/pinBucket";
@@ -220,29 +221,27 @@ describe("pin tokens — the inspected badge is gated by the OFF AIR chip", () =
 });
 
 describe("pin tokens — a partly inspected stack is flagged", () => {
-  it("a green head with an uninspected station beneath it gains the amber alert", () => {
-    const [pin] = draw([
-      makeFM({ id: 1, inspection69: "ตรวจแล้ว" }),
-      makeFM({ id: 2 }),
-    ]);
+  const done = makeFM({ id: 1, inspection69: "ตรวจแล้ว" });
+  const open = makeFM({ id: 2 });
+
+  it("a green head with an uninspected station beneath it gains the split disc", () => {
+    const [pin] = draw([done, open]);
     expect(bodyFill(pin.html)).toBe(PIN_COLORS.inspected);
-    expect(pin.className).toContain("is-mixed-inspection");
-    expect(pin.html).toContain(BADGE_MIXED);
+    expect(pin.className).toContain("is-partly-inspected-badge");
+    expect(pin.html).toContain(BADGE_PARTLY_GLYPH);
+    expect(pin.html).toContain(BADGE_PARTLY_TITLE);
   });
 
   it("a stack that agrees wears no alert", () => {
-    const [done] = draw([
-      makeFM({ id: 1, inspection69: "ตรวจแล้ว" }),
-      makeFM({ id: 2, inspection69: "ตรวจแล้ว" }),
-    ]);
-    expect(done.className).not.toContain("is-mixed-inspection");
-    expect(done.html).not.toContain(BADGE_MIXED);
+    const [allDone] = draw([done, makeFM({ id: 2, inspection69: "ตรวจแล้ว" })]);
+    expect(allDone.className).not.toContain("is-partly-inspected-badge");
+    expect(allDone.html).not.toContain(BADGE_PARTLY_GLYPH);
 
-    const [open] = draw([makeFM({ id: 1 }), makeFM({ id: 2 })]);
-    expect(open.className).not.toContain("is-mixed-inspection");
+    const [allOpen] = draw([makeFM({ id: 1 }), open]);
+    expect(allOpen.className).not.toContain("is-partly-inspected-badge");
   });
 
-  it("never shares a pin with the inspected badge", () => {
+  it("replaces the inspected badge rather than sharing its corner", () => {
     const [pin] = draw(
       [
         makeFM({ id: 1, onAir: false, inspection69: "ตรวจแล้ว" }),
@@ -251,8 +250,38 @@ describe("pin tokens — a partly inspected stack is flagged", () => {
       [],
       { offAir: true }
     );
-    expect(pin.className).toContain("is-mixed-inspection");
+    expect(pin.className).toContain("is-partly-inspected-badge");
     expect(pin.className).not.toContain("is-inspected-badge");
+  });
+
+  it("still shows when a filter has hidden the uninspected sibling", () => {
+    captured.length = 0;
+    render(
+      <FieldOpsMap
+        stations={[done]}
+        allStations={[done, open]}
+        interference={[]}
+        selection={null}
+        onSelect={() => {}}
+        flyTarget={null}
+      />
+    );
+    expect(captured[0].className).toContain("is-partly-inspected-badge");
+  });
+
+  it("halos the pin when the selected station is a sibling the filter hid", () => {
+    captured.length = 0;
+    render(
+      <FieldOpsMap
+        stations={[done]}
+        allStations={[done, open]}
+        interference={[]}
+        selection={{ kind: "fm", id: 2 }}
+        onSelect={() => {}}
+        flyTarget={null}
+      />
+    );
+    expect(captured[0].className).toContain("is-selected");
   });
 });
 

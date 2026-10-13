@@ -228,7 +228,7 @@ export function FieldOpsCurrentFM({
                     width: 8,
                     height: 8,
                     borderRadius: 999,
-                    background: sInsp ? "var(--fo-accent-2)" : "var(--fo-accent)",
+                    background: sInsp ? "var(--fo-accent-2)" : "var(--fo-warn)",
                     flexShrink: 0,
                   }}
                 />
@@ -236,6 +236,11 @@ export function FieldOpsCurrentFM({
                 <span style={{ flex: 1, fontSize: 13, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
                   {s.name}
                 </span>
+                {!sInsp && (
+                  <span className="fo-mono" style={{ color: "var(--fo-warn)", flexShrink: 0 }}>
+                    ยังไม่ตรวจ
+                  </span>
+                )}
                 <span className="fo-mono" style={{ color: "var(--fo-rail-mute)" }}>
                   {s.frequency.toFixed(2)}
                 </span>

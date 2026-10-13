@@ -20,6 +20,7 @@ import { CellSitesTab } from "./CellSitesTab";
 import { DataTab } from "./DataTab";
 import { computeKpis } from "@/utils/fieldOpsKpi";
 import type { FieldSelection } from "./FieldOpsMap";
+import { coordKey } from "@/utils/coordKey";
 
 const FieldOpsMap = dynamic(
   () => import("./FieldOpsMap").then((m) => m.FieldOpsMap),
@@ -217,7 +218,17 @@ export default function FieldOpsClient({
   useEffect(() => {
     if (!selection) return;
     if (selection.kind === "fm") {
-      if (!filteredStations.some((s) => s.id === selection.id)) {
+      // A station the filters hid stays open while its pin is still on the
+      // map — that is how the uninspected sibling of a stack is reached.
+      const selected = stations.find((s) => s.id === selection.id);
+      const pinVisible =
+        selected !== undefined &&
+        filteredStations.some(
+          (s) =>
+            coordKey(s.latitude, s.longitude) ===
+            coordKey(selected.latitude, selected.longitude)
+        );
+      if (!pinVisible) {
         setSelection(null);
         setFlyTarget(null);
         if (markingSourceForId !== null) setMarkingSourceForId(null);
@@ -229,29 +240,23 @@ export default function FieldOpsClient({
         if (markingSourceForId !== null) setMarkingSourceForId(null);
       }
     }
-  }, [selection, filteredStations, filteredInterference, markingSourceForId]);
+  }, [selection, stations, filteredStations, filteredInterference, markingSourceForId]);
 
   const coLocatedStations = useMemo(() => {
     if (!selectedStation) return [] as FMStation[];
-    const { latitude: lat, longitude: lng } = selectedStation;
-    const round = (n: number) => n.toFixed(5);
-    const key = `${round(lat)},${round(lng)}`;
-    return filteredStations.filter(
-      (s) => `${round(s.latitude)},${round(s.longitude)}` === key
-    );
-  }, [filteredStations, selectedStation]);
+    const key = coordKey(selectedStation.latitude, selectedStation.longitude);
+    // Unfiltered on purpose: the pin stands for everything at this point, and
+    // the partly-inspected badge sends the user here to find the rest.
+    return stations.filter((s) => coordKey(s.latitude, s.longitude) === key);
+  }, [stations, selectedStation]);
 
   const coLocatedSites = useMemo(() => {
     if (!selectedSite || selectedSite.lat === null || selectedSite.long === null) {
       return [] as InterferenceSite[];
     }
-    const round = (n: number) => n.toFixed(5);
-    const key = `${round(selectedSite.lat)},${round(selectedSite.long)}`;
+    const key = coordKey(selectedSite.lat, selectedSite.long);
     return filteredInterference.filter(
-      (s) =>
-        s.lat !== null &&
-        s.long !== null &&
-        `${round(s.lat)},${round(s.long)}` === key
+      (s) => s.lat !== null && s.long !== null && coordKey(s.lat, s.long) === key
     );
   }, [filteredInterference, selectedSite]);
 
@@ -526,6 +531,7 @@ export default function FieldOpsClient({
                 <div style={{ flex: 1, position: "relative", minWidth: 0 }}>
                   <FieldOpsMap
                     stations={filteredStations}
+                    allStations={stations}
                     interference={filteredInterference}
                     selection={selection}
                     onSelect={handleSelect}

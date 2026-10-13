@@ -6,7 +6,7 @@ import {
   makeClusterIcon,
   makeSegmentClusterIcon,
 } from "@/utils/clusterIcon";
-import { PIN_COLORS } from "@/utils/pinTokens";
+import { BADGE_PARTLY_GLYPH, PIN_COLORS } from "@/utils/pinTokens";
 
 describe("sizeForCount", () => {
   it("44px for small clusters (≤10)", () => {
@@ -136,6 +136,18 @@ describe("computeSegmentArcs", () => {
         { color: PIN_COLORS.inspected, count: 9 },
       ])
     );
+  });
+});
+
+describe("makeClusterIcon — partly-inspected flag", () => {
+  it("draws the badge only when asked", () => {
+    const flagged = makeClusterIcon(4, { inspected: 4 }, true);
+    expect(String(flagged.options.html)).toContain(BADGE_PARTLY_GLYPH);
+    expect(flagged.options.className).toContain("is-partly-inspected-badge");
+
+    const plain = makeClusterIcon(4, { inspected: 4 });
+    expect(String(plain.options.html)).not.toContain(BADGE_PARTLY_GLYPH);
+    expect(plain.options.className).toBe("fo-cluster");
   });
 });
 
