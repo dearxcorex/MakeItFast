@@ -3,6 +3,7 @@
 import { useState, type FormEvent } from "react";
 import { useSearchParams } from "next/navigation";
 import { safeNextPath } from "@/lib/safeRedirect";
+import { BrandLogo, BrandWordmark } from "@/components/field-ops/BrandMark";
 
 export default function LoginPage() {
   const params = useSearchParams();
@@ -79,7 +80,10 @@ export default function LoginPage() {
           color: "var(--fo-text)",
         }}
       >
-        <h1 className="text-2xl font-semibold text-center">งานภาคสนาม</h1>
+        <h1 className="flex flex-col items-center gap-3 pb-1">
+          <BrandLogo size={56} />
+          <BrandWordmark fontSize={24} />
+        </h1>
 
         <div>
           <label htmlFor="username" className="block text-sm mb-1">

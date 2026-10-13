@@ -1,7 +1,14 @@
 "use client";
 
 import { useEffect, useRef } from "react";
-import type { FieldFilters } from "./FieldOpsFilters";
+import {
+  DEFAULT_FILTERS,
+  TYPE_LABEL,
+  type FieldFilters,
+  type TypeFilter,
+} from "./FieldOpsFilters";
+
+const TYPES: TypeFilter[] = ["ALL", "FM", "INT"];
 
 interface Props {
   open: boolean;
@@ -20,14 +27,7 @@ export function MobileFilterSheet({
   provinces,
   resultCount,
 }: Props) {
-  const searchRef = useRef<HTMLInputElement>(null);
   const touchStartY = useRef<number | null>(null);
-
-  useEffect(() => {
-    if (open) {
-      requestAnimationFrame(() => searchRef.current?.focus());
-    }
-  }, [open]);
 
   useEffect(() => {
     if (!open) return;
@@ -93,6 +93,19 @@ export function MobileFilterSheet({
     });
   }
 
+  const handleType = (v: TypeFilter) => {
+    const next: FieldFilters = { ...filters, type: v };
+    if (v === "FM") next.lawSent = false;
+    if (v === "INT") {
+      next.offAir = false;
+      next.revoked = false;
+    }
+    onChange(next);
+  };
+
+  const anyFilterActive =
+    filters.type !== "ALL" || filters.status !== "ALL" || activeChips.length > 0;
+
   const showFMFilters = filters.type !== "INT";
   const showINTFilters = filters.type !== "FM";
 
@@ -114,7 +127,7 @@ export function MobileFilterSheet({
       />
       <aside
         role="dialog"
-        aria-label="ตัวกรองเพิ่มเติม"
+        aria-label="ตัวกรอง"
         aria-hidden={!open}
         onTouchStart={handleSwipeStart}
         onTouchEnd={handleSwipeEnd}
@@ -163,9 +176,30 @@ export function MobileFilterSheet({
             flexShrink: 0,
           }}
         >
-          <span className="fo-serif" style={{ fontSize: 18, lineHeight: 1.1 }}>
-            ตัวกรองเพิ่มเติม
+          <span style={{ fontSize: 18, fontWeight: 600, lineHeight: 1.1 }}>
+            ตัวกรอง
           </span>
+          <div style={{ flex: 1 }} />
+          {anyFilterActive && (
+            <button
+              type="button"
+              onClick={() => onChange(DEFAULT_FILTERS)}
+              style={{
+                minHeight: 44,
+                padding: "0 12px",
+                marginRight: 4,
+                border: "none",
+                background: "transparent",
+                color: "var(--fo-accent)",
+                fontFamily: "inherit",
+                fontSize: 14,
+                cursor: "pointer",
+                touchAction: "manipulation",
+              }}
+            >
+              ล้าง
+            </button>
+          )}
           <button
             type="button"
             aria-label="ปิด"
@@ -207,14 +241,7 @@ export function MobileFilterSheet({
                 marginBottom: 16,
               }}
             >
-              <span
-                className="fo-mono"
-                style={{
-                  fontSize: 10,
-                  color: "var(--fo-rail-mute)",
-                  letterSpacing: "0.16em",
-                }}
-              >
+              <span style={{ fontSize: 12, color: "var(--fo-rail-mute)" }}>
                 ที่ใช้อยู่:
               </span>
               {activeChips.map((c) => (
@@ -222,20 +249,19 @@ export function MobileFilterSheet({
                   key={c.key}
                   type="button"
                   onClick={c.clear}
-                  className="fo-mono"
                   style={{
                     display: "inline-flex",
                     alignItems: "center",
                     gap: 6,
-                    padding: "6px 10px",
-                    minHeight: 32,
+                    padding: "6px 12px",
+                    minHeight: 36,
                     border: "1px solid var(--fo-accent)",
                     borderRadius: 999,
                     background: "rgba(0, 237, 100, 0.08)",
                     color: "var(--fo-accent)",
-                    fontSize: 11,
+                    fontFamily: "inherit",
+                    fontSize: 13,
                     cursor: "pointer",
-                    letterSpacing: "0.04em",
                   }}
                 >
                   {c.label} <span aria-hidden>✕</span>
@@ -244,9 +270,39 @@ export function MobileFilterSheet({
             </div>
           )}
 
+          <FilterSection label="ประเภท">
+            <div role="group" style={{ display: "flex", gap: 8 }}>
+              {TYPES.map((t) => {
+                const active = filters.type === t;
+                return (
+                  <button
+                    key={t}
+                    type="button"
+                    onClick={() => handleType(t)}
+                    aria-pressed={active}
+                    style={{
+                      flex: 1,
+                      minWidth: 0,
+                      minHeight: 44,
+                      border: `1px solid ${active ? "var(--fo-accent)" : "var(--fo-divider)"}`,
+                      background: active ? "var(--fo-accent)" : "transparent",
+                      color: active ? "#001e2b" : "var(--fo-text)",
+                      borderRadius: 10,
+                      fontFamily: "inherit",
+                      fontSize: 14,
+                      fontWeight: active ? 700 : 400,
+                      cursor: "pointer",
+                    }}
+                  >
+                    {TYPE_LABEL[t]}
+                  </button>
+                );
+              })}
+            </div>
+          </FilterSection>
+
           <FilterSection label="ค้นหา">
             <input
-              ref={searchRef}
               type="search"
               placeholder="ค้นหาสถานี…"
               value={filters.search}
@@ -330,18 +386,17 @@ export function MobileFilterSheet({
           <button
             type="button"
             onClick={onClose}
-            className="fo-mono"
             style={{
               width: "100%",
-              minHeight: 56,
+              minHeight: 52,
               border: "none",
               background: "var(--fo-accent)",
               color: "#001e2b",
               borderRadius: 12,
-              fontSize: 14,
+              fontFamily: "inherit",
+              fontSize: 15,
               fontWeight: 700,
               cursor: "pointer",
-              letterSpacing: "0.04em",
               touchAction: "manipulation",
             }}
           >
@@ -356,15 +411,7 @@ export function MobileFilterSheet({
 function FilterSection({ label, children }: { label: string; children: React.ReactNode }) {
   return (
     <div style={{ marginBottom: 16 }}>
-      <div
-        className="fo-mono"
-        style={{
-          fontSize: 10,
-          color: "var(--fo-rail-mute)",
-          letterSpacing: "0.16em",
-          marginBottom: 8,
-        }}
-      >
+      <div style={{ fontSize: 12, color: "var(--fo-rail-mute)", marginBottom: 8 }}>
         {label}
       </div>
       {children}
@@ -386,7 +433,6 @@ function TogglePill({
       type="button"
       onClick={onClick}
       aria-pressed={active}
-      className="fo-mono"
       style={{
         display: "inline-flex",
         alignItems: "center",
@@ -397,9 +443,9 @@ function TogglePill({
         background: active ? "var(--fo-accent)" : "transparent",
         color: active ? "#001e2b" : "var(--fo-text)",
         borderRadius: 999,
-        fontSize: 12,
+        fontFamily: "inherit",
+        fontSize: 14,
         cursor: "pointer",
-        letterSpacing: "0.04em",
         transition: "background-color 120ms ease, border-color 120ms ease",
       }}
     >

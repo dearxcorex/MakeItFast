@@ -59,8 +59,8 @@ const kalam = Kalam({
 });
 
 export const metadata: Metadata = {
-  title: "งานภาคสนาม | ติดตามสถานี FM และการรบกวน กสทช.",
-  description: "ระบบงานภาคสนามสำหรับตรวจสถานีวิทยุ FM และติดตามจุดรบกวนคลื่นความถี่",
+  title: "nbtc!NMATEAM | ติดตามสถานี FM และการรบกวน กสทช.",
+  description: "nbtc!NMATEAM — ระบบงานภาคสนามสำหรับตรวจสถานีวิทยุ FM และติดตามจุดรบกวนคลื่นความถี่",
   keywords: "FM radio, interference, NBTC, field ops, inspection, intermodulation",
 };
 

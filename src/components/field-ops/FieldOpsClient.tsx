@@ -63,6 +63,10 @@ export function fmStationMatchesFilter(s: FMStation, filters: FieldFilters): boo
   return true;
 }
 
+// Rough height of the collapsed mobile sheet, used to centre a selected pin
+// in the part of the map that stays visible above it.
+const MOBILE_SHEET_PEEK = 230;
+
 export default function FieldOpsClient({
   initialStations,
   initialInterference,
@@ -527,8 +531,10 @@ export default function FieldOpsClient({
                 />
               )}
 
-              <div style={{ flex: 1, display: "flex", minHeight: 0 }}>
-                <div style={{ flex: 1, position: "relative", minWidth: 0 }}>
+              <div style={{ flex: 1, display: "flex", minHeight: 0, position: "relative" }}>
+                {/* zIndex 0 keeps Leaflet's panes (z-index up to 1000) inside
+                    this box, so the mobile sheet can sit over the map. */}
+                <div style={{ flex: 1, position: "relative", minWidth: 0, zIndex: 0 }}>
                   <FieldOpsMap
                     stations={filteredStations}
                     allStations={stations}
@@ -536,6 +542,7 @@ export default function FieldOpsClient({
                     selection={selection}
                     onSelect={handleSelect}
                     flyTarget={flyTarget}
+                    flyBottomInset={isMobile && selection ? MOBILE_SHEET_PEEK : 0}
                     markingSourceForId={markingSourceForId}
                     onMarkSource={handleMarkSource}
                     onCancelMarkSource={() => setMarkingSourceForId(null)}
@@ -618,42 +625,57 @@ export default function FieldOpsClient({
                     )}
                   </aside>
                 )}
+                {isMobile && (
+                  // Floats over the map instead of pushing it up: the pin that
+                  // was just tapped stays on screen. The box spans the map so
+                  // the sheet's max-height can be a share of it, and lets
+                  // touches through everywhere the sheet is not.
+                  <div
+                    style={{
+                      position: "absolute",
+                      inset: 0,
+                      zIndex: 1,
+                      display: "flex",
+                      flexDirection: "column",
+                      justifyContent: "flex-end",
+                      pointerEvents: "none",
+                    }}
+                  >
+                    <FieldOpsBottomSheet
+                      selection={selection}
+                      station={selectedStation}
+                      site={selectedSite}
+                      coLocatedStations={coLocatedStations}
+                      coLocatedSites={coLocatedSites}
+                      onSelectStation={(id) => handleSelect({ kind: "fm", id })}
+                      onSelectSite={(id) => handleSelect({ kind: "int", id })}
+                      onToggleInspection={handleToggleInspection}
+                      onToggleLawPaper={handleToggleLawPaper}
+                      onToggleOnAir={handleToggleOnAir}
+                      onClose={() => setSelection(null)}
+                      pending={pending}
+                      marking={selectedSite ? markingSourceForId === selectedSite.id : false}
+                      onStartMarkSource={
+                        selectedSite ? () => setMarkingSourceForId(selectedSite.id) : undefined
+                      }
+                      onCancelMarkSource={() => setMarkingSourceForId(null)}
+                      onClearSource={
+                        selectedSite ? () => handleClearSource(selectedSite.id) : undefined
+                      }
+                      onSubmitSourceCoords={
+                        selectedSite
+                          ? (lat, lng) => handleMarkSource(selectedSite.id, lat, lng)
+                          : undefined
+                      }
+                      inspectors={inspectors}
+                      currentUser={currentUser}
+                      helperUserIds={helperUserIds}
+                      onHelperUserIdsChange={setHelperUserIds}
+                      lastInspection={lastInspection}
+                    />
+                  </div>
+                )}
               </div>
-
-              {isMobile && (
-                <FieldOpsBottomSheet
-                  selection={selection}
-                  station={selectedStation}
-                  site={selectedSite}
-                  coLocatedStations={coLocatedStations}
-                  coLocatedSites={coLocatedSites}
-                  onSelectStation={(id) => handleSelect({ kind: "fm", id })}
-                  onSelectSite={(id) => handleSelect({ kind: "int", id })}
-                  onToggleInspection={handleToggleInspection}
-                  onToggleLawPaper={handleToggleLawPaper}
-                  onToggleOnAir={handleToggleOnAir}
-                  onClose={() => setSelection(null)}
-                  pending={pending}
-                  marking={selectedSite ? markingSourceForId === selectedSite.id : false}
-                  onStartMarkSource={
-                    selectedSite ? () => setMarkingSourceForId(selectedSite.id) : undefined
-                  }
-                  onCancelMarkSource={() => setMarkingSourceForId(null)}
-                  onClearSource={
-                    selectedSite ? () => handleClearSource(selectedSite.id) : undefined
-                  }
-                  onSubmitSourceCoords={
-                    selectedSite
-                      ? (lat, lng) => handleMarkSource(selectedSite.id, lat, lng)
-                      : undefined
-                  }
-                  inspectors={inspectors}
-                  currentUser={currentUser}
-                  helperUserIds={helperUserIds}
-                  onHelperUserIdsChange={setHelperUserIds}
-                  lastInspection={lastInspection}
-                />
-              )}
             </>
           )}
 

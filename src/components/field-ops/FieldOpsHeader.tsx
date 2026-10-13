@@ -7,6 +7,7 @@ import type { TypeFilter } from "./FieldOpsFilters";
 import type { GeolocationStatus } from "@/hooks/useGeolocation";
 import { computeKpis } from "@/utils/fieldOpsKpi";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
+import { BrandMark, BrandWordmark } from "./BrandMark";
 
 export function FieldOpsHeader({
   stations,
@@ -43,11 +44,9 @@ export function FieldOpsHeader({
 
   if (isMobile) {
     return <MobileHeader
-      scopeLabel={scopeLabel}
       headerBg={headerBg}
       textColor={textColor}
       borderColor={borderColor}
-      accentText={accentText}
       onOpenDrawer={onOpenDrawer}
       locationStatus={locationStatus}
       onRetryLocation={onRetryLocation}
@@ -72,12 +71,9 @@ export function FieldOpsHeader({
         <div className="fo-mono" style={{ color: accentText }}>
           กสทช. · ภาคสนาม · {scopeLabel}
         </div>
-        <div
-          className="fo-serif"
-          style={{ fontSize: 20, lineHeight: 1.1, marginTop: 2, color: textColor }}
-        >
-          งานภาคสนาม
-        </div>
+        <h1 style={{ margin: "3px 0 0", lineHeight: 1, color: textColor }}>
+          <BrandWordmark fontSize={20} />
+        </h1>
       </div>
 
       <div style={{ flex: 1 }} />
@@ -206,21 +202,17 @@ function Stat({
 }
 
 function MobileHeader({
-  scopeLabel,
   headerBg,
   textColor,
-  borderColor,
-  accentText,
   onOpenDrawer,
   locationStatus,
   onRetryLocation,
   labelColor,
+  borderColor,
 }: {
-  scopeLabel: string;
   headerBg: string;
   textColor: string;
   borderColor: string;
-  accentText: string;
   onOpenDrawer?: () => void;
   locationStatus?: GeolocationStatus;
   onRetryLocation?: () => void;
@@ -231,8 +223,9 @@ function MobileHeader({
       style={{
         display: "flex",
         alignItems: "center",
-        gap: 10,
-        padding: "10px 12px",
+        gap: 4,
+        minHeight: 48,
+        padding: "0 12px 0 2px",
         background: headerBg,
         color: textColor,
         borderBottom: `1px solid ${borderColor}`,
@@ -247,25 +240,30 @@ function MobileHeader({
         aria-label="เปิดเมนู"
         onClick={onOpenDrawer}
         style={{
-          border: `1px solid ${borderColor}`,
+          border: "none",
           background: "transparent",
           color: textColor,
-          padding: "6px 10px",
-          borderRadius: 6,
-          fontSize: 16,
+          width: 44,
+          height: 44,
+          flexShrink: 0,
+          fontSize: 20,
           cursor: "pointer",
           lineHeight: 1,
+          padding: 0,
         }}
       >
         ☰
       </button>
-      <div style={{ flex: 1, minWidth: 0 }}>
-        <div className="fo-mono" style={{ color: accentText, fontSize: 9, letterSpacing: "0.18em" }}>
-          กสทช. · ภาคสนาม · {scopeLabel}
-        </div>
-        <div className="fo-serif" style={{ fontSize: 14, lineHeight: 1.1, color: textColor }}>
-          งานภาคสนาม
-        </div>
+      <div
+        style={{
+          flex: 1,
+          minWidth: 0,
+          display: "flex",
+          color: textColor,
+          overflow: "hidden",
+        }}
+      >
+        <BrandMark logoSize={28} fontSize={16} gap={8} />
       </div>
       <LocationBadge
         status={locationStatus}

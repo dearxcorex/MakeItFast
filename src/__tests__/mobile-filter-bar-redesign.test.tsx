@@ -12,7 +12,7 @@ beforeEach(() => {
 });
 
 describe("MobileFilterBar (redesigned)", () => {
-  it("renders two segment groups: Type (All/FM/INT) and Status (All/Pending/Inspected)", () => {
+  it("keeps Status chips in the bar and Type (All/FM/INT) in the sheet", () => {
     const { container } = render(
       <MobileFilterBar
         filters={baseFilters()}
@@ -27,11 +27,16 @@ describe("MobileFilterBar (redesigned)", () => {
     expect(text).toContain("รบกวน");
     expect(text).toContain("ยังไม่ตรวจ");
     expect(text).toContain("ตรวจแล้ว");
-    // The advanced toggles live in the (hidden) sheet, not in the bar's chips.
+    // One row: the bar itself holds only the status chips and the filter
+    // button. Type, the advanced toggles and reset live in the (hidden) sheet.
     const barChips = Array.from(container.querySelectorAll("button"))
       .filter((b) => !b.closest('[role="dialog"]'))
       .map((b) => b.textContent ?? "")
       .join(" ");
+    expect(barChips).toContain("ยังไม่ตรวจ");
+    expect(barChips).not.toContain("FM");
+    expect(barChips).not.toContain("รบกวน");
+    expect(barChips).not.toContain("ล้าง");
     expect(barChips).not.toContain("ไม่ออกอากาศ");
     expect(barChips).not.toContain("เพิกถอน");
   });
@@ -123,10 +128,25 @@ describe("MobileFilterBar (redesigned)", () => {
       />
     );
     const more = Array.from(container.querySelectorAll("button")).find((b) =>
-      (b.textContent ?? "").includes("เพิ่มเติม")
+      (b.textContent ?? "").includes("ตัวกรอง")
     );
     expect(more).toBeDefined();
-    expect(more!.textContent).not.toMatch(/เพิ่มเติม\s*·\s*\d/);
+    expect(more!.textContent).not.toMatch(/ตัวกรอง\s*·\s*\d/);
+  });
+
+  it("filter button counts a non-default type, since type is no longer visible in the bar", () => {
+    const { container } = render(
+      <MobileFilterBar
+        filters={baseFilters({ type: "FM" })}
+        onChange={vi.fn()}
+        provinces={["A"]}
+        resultCount={1}
+      />
+    );
+    const more = Array.from(container.querySelectorAll("button")).find((b) =>
+      (b.textContent ?? "").includes("ตัวกรอง")
+    );
+    expect(more!.textContent).toMatch(/ตัวกรอง\s*·\s*1/);
   });
 
   it("More button shows count when advanced filters are set", () => {
@@ -139,9 +159,9 @@ describe("MobileFilterBar (redesigned)", () => {
       />
     );
     const more = Array.from(container.querySelectorAll("button")).find((b) =>
-      (b.textContent ?? "").includes("เพิ่มเติม")
+      (b.textContent ?? "").includes("ตัวกรอง")
     );
-    expect(more!.textContent).toMatch(/เพิ่มเติม\s*·\s*3/);
+    expect(more!.textContent).toMatch(/ตัวกรอง\s*·\s*3/);
   });
 
   it("Reset button is hidden in default state", () => {
@@ -191,7 +211,7 @@ describe("MobileFilterBar (redesigned)", () => {
     expect(dialog!.getAttribute("aria-hidden")).toBe("true");
 
     const more = Array.from(container.querySelectorAll("button")).find((b) =>
-      (b.textContent ?? "").includes("เพิ่มเติม")
+      (b.textContent ?? "").includes("ตัวกรอง")
     );
     fireEvent.click(more!);
     expect(dialog!.getAttribute("aria-hidden")).toBe("false");
@@ -207,7 +227,7 @@ describe("MobileFilterBar (redesigned)", () => {
       />
     );
     const more = Array.from(container.querySelectorAll("button")).find((b) =>
-      (b.textContent ?? "").includes("เพิ่มเติม")
+      (b.textContent ?? "").includes("ตัวกรอง")
     );
     fireEvent.click(more!);
     expect(window.sessionStorage.getItem("fo:filterSheetOpen")).toBe("true");

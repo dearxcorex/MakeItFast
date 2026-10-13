@@ -2,17 +2,13 @@
 
 import { useEffect, useState } from "react";
 import {
-  DEFAULT_FILTERS,
   STATUS_LABEL,
-  TYPE_LABEL,
   type FieldFilters,
   type StatusFilter,
-  type TypeFilter,
 } from "./FieldOpsFilters";
 import { MobileFilterSheet } from "./MobileFilterSheet";
 
 const SS_KEY = "fo:filterSheetOpen";
-const TYPES: TypeFilter[] = ["ALL", "FM", "INT"];
 const STATUSES: StatusFilter[] = ["ALL", "PENDING", "INSPECTED"];
 
 export function MobileFilterBar({
@@ -46,32 +42,18 @@ export function MobileFilterBar({
     }
   };
 
-  const advancedCount =
+  // Everything the sheet holds, type included — the badge has to account for
+  // any filter that is narrowing the map but is not visible in this row.
+  const sheetCount =
+    (filters.type !== "ALL" ? 1 : 0) +
     (filters.search.trim().length > 0 ? 1 : 0) +
     (filters.province !== "All" ? 1 : 0) +
     (filters.offAir ? 1 : 0) +
     (filters.revoked ? 1 : 0) +
     (filters.lawSent ? 1 : 0);
 
-  const anyFilterActive =
-    filters.type !== "ALL" || filters.status !== "ALL" || advancedCount > 0;
-
-  const handleType = (v: TypeFilter) => {
-    const next: FieldFilters = { ...filters, type: v };
-    if (v === "FM") next.lawSent = false;
-    if (v === "INT") {
-      next.offAir = false;
-      next.revoked = false;
-    }
-    onChange(next);
-  };
-
   const handleStatus = (v: StatusFilter) => {
     onChange({ ...filters, status: v });
-  };
-
-  const handleReset = () => {
-    onChange(DEFAULT_FILTERS);
   };
 
   return (
@@ -80,81 +62,44 @@ export function MobileFilterBar({
         style={{
           background: "var(--fo-rail-bg)",
           borderBottom: "1px solid var(--fo-rail-border)",
-          padding: "8px 12px",
+          padding: "6px 12px",
           display: "flex",
-          flexDirection: "column",
+          alignItems: "center",
           gap: 8,
+          flexShrink: 0,
         }}
       >
-        <div style={{ display: "flex", gap: 8 }}>
-          <ChipGroup
-            options={TYPES}
-            label={(v) => TYPE_LABEL[v]}
-            isActive={(v) => filters.type === v}
-            onPick={handleType}
-          />
-          <ChipGroup
-            options={STATUSES}
-            label={(v) => STATUS_LABEL[v]}
-            isActive={(v) => filters.status === v}
-            onPick={handleStatus}
-          />
-        </div>
-        <div
+        <ChipGroup
+          options={STATUSES}
+          label={(v) => STATUS_LABEL[v]}
+          isActive={(v) => filters.status === v}
+          onPick={handleStatus}
+        />
+        <button
+          type="button"
+          onClick={() => persist(true)}
+          aria-label={sheetCount > 0 ? `ตัวกรอง (ใช้อยู่ ${sheetCount})` : "ตัวกรอง"}
           style={{
-            display: "flex",
+            display: "inline-flex",
             alignItems: "center",
-            justifyContent: "space-between",
+            gap: 6,
+            minHeight: 44,
+            padding: "0 14px",
+            border: "1px solid var(--fo-accent)",
+            borderRadius: 999,
+            background: sheetCount > 0 ? "var(--fo-accent)" : "transparent",
+            color: sheetCount > 0 ? "#001e2b" : "var(--fo-accent)",
+            fontFamily: "inherit",
+            fontSize: 13,
+            fontWeight: 600,
+            cursor: "pointer",
+            flexShrink: 0,
+            whiteSpace: "nowrap",
           }}
         >
-          <button
-            type="button"
-            onClick={() => persist(true)}
-            className="fo-mono"
-            aria-label={
-              advancedCount > 0
-                ? `ตัวกรองเพิ่มเติม (ใช้อยู่ ${advancedCount})`
-                : "ตัวกรองเพิ่มเติม"
-            }
-            style={{
-              display: "inline-flex",
-              alignItems: "center",
-              gap: 6,
-              minHeight: 44,
-              padding: "0 14px",
-              border: "1px solid var(--fo-accent)",
-              borderRadius: 999,
-              background: "transparent",
-              color: "var(--fo-accent)",
-              fontSize: 11,
-              cursor: "pointer",
-              letterSpacing: "0.04em",
-            }}
-          >
-            <span aria-hidden>⇅</span>
-            <span>เพิ่มเติม{advancedCount > 0 ? ` · ${advancedCount}` : ""}</span>
-          </button>
-          {anyFilterActive && (
-            <button
-              type="button"
-              onClick={handleReset}
-              className="fo-mono"
-              style={{
-                minHeight: 44,
-                padding: "0 14px",
-                border: "1px solid var(--fo-rail-border)",
-                borderRadius: 999,
-                background: "transparent",
-                color: "var(--fo-rail-mute)",
-                fontSize: 11,
-                cursor: "pointer",
-                letterSpacing: "0.04em",
-              }}
-            >
-              ล้าง
-            </button>
-          )}
-        </div>
+          <span aria-hidden>⇅</span>
+          <span>ตัวกรอง{sheetCount > 0 ? ` · ${sheetCount}` : ""}</span>
+        </button>
       </div>
 
       <MobileFilterSheet
@@ -198,7 +143,6 @@ function ChipGroup<T extends string>({
             type="button"
             onClick={() => onPick(opt)}
             aria-pressed={active}
-            className="fo-mono"
             style={{
               // flex-basis 0 + minWidth 0 keeps "Inspected" from pushing the
               // row past the viewport — an overflowing chip lets the whole
@@ -214,10 +158,10 @@ function ChipGroup<T extends string>({
               border: "none",
               background: active ? "var(--fo-accent)" : "transparent",
               color: active ? "#001e2b" : "var(--fo-rail-text)",
-              fontSize: 12,
+              fontFamily: "inherit",
+              fontSize: 13,
               fontWeight: active ? 700 : 400,
               cursor: "pointer",
-              letterSpacing: "0.04em",
               borderRadius: 8,
               transition:
                 "background-color 120ms ease, color 120ms ease",

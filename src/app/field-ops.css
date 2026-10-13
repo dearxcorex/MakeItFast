@@ -113,6 +113,7 @@
   --fo-band-inset: var(--fo-ink);
   --fo-text: var(--fo-white);
   --fo-divider: var(--fo-ink-3);
+  --fo-accent-text: var(--fo-accent);
 
   /* Bottom-sheet — always dark regardless of theme so it reads against the map */
   --fo-sheet-bg: #0a1f23;
@@ -132,6 +133,7 @@
   --fo-band-inset: #f5f3ef;
   --fo-text: #001e2b;
   --fo-divider: #e2dfd8;
+  --fo-accent-text: var(--fo-accent-2);
 
   background: var(--fo-canvas);
   color: var(--fo-text);
@@ -421,5 +423,14 @@
   .field-ops-root select,
   .field-ops-root textarea {
     font-size: 16px !important;
+  }
+}
+
+/* Tracked-out uppercase mono suits Latin labels; at phone sizes it pulls Thai
+   words apart and 10px is too small to read in the field. */
+@media (max-width: 899px) {
+  .field-ops-root .fo-mono {
+    letter-spacing: 0.02em;
+    font-size: 12px;
   }
 }

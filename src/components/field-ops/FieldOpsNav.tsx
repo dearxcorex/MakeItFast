@@ -1,5 +1,7 @@
 "use client";
 
+import { BrandLogo } from "./BrandMark";
+
 export type FieldOpsTab = "field-ops" | "cell-sites" | "intermod" | "data";
 
 const ITEMS: Array<{ id: FieldOpsTab; label: string; icon: string }> = [
@@ -36,19 +38,8 @@ export function FieldOpsNav({
         flexShrink: 0,
       }}
     >
-      <div
-        className="fo-mono"
-        style={{
-          color: "var(--fo-accent)",
-          padding: "6px 0",
-          marginBottom: 12,
-          fontSize: 9,
-          letterSpacing: "0.2em",
-          writingMode: "vertical-rl",
-          transform: "rotate(180deg)",
-        }}
-      >
-        ภาคสนาม
+      <div style={{ marginBottom: 12 }}>
+        <BrandLogo size={40} />
       </div>
       {items.map((item) => {
         const isActive = active === item.id;

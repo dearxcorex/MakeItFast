@@ -69,6 +69,7 @@ export function FieldOpsBottomSheet({
 }) {
   const [expanded, setExpanded] = useState(false);
   const [coordsOpen, setCoordsOpen] = useState(false);
+  const [confirmUndo, setConfirmUndo] = useState(false);
   const touchStartY = useRef<number | null>(null);
 
   const handleSwipeStart = (e: React.TouchEvent) => {
@@ -102,6 +103,11 @@ export function FieldOpsBottomSheet({
     setCoordsOpen(false);
   }, [intSiteId]);
 
+  const selectionKey = selection ? `${selection.kind}:${selection.id}` : null;
+  useEffect(() => {
+    setConfirmUndo(false);
+  }, [selectionKey]);
+
   // Marking banner takes over the sheet so the map stays fully visible.
   if (marking && selection?.kind === "int") {
     return (
@@ -113,6 +119,7 @@ export function FieldOpsBottomSheet({
           borderTopRightRadius: 16,
           boxShadow: "0 -8px 24px rgba(0,30,43,0.25)",
           padding: "12px 16px",
+          pointerEvents: "auto",
           display: "flex",
           alignItems: "center",
           gap: 12,
@@ -136,10 +143,7 @@ export function FieldOpsBottomSheet({
           ◎
         </span>
         <div style={{ flex: 1, minWidth: 0 }}>
-          <div
-            className="fo-mono"
-            style={{ color: "var(--fo-accent)", fontSize: 10, letterSpacing: "0.16em" }}
-          >
+          <div style={{ color: "var(--fo-accent)", fontSize: 12 }}>
             ปักหมุดแหล่งรบกวน
           </div>
           <div
@@ -160,15 +164,14 @@ export function FieldOpsBottomSheet({
           type="button"
           onClick={onCancelMarkSource}
           disabled={pending}
-          className="fo-mono"
           style={{
-            padding: "10px 14px",
+            minHeight: 44,
+            padding: "0 14px",
             background: "transparent",
             color: "var(--fo-warn)",
             border: "1px solid var(--fo-warn)",
             borderRadius: 999,
-            fontSize: 10,
-            letterSpacing: "0.16em",
+            fontSize: 13,
             cursor: pending ? "wait" : "pointer",
             flexShrink: 0,
           }}
@@ -221,8 +224,10 @@ export function FieldOpsBottomSheet({
         borderTop: "1px solid var(--fo-rail-border)",
         borderTopLeftRadius: 20,
         borderTopRightRadius: 20,
-        boxShadow: "0 -8px 24px rgba(0,30,43,0.1)",
-        maxHeight: expanded ? "85dvh" : 320,
+        boxShadow: "0 -8px 24px rgba(0,30,43,0.35)",
+        // Shares of the map area the sheet floats over (see FieldOpsClient).
+        maxHeight: expanded ? "100%" : "70%",
+        pointerEvents: "auto",
         transition: "max-height 220ms ease",
         overflow: "hidden",
         display: "flex",
@@ -237,57 +242,60 @@ export function FieldOpsBottomSheet({
         style={{
           display: "flex",
           justifyContent: "center",
-          padding: "12px 0 8px",
+          padding: "10px 0 4px",
           background: "transparent",
           border: "none",
           cursor: "pointer",
           touchAction: "none",
+          flexShrink: 0,
         }}
       >
         <span style={{ width: 56, height: 5, borderRadius: 999, background: "var(--fo-line)" }} />
       </button>
 
-      <div style={{ padding: "0 16px", display: "flex", alignItems: "center", gap: 8 }}>
+      <div style={{ padding: "0 8px 0 16px", display: "flex", alignItems: "center", gap: 8, flexShrink: 0 }}>
         <span
-          className="fo-mono"
           style={{
             padding: "3px 8px",
             borderRadius: 4,
-            fontSize: 9,
+            fontSize: 11,
+            fontWeight: 700,
+            flexShrink: 0,
             background: isFM ? "var(--fo-ink)" : "var(--fo-accent-2)",
             color: isFM ? "var(--fo-accent)" : "var(--fo-white)",
           }}
         >
           {isFM ? "FM" : "รบกวน"}
         </span>
-        <span className="fo-mono" style={{ color: "var(--fo-sheet-text)" }}>{id}</span>
-        <div style={{ flex: 1 }} />
         <span
-          className="fo-mono"
           style={{
-            padding: "3px 8px",
-            borderRadius: 999,
-            border: `1px solid ${inspected ? "var(--fo-accent-2)" : "var(--fo-warn)"}`,
-            color: inspected ? "var(--fo-accent-2)" : "var(--fo-warn)",
-            fontSize: 9,
+            ...ellipsis,
+            fontFamily: "var(--fo-mono)",
+            fontSize: 13,
+            color: "var(--fo-rail-mute)",
+            minWidth: 0,
           }}
         >
-          {inspected ? "ตรวจแล้ว" : "ยังไม่ตรวจ"}
+          {id}
         </span>
-        {isFM && (
+        {/* Only the exception gets a tag: on air is the normal state, and the
+            inspect button below already says whether the station is done. */}
+        {isFM && !onAir && (
           <span
-            className="fo-mono"
             style={{
               padding: "3px 8px",
               borderRadius: 999,
-              border: `1px solid ${onAir ? "var(--fo-accent)" : "var(--fo-rail-mute)"}`,
-              color: onAir ? "var(--fo-accent)" : "var(--fo-rail-mute)",
-              fontSize: 9,
+              border: "1px solid var(--fo-warn)",
+              color: "var(--fo-warn)",
+              fontSize: 11,
+              flexShrink: 0,
+              whiteSpace: "nowrap",
             }}
           >
-            {onAir ? "ออกอากาศ" : "ไม่ออกอากาศ"}
+            ไม่ออกอากาศ
           </span>
         )}
+        <div style={{ flex: 1 }} />
         {onClose && (
           <button
             type="button"
@@ -303,14 +311,13 @@ export function FieldOpsBottomSheet({
               onClose();
             }}
             style={{
-              marginLeft: 4,
-              border: "1px solid var(--fo-rail-border)",
+              border: "none",
               background: "transparent",
               color: "var(--fo-rail-mute)",
               width: 44,
               height: 44,
-              borderRadius: 8,
-              fontSize: 18,
+              flexShrink: 0,
+              fontSize: 20,
               cursor: "pointer",
               lineHeight: 1,
               padding: 0,
@@ -322,12 +329,24 @@ export function FieldOpsBottomSheet({
         )}
       </div>
 
-      <div style={{ padding: "8px 16px 4px" }}>
-        <div className="fo-serif" style={{ fontSize: 18, color: "var(--fo-sheet-text)", lineHeight: 1.15 }}>
+      <div style={{ padding: "0 16px", flexShrink: 0 }}>
+        <div
+          style={{
+            fontSize: 19,
+            fontWeight: 600,
+            color: "var(--fo-sheet-text)",
+            lineHeight: 1.3,
+          }}
+        >
           {title}
         </div>
-        <div className="fo-mono" style={{ color: "var(--fo-rail-mute)", marginTop: 4 }}>
-          {province.toUpperCase()} · {district}
+        <div style={{ fontSize: 13, color: "var(--fo-rail-mute)", marginTop: 2, lineHeight: 1.4 }}>
+          {isFM && (
+            <span style={{ color: "var(--fo-sheet-text)", fontWeight: 600 }}>
+              {station!.frequency.toFixed(2)} MHz ·{" "}
+            </span>
+          )}
+          {province} · {district}
         </div>
       </div>
 
@@ -340,111 +359,88 @@ export function FieldOpsBottomSheet({
         onSelectSite={onSelectSite}
       />
 
-      <div style={{ padding: "8px 16px 0", display: "flex", gap: 16, fontSize: 12 }}>
-        {isFM ? (
-          <>
-            <Inline label="ความถี่" value={`${station!.frequency.toFixed(2)} MHz`} />
-            {station!.permit && (
-              <Inline
-                label={isRelicensed(station!) ? "ผู้รับใบอนุญาตรายใหม่" : "ผู้รับใบอนุญาต"}
-                value={station!.permit}
-              />
-            )}
-          </>
-        ) : (
-          <>
-            {site!.avgNiCarrier !== null && site!.avgNiCarrier !== undefined && (
-              <Inline label="N/I" value={`${site!.avgNiCarrier.toFixed(1)}`} />
-            )}
-            {site!.ranking && <Inline label="ระดับ" value={rankingLabel(site!.ranking)} />}
-          </>
-        )}
-      </div>
-
-      <div style={{ padding: "12px 16px 0", display: "flex", gap: 8 }}>
-        <a
-          href={canNavigate ? googleMapsUrl(lat, lng) : "#"}
-          target="_blank"
-          rel="noopener noreferrer"
-          aria-disabled={!canNavigate}
-          className="fo-mono"
-          onClick={(e) => {
-            if (!canNavigate) e.preventDefault();
-          }}
-          style={{
-            flex: 1,
-            padding: "12px",
-            background: canNavigate ? "var(--fo-accent)" : "var(--fo-line)",
-            color: "var(--fo-ink)",
-            borderRadius: 999,
-            fontSize: 11,
-            letterSpacing: "0.2em",
-            fontWeight: 700,
-            textDecoration: "none",
-            textAlign: "center",
-          }}
-        >
-          ▶ นำทาง
-        </a>
-        <button
-          type="button"
-          onClick={onToggleInspection}
-          disabled={pending}
-          className="fo-mono"
-          style={{
-            flex: 1,
-            padding: "12px",
-            background: revoked
-              ? "var(--fo-crit)"
-              : inspected
-                ? "var(--fo-ink)"
-                : "var(--fo-white)",
-            color: revoked
-              ? "#ffffff"
-              : inspected
-                ? "var(--fo-accent)"
-                : "var(--fo-ink)",
-            border: `1px solid ${
-              revoked
-                ? "var(--fo-crit)"
-                : inspected
-                  ? "var(--fo-ink)"
-                  : "var(--fo-line)"
-            }`,
-            borderRadius: 999,
-            fontSize: 11,
-            letterSpacing: "0.2em",
-            fontWeight: 700,
-            cursor: pending ? "wait" : "pointer",
-            opacity: pending ? 0.6 : 1,
-          }}
-        >
-          {inspected ? "✓ ตรวจแล้ว" : "✓ ตรวจ"}
-        </button>
-      </div>
-
-      {isFM && onToggleOnAir && (
-        <div style={{ padding: "8px 16px 0" }}>
+      {confirmUndo ? (
+        <div style={{ padding: "12px 16px 0", flexShrink: 0 }}>
+          <div style={{ fontSize: 14, color: "var(--fo-sheet-text)", marginBottom: 8 }}>
+            ยกเลิกการตรวจสถานีนี้?
+          </div>
+          <div style={{ display: "flex", gap: 8 }}>
+            <button
+              type="button"
+              onClick={() => setConfirmUndo(false)}
+              style={{
+                ...actionStyle,
+                background: "transparent",
+                color: "var(--fo-sheet-text)",
+                border: "1px solid var(--fo-rail-border)",
+              }}
+            >
+              ไม่ยกเลิก
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                setConfirmUndo(false);
+                onToggleInspection();
+              }}
+              disabled={pending}
+              style={{
+                ...actionStyle,
+                background: "var(--fo-crit)",
+                color: "#ffffff",
+                border: "1px solid var(--fo-crit)",
+              }}
+            >
+              ยกเลิกการตรวจ
+            </button>
+          </div>
+        </div>
+      ) : (
+        <div style={{ padding: "12px 16px 0", display: "flex", gap: 8, flexShrink: 0 }}>
+          <a
+            href={canNavigate ? googleMapsUrl(lat, lng) : "#"}
+            target="_blank"
+            rel="noopener noreferrer"
+            aria-disabled={!canNavigate}
+            onClick={(e) => {
+              if (!canNavigate) e.preventDefault();
+            }}
+            style={{
+              ...actionStyle,
+              background: canNavigate ? "var(--fo-accent)" : "var(--fo-line)",
+              color: "var(--fo-ink)",
+              border: "1px solid transparent",
+              textDecoration: "none",
+            }}
+          >
+            ▶ นำทาง
+          </a>
           <button
             type="button"
-            onClick={onToggleOnAir}
+            // Marking is one tap; undoing deletes the Discord notice, so it asks first.
+            onClick={inspected ? () => setConfirmUndo(true) : onToggleInspection}
             disabled={pending}
-            className="fo-mono"
+            aria-pressed={inspected}
             style={{
-              width: "100%",
-              padding: "12px",
-              background: onAir ? "var(--fo-warn)" : "var(--fo-accent)",
-              color: "var(--fo-ink)",
-              border: `1px solid ${onAir ? "var(--fo-warn)" : "var(--fo-accent)"}`,
-              borderRadius: 999,
-              fontSize: 11,
-              letterSpacing: "0.2em",
-              fontWeight: 700,
+              ...actionStyle,
+              background: inspected
+                ? "transparent"
+                : revoked
+                  ? "var(--fo-crit)"
+                  : "var(--fo-white)",
+              color: inspected
+                ? "var(--fo-accent)"
+                : revoked
+                  ? "#ffffff"
+                  : "var(--fo-ink)",
+              border: `1px solid ${
+                inspected ? "var(--fo-accent)" : revoked ? "var(--fo-crit)" : "var(--fo-white)"
+              }`,
               cursor: pending ? "wait" : "pointer",
               opacity: pending ? 0.6 : 1,
             }}
           >
-            {onAir ? "📡 ออกอากาศ · หยุด" : "📡 ไม่ออกอากาศ · เปิด"}
+            {inspected ? "✓ ตรวจแล้ว" : "ตรวจ"}
           </button>
         </div>
       )}
@@ -454,7 +450,7 @@ export function FieldOpsBottomSheet({
         && onHelperUserIdsChange
         && inspectors
         && currentUser && (
-        <div style={{ padding: '0 16px' }}>
+        <div style={{ padding: '4px 16px 0', flexShrink: 0 }}>
           <TeammatePicker
             inspectors={inspectors}
             currentUserId={currentUser.id}
@@ -465,55 +461,33 @@ export function FieldOpsBottomSheet({
         </div>
       )}
 
-      {inspected && lastInspection && (
-        <div style={{ padding: '0 16px' }}>
-          <InspectionTeamChips
-            lead={lastInspection.lead}
-            helpers={lastInspection.helpers}
-            inspectedOn={lastInspection.inspectedOn}
-          />
-        </div>
-      )}
-
       {showSourceControls && (
-        <div style={{ padding: "10px 16px 0" }}>
+        <div style={{ padding: "8px 16px 0", flexShrink: 0 }}>
           {hasSource ? (
             <div style={{ display: "flex", gap: 8 }}>
               <button
                 type="button"
                 onClick={onClearSource}
                 disabled={pending}
-                className="fo-mono"
                 style={{
+                  ...secondaryStyle,
                   flex: 1,
-                  padding: "11px",
-                  background: "transparent",
                   color: "var(--fo-rail-mute)",
                   border: "1px solid var(--fo-rail-border)",
-                  borderRadius: 999,
-                  fontSize: 10,
-                  letterSpacing: "0.18em",
-                  fontWeight: 700,
                   cursor: pending ? "wait" : "pointer",
                 }}
               >
-                ✕ ล้าง
+                ✕ ล้างหมุด
               </button>
               <button
                 type="button"
                 onClick={onStartMarkSource}
                 disabled={pending}
-                className="fo-mono"
                 style={{
+                  ...secondaryStyle,
                   flex: 2,
-                  padding: "11px",
-                  background: "transparent",
                   color: "var(--fo-accent)",
                   border: "1px solid var(--fo-accent)",
-                  borderRadius: 999,
-                  fontSize: 10,
-                  letterSpacing: "0.18em",
-                  fontWeight: 700,
                   cursor: pending ? "wait" : "pointer",
                 }}
               >
@@ -525,17 +499,11 @@ export function FieldOpsBottomSheet({
               type="button"
               onClick={onStartMarkSource}
               disabled={pending}
-              className="fo-mono"
               style={{
+                ...secondaryStyle,
                 width: "100%",
-                padding: "12px",
-                background: "transparent",
                 color: "var(--fo-accent)",
                 border: "1px dashed var(--fo-accent)",
-                borderRadius: 999,
-                fontSize: 11,
-                letterSpacing: "0.2em",
-                fontWeight: 700,
                 cursor: pending ? "wait" : "pointer",
               }}
             >
@@ -545,7 +513,23 @@ export function FieldOpsBottomSheet({
         </div>
       )}
 
-      <div style={{ height: 12 }} />
+      <button
+        type="button"
+        onClick={() => setExpanded((v) => !v)}
+        aria-expanded={expanded}
+        style={{
+          minHeight: 40,
+          padding: "0 16px",
+          background: "transparent",
+          border: "none",
+          color: "var(--fo-rail-mute)",
+          fontSize: 13,
+          cursor: "pointer",
+          flexShrink: 0,
+        }}
+      >
+        {expanded ? "ซ่อนรายละเอียด ▾" : "รายละเอียด ▴"}
+      </button>
 
       {expanded && (
         <div
@@ -557,6 +541,77 @@ export function FieldOpsBottomSheet({
             minHeight: 0,
           }}
         >
+          {isFM && onToggleOnAir && (
+            <div
+              style={{
+                padding: "10px 12px",
+                border: "1px solid var(--fo-rail-border)",
+                borderRadius: 12,
+                display: "flex",
+                alignItems: "center",
+                gap: 10,
+                marginBottom: 10,
+              }}
+            >
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <div style={labelStyle}>สถานะออกอากาศ</div>
+                <div
+                  style={{
+                    fontSize: 15,
+                    fontWeight: 600,
+                    color: onAir ? "var(--fo-sheet-text)" : "var(--fo-warn)",
+                  }}
+                >
+                  {onAir ? "ออกอากาศ" : "ไม่ออกอากาศ"}
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={onToggleOnAir}
+                disabled={pending}
+                style={{
+                  ...secondaryStyle,
+                  padding: "0 14px",
+                  color: "var(--fo-sheet-text)",
+                  border: "1px solid var(--fo-rail-border)",
+                  cursor: pending ? "wait" : "pointer",
+                  opacity: pending ? 0.6 : 1,
+                  flexShrink: 0,
+                }}
+              >
+                {onAir ? "เปลี่ยนเป็นไม่ออกอากาศ" : "เปลี่ยนเป็นออกอากาศ"}
+              </button>
+            </div>
+          )}
+
+          <div style={{ display: "flex", flexDirection: "column", gap: 8, marginBottom: 10 }}>
+            {isFM ? (
+              station!.permit && (
+                <Inline
+                  label={isRelicensed(station!) ? "ผู้รับใบอนุญาตรายใหม่" : "ผู้รับใบอนุญาต"}
+                  value={station!.permit}
+                />
+              )
+            ) : (
+              <div style={{ display: "flex", gap: 16 }}>
+                {site!.avgNiCarrier !== null && site!.avgNiCarrier !== undefined && (
+                  <Inline label="N/I" value={`${site!.avgNiCarrier.toFixed(1)}`} />
+                )}
+                {site!.ranking && <Inline label="ระดับ" value={rankingLabel(site!.ranking)} />}
+              </div>
+            )}
+          </div>
+
+          {inspected && lastInspection && (
+            <div style={{ marginBottom: 10 }}>
+              <InspectionTeamChips
+                lead={lastInspection.lead}
+                helpers={lastInspection.helpers}
+                inspectedOn={lastInspection.inspectedOn}
+              />
+            </div>
+          )}
+
           {!isFM && (
             <button
               type="button"
@@ -581,12 +636,12 @@ export function FieldOpsBottomSheet({
             >
               <span style={{ fontSize: 18 }}>✉</span>
               <span style={{ flex: 1 }}>
-                <span className="fo-mono">หนังสือแจ้ง</span>
-                <div style={{ fontSize: 13, fontWeight: 600 }}>
+                <span style={{ fontSize: 12 }}>หนังสือแจ้ง</span>
+                <div style={{ fontSize: 15, fontWeight: 600 }}>
                   {lawSent ? "ส่งแล้ว" : "ยังไม่ส่ง"}
                 </div>
               </span>
-              <span className="fo-mono" style={{ color: "var(--fo-rail-mute)" }}>แตะเพื่อสลับ</span>
+              <span style={{ fontSize: 12, color: "#5c6c75" }}>แตะเพื่อสลับ</span>
             </button>
           )}
 
@@ -602,9 +657,9 @@ export function FieldOpsBottomSheet({
               <button
                 type="button"
                 onClick={() => setCoordsOpen((v) => !v)}
-                className="fo-mono"
                 style={{
                   width: "100%",
+                  minHeight: 32,
                   display: "flex",
                   alignItems: "center",
                   justifyContent: "space-between",
@@ -612,8 +667,7 @@ export function FieldOpsBottomSheet({
                   border: "none",
                   background: "transparent",
                   color: "var(--fo-rail-mute)",
-                  fontSize: 10,
-                  letterSpacing: "0.18em",
+                  fontSize: 13,
                   cursor: "pointer",
                 }}
               >
@@ -654,27 +708,27 @@ export function FieldOpsBottomSheet({
                     type="button"
                     onClick={handleSubmitCoords}
                     disabled={pending || (!latInput.trim() && !lngInput.trim())}
-                    className="fo-mono"
                     style={{
                       width: "100%",
+                      minHeight: 44,
                       padding: "10px 12px",
                       background: "var(--fo-accent-2)",
                       color: "#fff",
                       border: "1px solid var(--fo-accent-2)",
                       borderRadius: 8,
                       cursor: pending ? "wait" : "pointer",
-                      fontSize: 11,
-                      letterSpacing: "0.14em",
+                      fontSize: 14,
+                      fontWeight: 600,
                     }}
                   >
                     บันทึกพิกัด
                   </button>
                   {coordError && (
-                    <div className="fo-mono" style={{ color: "var(--fo-crit)", fontSize: 10 }}>
+                    <div style={{ color: "var(--fo-crit)", fontSize: 12 }}>
                       ✕ {coordError}
                     </div>
                   )}
-                  <div className="fo-mono" style={{ color: "var(--fo-rail-mute)", fontSize: 10 }}>
+                  <div style={{ color: "var(--fo-rail-mute)", fontSize: 12 }}>
                     เคล็ดลับ: วาง &quot;13.756, 100.501&quot; ในช่อง LAT
                   </div>
                 </div>
@@ -716,6 +770,46 @@ export function FieldOpsBottomSheet({
   );
 }
 
+const ellipsis: React.CSSProperties = {
+  overflow: "hidden",
+  textOverflow: "ellipsis",
+  whiteSpace: "nowrap",
+};
+
+// Thai labels: no tracking and no uppercase — the `.fo-mono` look pulls Thai
+// words apart at phone sizes.
+const labelStyle: React.CSSProperties = {
+  fontSize: 12,
+  color: "var(--fo-rail-mute)",
+};
+
+const actionStyle: React.CSSProperties = {
+  flex: 1,
+  minWidth: 0,
+  minHeight: 48,
+  display: "inline-flex",
+  alignItems: "center",
+  justifyContent: "center",
+  padding: "0 12px",
+  borderRadius: 12,
+  fontFamily: "inherit",
+  fontSize: 15,
+  fontWeight: 700,
+  cursor: "pointer",
+  touchAction: "manipulation",
+};
+
+const secondaryStyle: React.CSSProperties = {
+  minHeight: 44,
+  padding: "0 12px",
+  background: "transparent",
+  borderRadius: 12,
+  fontFamily: "inherit",
+  fontSize: 13,
+  fontWeight: 600,
+  touchAction: "manipulation",
+};
+
 const inputStyle: React.CSSProperties = {
   minWidth: 0,
   width: "100%",
@@ -731,9 +825,8 @@ const inputStyle: React.CSSProperties = {
 function Inline({ label, value }: { label: string; value: string }) {
   return (
     <div style={{ display: "flex", flexDirection: "column" }}>
-      <span className="fo-mono" style={{ color: "var(--fo-rail-mute)" }}>{label}</span>
+      <span style={labelStyle}>{label}</span>
       <span
-        className="fo-serif"
         style={{
           fontSize: 14,
           color: "var(--fo-sheet-text)",
@@ -766,16 +859,8 @@ function CoLocatedStrip({
     : (sites ?? []).filter((s) => s.id !== currentId);
   if (others.length === 0) return null;
   return (
-    <div style={{ padding: "8px 16px 0" }}>
-      <div
-        className="fo-mono"
-        style={{
-          color: "var(--fo-rail-mute)",
-          fontSize: 9,
-          letterSpacing: "0.18em",
-          marginBottom: 6,
-        }}
-      >
+    <div style={{ padding: "8px 16px 0", flexShrink: 0 }}>
+      <div style={{ ...labelStyle, marginBottom: 6 }}>
         ที่เดียวกัน · {others.length}
       </div>
       <div
@@ -804,22 +889,20 @@ function CoLocatedStrip({
               key={String(s.id)}
               type="button"
               onClick={handleClick}
-              className="fo-mono"
               style={{
                 flexShrink: 0,
                 display: "inline-flex",
                 alignItems: "center",
                 gap: 6,
                 padding: "8px 12px",
-                minHeight: 36,
+                minHeight: 44,
                 border: "1px solid var(--fo-rail-border)",
                 borderRadius: 999,
                 background: "transparent",
                 color: "var(--fo-sheet-text)",
-                fontSize: 11,
+                fontSize: 13,
                 cursor: "pointer",
-                letterSpacing: "0.04em",
-                maxWidth: 220,
+                maxWidth: 240,
               }}
             >
               <span
@@ -858,8 +941,8 @@ function Cell({ label, value }: { label: string; value: string }) {
   // rail-mute tokens here would render light-on-light and be invisible.
   return (
     <div>
-      <div className="fo-mono" style={{ color: "#5c6c75", marginBottom: 2 }}>{label}</div>
-      <div style={{ fontSize: 13, color: "#001e2b" }}>{value}</div>
+      <div style={{ fontSize: 12, color: "#5c6c75", marginBottom: 2 }}>{label}</div>
+      <div style={{ fontSize: 14, color: "#001e2b" }}>{value}</div>
     </div>
   );
 }

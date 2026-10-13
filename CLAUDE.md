@@ -59,13 +59,13 @@ FM radio station tracker for NBTC (Thailand), built with Next.js 15, TypeScript,
 
 ### Responsive Design
 - **Desktop**: 72px icon rail (`FieldOpsNav`) + top header (`FieldOpsHeader`) + map-dominant content
-- **Mobile** (`< 900px`): the rail is hidden; a top header with a ☰ opens `FieldOpsDrawer`, filters live in `MobileFilterBar`, and station detail opens in `FieldOpsBottomSheet`
+- **Mobile** (`< 900px`): the rail is hidden; a one-line header with a ☰ opens `FieldOpsDrawer`. `MobileFilterBar` is a single row (status chips + a ตัวกรอง button); type, search, province and reset live in `MobileFilterSheet`. Station detail opens in `FieldOpsBottomSheet`, which floats over the map rather than pushing it up: the collapsed view holds นำทาง / ตรวจ, everything else (on-air switch included) is in the expanded details, and undoing an inspection asks first
 - Tailwind CSS 4 with CSS-based config (no `tailwind.config.js`)
 
 ## Testing
 
 - Vitest with jsdom environment, `@testing-library/react` for components
-- Tests in `src/__tests__/`, 811 tests across 87 files
+- Tests in `src/__tests__/`, 817 tests across 88 files
 - Leaflet requires mocking: `vi.mock('leaflet')` and `vi.mock('react-leaflet')` with divIcon/icon stubs
 - CSS stub at `src/__tests__/css-stub.js` handles `leaflet/dist/leaflet.css` imports (aliased in `vitest.config.ts`)
 - API route tests mock Prisma via `vi.mock('@/lib/prisma')` with method stubs (findMany, findFirst, etc.)

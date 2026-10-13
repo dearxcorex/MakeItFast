@@ -248,13 +248,27 @@ function intIcon(
   });
 }
 
-export function FlyTo({ target }: { target: [number, number] | null }) {
+// `bottomInset` is the strip of the map hidden under the mobile bottom sheet;
+// the target lands in the middle of what is left above it. Optional-chains
+// guard against incomplete useMap mocks in unit tests.
+export function FlyTo({
+  target,
+  bottomInset = 0,
+}: {
+  target: [number, number] | null;
+  bottomInset?: number;
+}) {
   const map = useMap();
   useEffect(() => {
-    if (target) {
-      map.flyTo(target, Math.max(map.getZoom(), 12), { duration: 0.6 });
+    if (!target) return;
+    const zoom = Math.max(map.getZoom(), 12);
+    let centre: L.LatLngExpression = target;
+    if (bottomInset > 0 && map.project && map.unproject) {
+      const point = map.project(target, zoom);
+      centre = map.unproject([point.x, point.y + bottomInset / 2], zoom);
     }
-  }, [target, map]);
+    map.flyTo(centre, zoom, { duration: 0.6 });
+  }, [target, bottomInset, map]);
   return null;
 }
 
@@ -384,6 +398,7 @@ export function FieldOpsMap({
   selection,
   onSelect,
   flyTarget,
+  flyBottomInset = 0,
   markingSourceForId = null,
   onMarkSource,
   onCancelMarkSource,
@@ -401,6 +416,8 @@ export function FieldOpsMap({
   selection: FieldSelection;
   onSelect: (sel: FieldSelection) => void;
   flyTarget: [number, number] | null;
+  /** Pixels of the map covered from the bottom (the mobile sheet). */
+  flyBottomInset?: number;
   markingSourceForId?: number | null;
   onMarkSource?: (siteId: number, lat: number, lng: number) => void;
   onCancelMarkSource?: () => void;
@@ -706,7 +723,7 @@ export function FieldOpsMap({
         />
       )}
 
-      <FlyTo target={flyTarget} />
+      <FlyTo target={flyTarget} bottomInset={flyBottomInset} />
       <InvalidateOnResize />
       {userLocation && <RecenterButton location={userLocation} />}
     </MapContainer>

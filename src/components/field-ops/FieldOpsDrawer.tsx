@@ -4,6 +4,7 @@ import Link from "next/link";
 import type { FieldOpsTab } from "./FieldOpsNav";
 import type { FieldOpsKpis } from "@/utils/fieldOpsKpi";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
+import { APP_NAME, BrandMark } from "./BrandMark";
 
 interface NavItem {
   id: FieldOpsTab;
@@ -55,7 +56,7 @@ export function FieldOpsDrawer({
       />
       <aside
         role="dialog"
-        aria-label="เมนูงานภาคสนาม"
+        aria-label={`เมนู ${APP_NAME}`}
         style={{
           position: "fixed",
           top: 0,
@@ -73,6 +74,8 @@ export function FieldOpsDrawer({
           overflowY: "auto",
         }}
       >
+        <BrandMark logoSize={32} fontSize={18} />
+
         <AccountSection onAfterAction={onClose} />
 
         <div style={{ height: 1, background: "var(--fo-rail-border)", margin: "4px 0" }} />
