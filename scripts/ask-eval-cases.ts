@@ -8,7 +8,7 @@ import type { EvalCase } from '../src/utils/askEval';
 
 const FM_TOOLS = ['find_stations', 'scan_intermod'];
 /** History replays tool calls; their raw names must not leak into a follow-up answer. */
-const NO_TOOL_NAMES = /\b(?:find_stations|scan_intermod|path_loss|web_search|tool_use)\b/;
+const NO_TOOL_NAMES = /\b(?:find_stations|scan_intermod|path_loss|web_search|find_oper_stations|count_oper_inspections|tool_use)\b/;
 const INTERMOD_122 = 'มีเรื่องร้องเรียนว่าความถี่การบิน 122.5 MHz ถูกรบกวน น่าจะมาจากคู่สถานี FM คู่ไหน';
 const ALL_TOOLS = [...FM_TOOLS, 'path_loss', 'web_search'];
 
@@ -47,6 +47,23 @@ export const CASES: EvalCase[] = [
       { tool: 'find_stations', key: 'freqMin', equals: 88 },
       { tool: 'find_stations', key: 'freqMax', equals: 90 },
     ],
+  },
+
+  // --- OPER register (live portal, only reachable from the Pi) -------------
+  {
+    id: 'oper-inspected-count',
+    question: 'สถานีที่ตรวจแล้วมีกี่สถานี',
+    why: 'Live OPER inspection count — failed before the OPER tools, answered "no records".',
+    mustCall: ['count_oper_inspections'],
+    mustNotCall: ['web_search'],
+  },
+  {
+    id: 'oper-licence-expiry',
+    question: 'สถานีความถี่ 91.75 MHz ในชัยภูมิ ใบอนุญาตหมดอายุเมื่อไหร่',
+    why: 'Licence facts live only in the OPER register.',
+    mustCall: ['find_oper_stations'],
+    mustNotCall: ['web_search'],
+    args: [{ tool: 'find_oper_stations', key: 'frequency', equals: 91.75 }],
   },
 
   // --- Intermod: inside FM_RELEVANT_RANGE, must scan -----------------------

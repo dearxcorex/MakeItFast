@@ -9,6 +9,7 @@ import prisma from '@/lib/prisma';
 import { searchWeb, type ToolDefinition } from '@/lib/deepseek';
 import { convertToFMStation } from '@/services/stationService';
 import { haversineDistanceKm } from '@/utils/distance';
+import { operRequest } from '@/lib/operApi';
 import {
   assessInterferenceRisk,
   calculatePathLoss,
@@ -17,6 +18,8 @@ import {
 
 const MAX_STATIONS = 25;
 const MAX_PAIRS = 10;
+const OPER_SOURCES = ['ASMS', 'WEB', 'BCS', 'BCS2', 'BCS3', 'OPER'] as const;
+const ISO_DATE = /^\d{4}-\d{2}-\d{2}$/;
 
 export const TOOL_DEFINITIONS: ToolDefinition[] = [
   {
@@ -24,7 +27,7 @@ export const TOOL_DEFINITIONS: ToolDefinition[] = [
     description:
       'ค้นหาสถานีวิทยุ FM ที่ได้รับอนุญาต ในฐานข้อมูลของสำนักงาน (เฉพาะ 87.5–108 MHz ' +
       'จังหวัดนครราชสีมาและชัยภูมิ) กรองตามความถี่ ช่วงความถี่ ชื่อ อำเภอ จังหวัด หรือระยะห่างจากพิกัด ' +
-      'คืนค่าเป็นรายการย่อและจำนวนรวม ไม่คืนพิกัด',
+      'คืนค่าเป็นรายการย่อ (รวมสถานะตรวจแล้ว ออกอากาศ เพิกถอน) และจำนวนรวม ไม่คืนพิกัด',
     input_schema: {
       type: 'object',
       properties: {
@@ -79,6 +82,48 @@ export const TOOL_DEFINITIONS: ToolDefinition[] = [
       type: 'object',
       properties: { query: { type: 'string', description: 'คำค้น ใช้ภาษาอังกฤษจะได้ผลดีกว่า' } },
       required: ['query'],
+    },
+  },
+  {
+    name: 'find_oper_stations',
+    description:
+      'ค้นทะเบียนสถานีวิทยุกระจายเสียงของ กสทช. (ระบบ OPER, ข้อมูลสด) รวมสถานีที่ยังไม่เคยตรวจ ' +
+      'และสถานีที่ไม่มีในฐานข้อมูลของสำนักงาน กรองตามจังหวัด อำเภอ ตำบล ความถี่ (ตรงตัว) ชื่อ หรือแหล่งข้อมูล ' +
+      'ต้องระบุอย่างน้อยหนึ่งอย่างจาก จังหวัด อำเภอ ความถี่ ชื่อ  details=true เพิ่มเลขใบอนุญาต วันหมดอายุ ' +
+      'และผู้ประกอบการ (ช้ากว่า สูงสุด 10 สถานี) ไม่คืนพิกัด ช้ากว่า find_stations หลายวินาที',
+    input_schema: {
+      type: 'object',
+      properties: {
+        province: { type: 'string', description: 'จังหวัด เช่น ชัยภูมิ' },
+        district: { type: 'string', description: 'อำเภอ เช่น ภูเขียว' },
+        subdistrict: { type: 'string', description: 'ตำบล ต้องระบุอำเภอด้วย' },
+        frequency: { type: 'number', description: 'ความถี่ MHz แบบตรงตัว เช่น 91.75' },
+        name: { type: 'string', description: 'ชื่อสถานี (บางส่วนได้)' },
+        source: {
+          type: 'string',
+          enum: [...OPER_SOURCES],
+          description: 'แหล่งข้อมูล ไม่ระบุ = ทุกแหล่ง  OPER คือทะเบียนใบอนุญาต',
+        },
+        limit: { type: 'number', description: `จำนวนสูงสุดที่ส่งกลับ (สูงสุด ${MAX_STATIONS})` },
+        details: { type: 'boolean', description: 'เพิ่มเลขใบอนุญาต วันหมดอายุ ผู้ประกอบการ' },
+      },
+    },
+  },
+  {
+    name: 'count_oper_inspections',
+    description:
+      'นับการตรวจสถานีวิทยุที่บันทึกในระบบ OPER ของ กสทช. (ข้อมูลสด) ในช่วงวันที่ตรวจ ' +
+      'คืนจำนวนครั้งที่ตรวจ (inspections) และจำนวนสถานีที่ไม่ซ้ำ (stations) ' +
+      'กรองตามจังหวัด อำเภอได้ ใช้ปี ค.ศ. ช่วงยิ่งยาวยิ่งช้า',
+    input_schema: {
+      type: 'object',
+      properties: {
+        inspectedFrom: { type: 'string', description: 'วันแรก YYYY-MM-DD (ค.ศ.)' },
+        inspectedTo: { type: 'string', description: 'วันสุดท้าย YYYY-MM-DD (ค.ศ.)' },
+        province: { type: 'string', description: 'จังหวัด' },
+        district: { type: 'string', description: 'อำเภอ' },
+      },
+      required: ['inspectedFrom', 'inspectedTo'],
     },
   },
 ];
@@ -239,6 +284,46 @@ function pathLoss(input: Record<string, unknown>) {
   };
 }
 
+async function findOperStations(input: Record<string, unknown>) {
+  const body: Record<string, unknown> = {};
+  for (const key of ['province', 'district', 'subdistrict', 'name'] as const) {
+    const v = str(input, key);
+    if (v) body[key] = v;
+  }
+  const frequency = num(input, 'frequency');
+  if (frequency !== undefined) body.frequency = frequency;
+  if (!body.province && !body.district && !body.name && body.frequency === undefined) {
+    throw new Error('ต้องระบุอย่างน้อยหนึ่งอย่าง: province, district, frequency หรือ name');
+  }
+  const source = str(input, 'source');
+  if (source && (OPER_SOURCES as readonly string[]).includes(source)) body.source = source;
+  body.limit = Math.min(Math.max(Math.trunc(num(input, 'limit') ?? 10), 1), MAX_STATIONS);
+  if (input.details === true) body.details = true;
+
+  return {
+    ...(await operRequest('/find-stations', body) as Record<string, unknown>),
+    note: 'ทะเบียนสถานีระบบ OPER ของ กสทช. (ข้อมูลสด) แหล่งข้อมูลหลายแหล่งอาจมีสถานีเดียวกันซ้ำ',
+  };
+}
+
+async function countOperInspections(input: Record<string, unknown>) {
+  const inspectedFrom = str(input, 'inspectedFrom');
+  const inspectedTo = str(input, 'inspectedTo');
+  if (!inspectedFrom || !inspectedTo || !ISO_DATE.test(inspectedFrom) || !ISO_DATE.test(inspectedTo)) {
+    throw new Error('inspectedFrom and inspectedTo are required as YYYY-MM-DD');
+  }
+  const body: Record<string, unknown> = { inspected_from: inspectedFrom, inspected_to: inspectedTo };
+  const province = str(input, 'province');
+  if (province) body.province = province;
+  const district = str(input, 'district');
+  if (district) body.district = district;
+
+  return {
+    ...(await operRequest('/count-stations', body) as Record<string, unknown>),
+    note: 'นับจากบันทึกการตรวจในระบบ OPER ของ กสทช. inspections = จำนวนครั้ง, stations = สถานีไม่ซ้ำ',
+  };
+}
+
 /**
  * Run one tool call. Throwing is fine — the agent turns a throw into a
  * tool_result with is_error, so the model can recover or say it could not.
@@ -257,6 +342,10 @@ export async function runTool(name: string, input: Record<string, unknown>): Pro
       if (!query) throw new Error('query is required');
       return { query, result: await searchWeb(query) };
     }
+    case 'find_oper_stations':
+      return findOperStations(input);
+    case 'count_oper_inspections':
+      return countOperInspections(input);
     default:
       throw new Error(`unhandled tool: ${name}`);
   }

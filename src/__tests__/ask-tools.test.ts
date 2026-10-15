@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 
 vi.mock('@/lib/prisma', () => ({
   default: { fm_station: { findMany: vi.fn() } },
@@ -45,8 +45,10 @@ beforeEach(() => {
 });
 
 describe('TOOL_DEFINITIONS', () => {
-  it('exposes exactly the four tools the agent is allowed to call', () => {
+  it('exposes exactly the six tools the agent is allowed to call', () => {
     expect(TOOL_DEFINITIONS.map((t) => t.name).sort()).toEqual([
+      'count_oper_inspections',
+      'find_oper_stations',
       'find_stations',
       'path_loss',
       'scan_intermod',
@@ -228,5 +230,84 @@ describe('web_search', () => {
   it('refuses an empty query', async () => {
     await expect(runTool('web_search', { query: '   ' })).rejects.toThrow('query is required');
     expect(searchWeb).not.toHaveBeenCalled();
+  });
+});
+
+describe('OPER tools', () => {
+  const fetchMock = vi.fn();
+
+  beforeEach(() => {
+    vi.stubGlobal('fetch', fetchMock);
+    vi.stubEnv('OPER_API_URL', 'http://127.0.0.1:8787/');
+    vi.stubEnv('OPER_API_TOKEN', 'secret');
+  });
+
+  afterEach(() => {
+    vi.unstubAllGlobals();
+    vi.unstubAllEnvs();
+  });
+
+  function respond(status: number, body: unknown) {
+    fetchMock.mockResolvedValueOnce(new Response(JSON.stringify(body), { status }));
+  }
+
+  function sent() {
+    const [url, init] = fetchMock.mock.calls[0];
+    return { url, headers: init.headers, body: JSON.parse(init.body) };
+  }
+
+  it('find_oper_stations posts the filters with the bearer token', async () => {
+    respond(200, { total: 1, shown: 1, stations: [{ stn_id: '9', name: 'ทดสอบ', frequency_mhz: 91.75 }] });
+    const out = (await runTool('find_oper_stations', { province: 'ชัยภูมิ', frequency: 91.75, details: true })) as {
+      total: number;
+      note: string;
+    };
+    const { url, headers, body } = sent();
+    expect(url).toBe('http://127.0.0.1:8787/find-stations');
+    expect(headers.Authorization).toBe('Bearer secret');
+    expect(body).toEqual({ province: 'ชัยภูมิ', frequency: 91.75, limit: 10, details: true });
+    expect(out.total).toBe(1);
+    expect(out.note).toContain('OPER');
+  });
+
+  it('find_oper_stations caps the limit and drops an unknown source', async () => {
+    respond(200, { total: 0, stations: [] });
+    await runTool('find_oper_stations', { name: 'คน', limit: 500, source: 'BOGUS' });
+    expect(sent().body).toEqual({ name: 'คน', limit: 25 });
+  });
+
+  it('find_oper_stations refuses a query with no filter before calling out', async () => {
+    await expect(runTool('find_oper_stations', { subdistrict: 'ในเมือง' })).rejects.toThrow('ต้องระบุ');
+    expect(fetchMock).not.toHaveBeenCalled();
+  });
+
+  it('count_oper_inspections maps the dates to the wrapper fields', async () => {
+    respond(200, { inspections: 40, stations: 31, complete: true, inspected_from: '2026-01-01', inspected_to: '2026-10-16' });
+    const out = (await runTool('count_oper_inspections', {
+      inspectedFrom: '2026-01-01',
+      inspectedTo: '2026-10-16',
+      province: 'นครราชสีมา',
+    })) as { stations: number };
+    expect(sent().url).toBe('http://127.0.0.1:8787/count-stations');
+    expect(sent().body).toEqual({ inspected_from: '2026-01-01', inspected_to: '2026-10-16', province: 'นครราชสีมา' });
+    expect(out.stations).toBe(31);
+  });
+
+  it('count_oper_inspections rejects a malformed date', async () => {
+    await expect(runTool('count_oper_inspections', { inspectedFrom: '1/1/2569', inspectedTo: '2026-10-16' })).rejects.toThrow(
+      'YYYY-MM-DD',
+    );
+    expect(fetchMock).not.toHaveBeenCalled();
+  });
+
+  it('surfaces the wrapper error kind so the model can say what failed', async () => {
+    respond(503, { error: 'cloudflare', detail: 'challenged' });
+    await expect(runTool('find_oper_stations', { province: 'ชัยภูมิ' })).rejects.toThrow('OPER cloudflare: challenged');
+  });
+
+  it('says it is not set up when the env is missing', async () => {
+    vi.stubEnv('OPER_API_URL', '');
+    await expect(runTool('find_oper_stations', { province: 'ชัยภูมิ' })).rejects.toThrow('ยังไม่ได้ตั้งค่า');
+    expect(fetchMock).not.toHaveBeenCalled();
   });
 });
