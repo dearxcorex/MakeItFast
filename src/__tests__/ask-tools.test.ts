@@ -45,13 +45,12 @@ beforeEach(() => {
 });
 
 describe('TOOL_DEFINITIONS', () => {
-  it('exposes exactly the six tools the agent is allowed to call', () => {
+  it('exposes exactly the five tools the agent is allowed to call', () => {
     expect(TOOL_DEFINITIONS.map((t) => t.name).sort()).toEqual([
       'count_oper_inspections',
       'find_oper_stations',
       'find_stations',
       'path_loss',
-      'scan_intermod',
       'web_search',
     ]);
   });
@@ -152,53 +151,6 @@ describe('find_stations', () => {
   });
 });
 
-describe('scan_intermod', () => {
-  // 2 × 90.0 − 57.5 is out of band; use a real aviation-band case:
-  // 2 × 107.9 − 93.3 = 122.5 MHz.
-  const pairRows = [
-    row({ id: 1, name: 'สถานี A', freq: 107.9, lat: 14.98, long: 102.1 }),
-    row({ id: 2, name: 'สถานี B', freq: 93.3, lat: 14.99, long: 102.11 }),
-  ];
-
-  it('finds the pair whose third-order product lands on the target', async () => {
-    vi.mocked(prisma.fm_station.findMany).mockResolvedValue(pairRows as never);
-    const out = (await runTool('scan_intermod', { targetFrequency: 122.5 })) as {
-      dangerousPairsFound: number;
-      pairs: Array<{ products: Array<{ frequencyMHz: number; type: string }> }>;
-    };
-    expect(out.dangerousPairsFound).toBe(1);
-    expect(out.pairs[0].products[0].frequencyMHz).toBeCloseTo(122.5, 3);
-    expect(out.pairs[0].products[0].type).toBe('2f1-f2');
-  });
-
-  it('reports how many stations it could not scan for want of coordinates', async () => {
-    vi.mocked(prisma.fm_station.findMany).mockResolvedValue([
-      ...pairRows,
-      row({ id: 3, lat: null, long: null }),
-    ] as never);
-    const out = (await runTool('scan_intermod', { targetFrequency: 122.5 })) as {
-      stationsScanned: number;
-      stationsSkippedNoCoordinates: number;
-    };
-    expect(out.stationsScanned).toBe(2);
-    expect(out.stationsSkippedNoCoordinates).toBe(1);
-  });
-
-  it('finds nothing when no pair mixes onto the target', async () => {
-    vi.mocked(prisma.fm_station.findMany).mockResolvedValue(pairRows as never);
-    const out = (await runTool('scan_intermod', { targetFrequency: 130.0 })) as {
-      dangerousPairsFound: number;
-      highestRiskLevel: string | null;
-    };
-    expect(out.dangerousPairsFound).toBe(0);
-    expect(out.highestRiskLevel).toBeNull();
-  });
-
-  it('refuses to run without a target frequency', async () => {
-    await expect(runTool('scan_intermod', {})).rejects.toThrow('targetFrequency is required');
-  });
-});
-
 describe('path_loss', () => {
   it('computes free-space path loss', async () => {
     const out = (await runTool('path_loss', { distanceKm: 10, frequencyMHz: 100 })) as {
@@ -252,7 +204,7 @@ describe('OPER tools', () => {
   }
 
   function sent() {
-    const [url, init] = fetchMock.mock.calls[0];
+    const [url, init] = fetchMock.mock.calls.at(-1)!;
     return { url, headers: init.headers, body: JSON.parse(init.body) };
   }
 
@@ -291,6 +243,24 @@ describe('OPER tools', () => {
     expect(sent().url).toBe('http://127.0.0.1:8787/count-stations');
     expect(sent().body).toEqual({ inspected_from: '2026-01-01', inspected_to: '2026-10-16', province: 'นครราชสีมา' });
     expect(out.stations).toBe(31);
+  });
+
+  it('count_oper_inspections passes a result filter through and drops anything else', async () => {
+    respond(200, { inspections: 8, stations: 8, complete: true });
+    await runTool('count_oper_inspections', { inspectedFrom: '2026-01-01', inspectedTo: '2026-10-16', result: 'ไม่ตรงตามมาตรฐาน' });
+    expect(sent().body).toEqual({ inspected_from: '2026-01-01', inspected_to: '2026-10-16', result: 'ไม่ตรงตามมาตรฐาน' });
+    respond(200, { inspections: 126, stations: 122, complete: true });
+    await runTool('count_oper_inspections', { inspectedFrom: '2026-01-01', inspectedTo: '2026-10-16', result: 'ผ่าน' });
+    expect(sent().body).toEqual({ inspected_from: '2026-01-01', inspected_to: '2026-10-16' });
+  });
+
+  it('count_oper_inspections tells the model inspections are the headline', async () => {
+    respond(200, { inspections: 126, stations: 122, by_result: {}, complete: true });
+    const out = (await runTool('count_oper_inspections', { inspectedFrom: '2026-01-01', inspectedTo: '2026-10-16' })) as {
+      note: string;
+    };
+    expect(out.note).toContain('ตัวเลขหลัก');
+    expect(out.note).toContain('by_result');
   });
 
   it('count_oper_inspections rejects a malformed date', async () => {

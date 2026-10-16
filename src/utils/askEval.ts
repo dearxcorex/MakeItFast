@@ -20,6 +20,8 @@ export interface ArgExpectation {
   /** Numeric equality, or a pattern for a string argument. */
   equals?: number;
   matches?: RegExp;
+  /** The argument must not be passed at all. */
+  absent?: true;
 }
 
 export interface EvalCase {
@@ -157,6 +159,7 @@ const CERTAINTY_PHRASES = ['ยืนยันแล้ว', 'แน่นอน
 
 function argMatches(call: ToolCallTrace, exp: ArgExpectation): boolean {
   const v = call.input[exp.key];
+  if (exp.absent) return v === undefined;
   if (exp.equals !== undefined) return typeof v === 'number' && Math.abs(v - exp.equals) < 1e-6;
   if (exp.matches) return typeof v === 'string' && exp.matches.test(v);
   return v !== undefined;
@@ -173,7 +176,7 @@ export function scoreRun(c: EvalCase, run: RunInput): CheckResult[] {
     results.push({ name: `does not call ${tool}`, severity: 'quality', pass: !called.has(tool) });
   }
   for (const exp of c.args ?? []) {
-    const want = exp.equals ?? exp.matches ?? 'present';
+    const want = exp.absent ? 'absent' : exp.equals ?? exp.matches ?? 'present';
     const pass = run.calls.some((call) => call.name === exp.tool && argMatches(call, exp));
     const seen = run.calls.filter((call) => call.name === exp.tool).map((call) => JSON.stringify(call.input[exp.key]));
     results.push({

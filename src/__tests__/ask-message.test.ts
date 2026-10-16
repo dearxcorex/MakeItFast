@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { buildAskMessage, askErrorMessage, truncate } from '@/utils/askMessage';
-import { BACKED_BAND, DISCLAIMER, FIELD_KIT, FM_RELEVANT_RANGE, buildSystemPrompt } from '@/utils/askPrompt';
+import { BACKED_BAND, DISCLAIMER, FIELD_KIT, buildSystemPrompt } from '@/utils/askPrompt';
 
 const result = (over: Partial<{ answer: string; toolsUsed: string[]; truncated: boolean }> = {}) => ({
   answer: 'ลองดูที่ย่าน 122 MHz ก่อน',
@@ -34,8 +34,8 @@ describe('buildAskMessage', () => {
   });
 
   it('names the tools it used in Thai', () => {
-    const msg = buildAskMessage('ถาม', result({ toolsUsed: ['scan_intermod', 'scan_intermod', 'web_search'] }));
-    expect(msg.embeds[0].footer.text).toContain('ใช้: คำนวณอินเตอร์มอด · ค้นเว็บ');
+    const msg = buildAskMessage('ถาม', result({ toolsUsed: ['find_oper_stations', 'find_oper_stations', 'web_search'] }));
+    expect(msg.embeds[0].footer.text).toContain('ใช้: ทะเบียน OPER · ค้นเว็บ');
   });
 
   it('says so when no tool was called, so an ungrounded answer is visible', () => {
@@ -90,8 +90,9 @@ describe('buildSystemPrompt', () => {
     for (const model of ['HE300', 'HE400', 'DDF550']) expect(prompt).toContain(model);
   });
 
-  it('keeps the FM tools to the range where FM stations can matter', () => {
-    expect(prompt).toContain(FM_RELEVANT_RANGE);
+  it('makes OPER the main job and keeps the FM database out of non-FM questions', () => {
+    expect(prompt).toContain('งานหลัก: **ตอบข้อมูลสถานีวิทยุกระจายเสียงจากระบบ OPER');
+    expect(prompt).not.toContain('scan_intermod');
     expect(prompt).toContain('ไม่ต้องพูดถึงฐานข้อมูล FM เลย');
   });
 
@@ -101,6 +102,12 @@ describe('buildSystemPrompt', () => {
 
   it('leaves the disclaimer to the embed builder instead of the model', () => {
     expect(prompt).toContain('ระบบใส่ให้แล้ว');
+  });
+
+  it('answers a count with inspections first, split by result, stations in brackets', () => {
+    expect(prompt).toContain('ตัวเลขหลักคือจำนวนครั้งที่ตรวจ (inspections) สถานีไม่ซ้ำใส่ในวงเล็บ');
+    expect(prompt).toContain('ตรงตามมาตรฐาน 118 / ไม่ตรงตามมาตรฐาน 8 (122 สถานีไม่ซ้ำ)');
+    expect(prompt).toContain('ไม่ผ่าน/ไม่ตรงมาตรฐาน → ไม่ตรงตามมาตรฐาน');
   });
 
   it('treats OPER sources as exact-match data sources, not names', () => {

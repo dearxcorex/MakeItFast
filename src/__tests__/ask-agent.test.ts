@@ -45,18 +45,18 @@ describe('askAgent', () => {
 
   it('runs a tool and feeds the result back as tool_result', async () => {
     vi.mocked(createMessage)
-      .mockResolvedValueOnce(wantsTool('scan_intermod', { targetFrequency: 122.5 }))
+      .mockResolvedValueOnce(wantsTool('find_oper_stations', { frequency: 91.75 }))
       .mockResolvedValueOnce(text('เจอคู่สถานี'));
     vi.mocked(runTool).mockResolvedValue({ dangerousPairsFound: 1 });
 
     const out = await askAgent('122.5 MHz โดนรบกวน', '2026-09-20');
 
-    expect(runTool).toHaveBeenCalledWith('scan_intermod', { targetFrequency: 122.5 });
-    expect(out).toMatchObject({ answer: 'เจอคู่สถานี', toolsUsed: ['scan_intermod'], truncated: false });
+    expect(runTool).toHaveBeenCalledWith('find_oper_stations', { frequency: 91.75 });
+    expect(out).toMatchObject({ answer: 'เจอคู่สถานี', toolsUsed: ['find_oper_stations'], truncated: false });
     expect(out.calls).toEqual([
       {
-        name: 'scan_intermod',
-        input: { targetFrequency: 122.5 },
+        name: 'find_oper_stations',
+        input: { frequency: 91.75 },
         output: JSON.stringify({ dangerousPairsFound: 1 }),
         isError: false,
         ms: expect.any(Number),

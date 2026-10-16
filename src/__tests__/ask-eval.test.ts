@@ -72,6 +72,14 @@ describe('scoreRun', () => {
     expect(check(wrong, 'scan_intermod.targetFrequency = 122.5')).toMatchObject({ pass: false, detail: 'got 121' });
   });
 
+  it('checks that an argument was left out', () => {
+    const c: EvalCase = { ...base, args: [{ tool: 'count_oper_inspections', key: 'result', absent: true }] };
+    const count = { name: 'count_oper_inspections', input: { inspectedFrom: '2026-01-01' }, output: '{}', isError: false };
+    expect(check(scoreRun(c, run({ calls: [count] })), 'count_oper_inspections.result = absent')).toMatchObject({ pass: true });
+    const filtered = { ...count, input: { result: 'ตรงตามมาตรฐาน' } };
+    expect(check(scoreRun(c, run({ calls: [filtered] })), 'count_oper_inspections.result = absent')).toMatchObject({ pass: false });
+  });
+
   it('flags a number that no tool, question or prompt produced', () => {
     const results = scoreRun(base, run({ answer: 'ผลิตภัณฑ์ที่ 122.5 MHz ห่าง 37 km', calls: [call] }));
     expect(check(results, 'every number is backed')).toMatchObject({ pass: false, detail: 'unbacked: 37' });

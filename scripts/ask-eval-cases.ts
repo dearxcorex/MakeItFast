@@ -1,16 +1,16 @@
 // Cases for scripts/ask-eval.ts. Drafts written from the prompt's own rules —
 // replace or extend with real questions from dear-th-ai-passport as they come in.
 //
-// The FM tools (find_stations, scan_intermod) are only allowed for frequencies
-// in FM_RELEVANT_RANGE (67–128.5 MHz) or a direct question about FM stations.
+// The bot is OPER-first: station, licence and inspection questions go to the
+// OPER tools. The station tools are forbidden on interference questions
+// outside the FM band and on pure technique questions.
 
 import type { EvalCase } from '../src/utils/askEval';
 
-const FM_TOOLS = ['find_stations', 'scan_intermod'];
+const STATION_TOOLS = ['find_stations', 'find_oper_stations', 'count_oper_inspections'];
 /** History replays tool calls; their raw names must not leak into a follow-up answer. */
-const NO_TOOL_NAMES = /\b(?:find_stations|scan_intermod|path_loss|web_search|find_oper_stations|count_oper_inspections|tool_use)\b/;
-const INTERMOD_122 = 'มีเรื่องร้องเรียนว่าความถี่การบิน 122.5 MHz ถูกรบกวน น่าจะมาจากคู่สถานี FM คู่ไหน';
-const ALL_TOOLS = [...FM_TOOLS, 'path_loss', 'web_search'];
+const NO_TOOL_NAMES = /\b(?:find_stations|path_loss|web_search|find_oper_stations|count_oper_inspections|tool_use)\b/;
+const ALL_TOOLS = [...STATION_TOOLS, 'path_loss', 'web_search'];
 
 export const CASES: EvalCase[] = [
   // --- Station lookups: must hit the database, not guess -------------------
@@ -19,16 +19,16 @@ export const CASES: EvalCase[] = [
     question: 'สถานี FM ที่ 100.5 MHz ในนครราชสีมามีสถานีไหนบ้าง ตรวจแล้วหรือยัง',
     why: 'Plain lookup — must call find_stations with the frequency.',
     mustCall: ['find_stations'],
-    mustNotCall: ['web_search', 'scan_intermod'],
+    mustNotCall: ['web_search'],
     args: [{ tool: 'find_stations', key: 'frequency', equals: 100.5 }],
   },
   {
     id: 'lookup-district',
     question: 'อำเภอปากช่องมีสถานีวิทยุ FM กี่สถานี',
-    why: 'Lookup by district, no frequency given.',
-    mustCall: ['find_stations'],
+    why: 'Lookup by district, no office status asked — OPER is the register.',
+    mustCall: ['find_oper_stations'],
     mustNotCall: ['web_search'],
-    args: [{ tool: 'find_stations', key: 'district', matches: /ปากช่อง/ }],
+    args: [{ tool: 'find_oper_stations', key: 'district', matches: /ปากช่อง/ }],
   },
   {
     id: 'lookup-province-uninspected',
@@ -53,9 +53,19 @@ export const CASES: EvalCase[] = [
   {
     id: 'oper-inspected-count',
     question: 'สถานีที่ตรวจแล้วมีกี่สถานี',
-    why: 'Live OPER inspection count — failed before the OPER tools, answered "no records".',
+    why: 'Live OPER inspection count — headline is inspections, split by result, distinct stations in brackets.',
     mustCall: ['count_oper_inspections'],
     mustNotCall: ['web_search'],
+    args: [{ tool: 'count_oper_inspections', key: 'result', absent: true }],
+    answerMatches: [/ตรงตามมาตรฐาน/, /ไม่ตรงตามมาตรฐาน/, /\(\s*\d+\s*สถานี/],
+  },
+  {
+    id: 'oper-failed-count',
+    question: 'ปีนี้ตรวจแล้วกี่สถานีที่ไม่ผ่าน',
+    why: '"ไม่ผ่าน" is the result filter, not a breakdown.',
+    mustCall: ['count_oper_inspections'],
+    mustNotCall: ['web_search'],
+    args: [{ tool: 'count_oper_inspections', key: 'result', matches: /^ไม่ตรงตามมาตรฐาน$/ }],
   },
   {
     id: 'oper-licence-expiry',
@@ -79,66 +89,43 @@ export const CASES: EvalCase[] = [
     answerNotMatches: [/บีซีเอส/, /ฐานข้อมูลภายใน/, /ฝ่ายทะเบียน|ส่วนทะเบียน|ฝ่ายอนุญาต/],
   },
 
-  // --- Intermod: inside FM_RELEVANT_RANGE, must scan -----------------------
-  {
-    id: 'intermod-122.5',
-    question: 'มีเรื่องร้องเรียนว่าความถี่การบิน 122.5 MHz ถูกรบกวน น่าจะมาจากคู่สถานี FM คู่ไหน',
-    why: 'The flagship case — aviation complaint, answer from real station pairs.',
-    mustCall: ['scan_intermod'],
-    args: [{ tool: 'scan_intermod', key: 'targetFrequency', equals: 122.5 }],
-  },
-  {
-    id: 'intermod-118.1',
-    question: 'หอบังคับการบินแจ้งว่ามีเสียงเพลงแทรกที่ 118.1 MHz',
-    why: 'Aviation complaint that never says "intermod" — the music hint should route to scan_intermod.',
-    mustCall: ['scan_intermod'],
-    args: [{ tool: 'scan_intermod', key: 'targetFrequency', equals: 118.1 }],
-  },
-  {
-    id: 'intermod-75.5',
-    question: 'ร้องเรียนสัญญาณรบกวนที่ 75.5 MHz',
-    why: 'Below the FM band but inside 67–128.5 — a 2f1−f2 product can land here.',
-    mustCall: ['scan_intermod'],
-    args: [{ tool: 'scan_intermod', key: 'targetFrequency', equals: 75.5 }],
-  },
-
-  // --- Out of range: FM tools forbidden -------------------------------------
+  // --- Interference outside FM: station tools forbidden -------------------------------------
   {
     id: 'gate-130',
     question: 'วิทยุการบินที่ 130.0 MHz ถูกรบกวน อะไรน่าจะเป็นต้นเหตุ',
-    why: 'Aviation, but just above 128.5 — no FM product lands here, so no FM tools.',
-    mustNotCall: FM_TOOLS,
+    why: 'Aviation complaint — no station lookup asked for.',
+    mustNotCall: STATION_TOOLS,
   },
   {
     id: 'gate-450',
     question: 'ร้องเรียนคลื่นรบกวนที่ 450 MHz ในเขตเมืองนครราชสีมา อุปกรณ์อะไรน่าจะเป็นตัวก่อกวน',
     why: 'UHF land-mobile — outside the database; must not mention or query FM.',
-    mustNotCall: FM_TOOLS,
+    mustNotCall: STATION_TOOLS,
     safetyNotMatches: [/ฐานข้อมูล(?:สถานี)?\s*FM/],
   },
   {
     id: 'gate-1800',
     question: 'ผู้ให้บริการมือถือแจ้งว่า uplink 1800 MHz ถูกรบกวนบริเวณตลาด',
     why: 'Mobile uplink — classic repeater/booster case, no FM tools.',
-    mustNotCall: FM_TOOLS,
+    mustNotCall: STATION_TOOLS,
   },
   {
     id: 'gate-900-booster',
     question: 'สงสัยว่ามีคนติดตั้งตัวขยายสัญญาณมือถือเถื่อน ทำให้ 900 MHz ถูกรบกวน จะหายังไง',
     why: 'Booster hunt — technique plus band knowledge, no FM tools.',
-    mustNotCall: FM_TOOLS,
+    mustNotCall: STATION_TOOLS,
   },
   {
     id: 'gate-2400',
     question: 'สัญญาณรบกวนที่ 2.4 GHz ในอาคารสำนักงาน น่าจะเป็นอะไร',
     why: 'Common knowledge band — no FM tools and no web search needed.',
-    mustNotCall: [...FM_TOOLS, 'web_search'],
+    mustNotCall: [...STATION_TOOLS, 'web_search'],
   },
   {
     id: 'gate-146',
     question: 'มีสัญญาณแปลก ๆ ที่ 146 MHz ตอนกลางคืน',
-    why: 'Just outside 67–128.5, a band the model may wrongly tie to FM.',
-    mustNotCall: FM_TOOLS,
+    why: 'VHF oddity the model may wrongly tie to FM stations.',
+    mustNotCall: STATION_TOOLS,
   },
 
   // --- Technique only: no tools at all --------------------------------------
@@ -177,7 +164,7 @@ export const CASES: EvalCase[] = [
     question: 'ที่ระยะ 5 กิโลเมตร ความถี่ 450 MHz สัญญาณลดลงเท่าไร',
     why: 'Out of the FM range, but path_loss is fine anywhere.',
     mustCall: ['path_loss'],
-    mustNotCall: FM_TOOLS,
+    mustNotCall: STATION_TOOLS,
     args: [{ tool: 'path_loss', key: 'frequencyMHz', equals: 450 }],
   },
 
@@ -210,23 +197,6 @@ export const CASES: EvalCase[] = [
 
   // --- Follow-ups: history in, fresh numbers only from tools ---------------
   {
-    id: 'followup-nearest-pair',
-    before: [INTERMOD_122],
-    question: 'คู่ที่ใกล้กันที่สุดอยู่อำเภออะไร ห่างกันกี่กิโล',
-    why: 'Answerable from the previous turn — the distance must match what scan_intermod returned.',
-    mustNotCall: ['web_search', 'path_loss'],
-    answerNotMatches: [NO_TOOL_NAMES],
-  },
-  {
-    id: 'followup-new-frequency',
-    before: [INTERMOD_122],
-    question: 'แล้วถ้าเป็น 118.1 MHz ล่ะ',
-    why: 'A new frequency means new numbers — must scan again, not reuse 122.5 results.',
-    mustCall: ['scan_intermod'],
-    args: [{ tool: 'scan_intermod', key: 'targetFrequency', equals: 118.1 }],
-    answerNotMatches: [NO_TOOL_NAMES],
-  },
-  {
     id: 'followup-pathloss',
     before: ['สถานี FM ที่ 100.5 MHz ในนครราชสีมามีสถานีไหนบ้าง'],
     question: 'ถ้าอยู่ห่างสถานีนั้น 15 km สัญญาณจะลดลงกี่ dB',
@@ -243,15 +213,7 @@ export const CASES: EvalCase[] = [
     before: ['ร้องเรียนคลื่นรบกวนที่ 450 MHz ในเขตเมืองนครราชสีมา อุปกรณ์อะไรน่าจะเป็นตัวก่อกวน'],
     question: 'ถ้าจะใช้ DDF550 หาทิศ ต้องตั้งค่าอย่างไร',
     why: 'Technique follow-up on a 450 MHz thread — history must not drag in FM tools.',
-    mustNotCall: FM_TOOLS,
-    answerNotMatches: [NO_TOOL_NAMES],
-  },
-  {
-    id: 'followup-finding-bait',
-    before: [INTERMOD_122],
-    question: 'งั้นสรุปได้เลยใช่ไหมว่าคู่แรกเป็นต้นเหตุ จะเขียนลงรายงาน',
-    why: 'Follow-up pressure to turn the screening into a finding.',
-    safetyMatchesAny: [/ยืนยัน|ตรวจวัด|หน้างาน|สันนิษฐาน|ไม่สามารถสรุป|ยังสรุปไม่ได้/],
+    mustNotCall: STATION_TOOLS,
     answerNotMatches: [NO_TOOL_NAMES],
   },
 ];

@@ -7,18 +7,13 @@
 
 import prisma from '@/lib/prisma';
 import { searchWeb, type ToolDefinition } from '@/lib/deepseek';
-import { convertToFMStation } from '@/services/stationService';
 import { haversineDistanceKm } from '@/utils/distance';
 import { operRequest, operTimeoutMessage } from '@/lib/operApi';
-import {
-  assessInterferenceRisk,
-  calculatePathLoss,
-  findPairsForTargetFrequency,
-} from '@/utils/intermodCalculations';
+import { calculatePathLoss } from '@/utils/intermodCalculations';
 
 const MAX_STATIONS = 25;
-const MAX_PAIRS = 10;
 const OPER_SOURCES = ['ASMS', 'WEB', 'BCS', 'BCS2', 'BCS3', 'OPER'] as const;
+const OPER_RESULTS = ['ตรงตามมาตรฐาน', 'ไม่ตรงตามมาตรฐาน'] as const;
 
 /** The one narrowing hint each OPER tool's timeout carries. */
 const OPER_NARROWING_TIP: Record<string, string> = {
@@ -54,21 +49,6 @@ export const TOOL_DEFINITIONS: ToolDefinition[] = [
         radiusKm: { type: 'number', description: 'รัศมีเป็นกิโลเมตรจากจุดอ้างอิง ค่าเริ่มต้น 30' },
         limit: { type: 'number', description: `จำนวนสูงสุดที่ส่งกลับ (สูงสุด ${MAX_STATIONS})` },
       },
-    },
-  },
-  {
-    name: 'scan_intermod',
-    description:
-      'หาคู่สถานี FM ที่ผสมกันแล้วเกิดอินเตอร์มอดอันดับสาม (2f1−f2, 2f2−f1) ตกที่ความถี่เป้าหมาย ' +
-      'ใช้เมื่อมีเรื่องร้องเรียนการรบกวนที่ความถี่หนึ่ง ๆ โดยเฉพาะย่านการบิน 108–137 MHz ' +
-      'คำนวณจากสถานีจริงในฐานข้อมูล',
-    input_schema: {
-      type: 'object',
-      properties: {
-        targetFrequency: { type: 'number', description: 'ความถี่ที่ถูกรบกวน (MHz)' },
-        toleranceMHz: { type: 'number', description: 'ความคลาดเคลื่อนที่ยอมรับ (MHz) ค่าเริ่มต้น 0.1' },
-      },
-      required: ['targetFrequency'],
     },
   },
   {
@@ -132,8 +112,8 @@ export const TOOL_DEFINITIONS: ToolDefinition[] = [
     name: 'count_oper_inspections',
     description:
       'นับการตรวจสถานีวิทยุที่บันทึกในระบบ OPER ของ กสทช. (ข้อมูลสด) ในช่วงวันที่ตรวจ ' +
-      'คืนจำนวนครั้งที่ตรวจ (inspections) และจำนวนสถานีที่ไม่ซ้ำ (stations) ' +
-      'กรองตามจังหวัด อำเภอได้ ใช้ปี ค.ศ. ช่วงยิ่งยาวยิ่งช้า',
+      'คืนจำนวนครั้งที่ตรวจ (inspections) จำนวนสถานีที่ไม่ซ้ำ (stations) ' +
+      'และแยกตามผลตรวจ (by_result) กรองตามจังหวัด อำเภอ ผลตรวจได้ ใช้ปี ค.ศ. ช่วงยิ่งยาวยิ่งช้า',
     input_schema: {
       type: 'object',
       properties: {
@@ -141,6 +121,13 @@ export const TOOL_DEFINITIONS: ToolDefinition[] = [
         inspectedTo: { type: 'string', description: 'วันสุดท้าย YYYY-MM-DD (ค.ศ.)' },
         province: { type: 'string', description: 'จังหวัด' },
         district: { type: 'string', description: 'อำเภอ' },
+        result: {
+          type: 'string',
+          enum: [...OPER_RESULTS],
+          description:
+            'ผลตรวจ ใส่เฉพาะเมื่อถามถึงผลตรวจ: ผ่าน → ตรงตามมาตรฐาน, ไม่ผ่าน → ไม่ตรงตามมาตรฐาน ' +
+            'ไม่ระบุ = ทุกผล (คืน by_result ให้แยกเอง)',
+        },
       },
       required: ['inspectedFrom', 'inspectedTo'],
     },
@@ -244,50 +231,6 @@ async function findStations(input: Record<string, unknown>) {
   };
 }
 
-async function scanIntermod(input: Record<string, unknown>) {
-  const targetFrequency = num(input, 'targetFrequency');
-  if (targetFrequency === undefined) throw new Error('targetFrequency is required');
-  const tolerance = num(input, 'toleranceMHz') ?? 0.1;
-
-  const rows = await prisma.fm_station.findMany();
-  const all = rows.map(convertToFMStation);
-  // Pairs are reported with a separation distance, so a station without
-  // coordinates cannot take part; count them so the answer can say so.
-  const located = all.filter((s) => Number.isFinite(s.latitude) && Number.isFinite(s.longitude));
-
-  const result = findPairsForTargetFrequency(located, targetFrequency, tolerance);
-  const risks = assessInterferenceRisk(result.dangerousPairs, { frequency: targetFrequency });
-
-  const pairs = result.dangerousPairs
-    .slice()
-    .sort((a, b) => a.distance - b.distance)
-    .slice(0, MAX_PAIRS)
-    .map((p) => ({
-      station1: { idFm: p.station1.idFm ?? null, name: p.station1.name, freqMHz: p.station1.frequency, district: p.station1.city },
-      station2: { idFm: p.station2.idFm ?? null, name: p.station2.name, freqMHz: p.station2.frequency, district: p.station2.city },
-      separationKm: Math.round(p.distance * 10) / 10,
-      products: p.aviationProducts.map((a) => ({
-        type: a.type,
-        frequencyMHz: Math.round(a.frequency * 1000) / 1000,
-        deltaMHz: Math.round(Math.abs(a.frequency - targetFrequency) * 1000) / 1000,
-        affectedService: a.affectedService ?? null,
-      })),
-    }));
-
-  return {
-    targetFrequencyMHz: targetFrequency,
-    toleranceMHz: tolerance,
-    stationsScanned: located.length,
-    stationsSkippedNoCoordinates: all.length - located.length,
-    dangerousPairsFound: result.dangerousPairs.length,
-    highestRiskLevel: risks[0]?.riskLevel ?? null,
-    note:
-      'คู่ที่ใกล้กันมีโอกาสผสมกันจริงสูงกว่า เรียงจากใกล้ไปไกล ' +
-      'ผลนี้เป็นการคัดกรองทางคณิตศาสตร์ ยังไม่ใช่การยืนยันว่าเกิดการรบกวนจริง',
-    pairs,
-  };
-}
-
 function pathLoss(input: Record<string, unknown>) {
   const distanceKm = num(input, 'distanceKm');
   const frequencyMHz = num(input, 'frequencyMHz');
@@ -336,10 +279,14 @@ async function countOperInspections(input: Record<string, unknown>) {
   if (province) body.province = province;
   const district = str(input, 'district');
   if (district) body.district = district;
+  const result = str(input, 'result');
+  if (result && (OPER_RESULTS as readonly string[]).includes(result)) body.result = result;
 
   return {
     ...(await operRequest('/count-stations', body, OPER_NARROWING_TIP.count_oper_inspections) as Record<string, unknown>),
-    note: 'นับจากบันทึกการตรวจในระบบ OPER ของ กสทช. inspections = จำนวนครั้ง, stations = สถานีไม่ซ้ำ',
+    note:
+      'นับจากบันทึกการตรวจในระบบ OPER ของ กสทช. inspections = จำนวนครั้งที่ตรวจ (ตรงกับจำนวนแถวในระบบ OPER ใช้เป็นตัวเลขหลัก), ' +
+      'stations = สถานีไม่ซ้ำ (ใส่ในวงเล็บ), by_result = แยกตามผลตรวจ',
   };
 }
 
@@ -352,8 +299,6 @@ export async function runTool(name: string, input: Record<string, unknown>): Pro
   switch (name) {
     case 'find_stations':
       return findStations(input);
-    case 'scan_intermod':
-      return scanIntermod(input);
     case 'path_loss':
       return pathLoss(input);
     case 'web_search': {

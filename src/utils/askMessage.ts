@@ -43,7 +43,8 @@ export function truncate(s: string, limit: number): string {
 
 const TOOL_LABELS: Record<string, string> = {
   find_stations: 'ฐานข้อมูลสถานี',
-  scan_intermod: 'คำนวณอินเตอร์มอด',
+  find_oper_stations: 'ทะเบียน OPER',
+  count_oper_inspections: 'นับการตรวจ OPER',
   path_loss: 'คำนวณ FSPL',
   web_search: 'ค้นเว็บ',
 };
