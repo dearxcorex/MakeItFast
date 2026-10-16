@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { buildAskMessage, askErrorMessage, operDataLines, thaiDateTime, truncate } from '@/utils/askMessage';
+import { MAX_DETAIL_STATIONS, buildAskMessage, askErrorMessage, operDataLines, thaiDateTime, truncate } from '@/utils/askMessage';
 import { BACKED_BAND, DISCLAIMER, FIELD_KIT, buildSystemPrompt } from '@/utils/askPrompt';
 
 const result = (over: Partial<{ answer: string; toolsUsed: string[]; truncated: boolean }> = {}) => ({
@@ -55,6 +55,43 @@ describe('truncate', () => {
     const out = truncate('a'.repeat(50), 10);
     expect(out).toHaveLength(10);
     expect(out.endsWith('…')).toBe(true);
+  });
+});
+
+describe('station details under the answer', () => {
+  const station = (n: number, more = {}) => ({
+    name: `สถานี ${n}`, frequencyMHz: 91.75, subdistrict: 'ผักปัง', district: 'ภูเขียว', province: 'ชัยภูมิ',
+    lat: 16.12671, lng: 101.897369, contactName: 'สมชาย', contactPhone: '081-111-1111', ...more,
+  });
+  const call = (stations: unknown[], isError = false) => ({ name: 'find_oper_stations', output: '{}', isError, stations });
+
+  it('prints place, a map link and the phone after the answer', () => {
+    const msg = buildAskMessage('ถาม', { answer: 'พบ 1 สถานี', toolsUsed: [], truncated: false, calls: [call([station(1)])] });
+    const text = msg.embeds[0].description;
+    expect(text.startsWith('พบ 1 สถานี\n\n')).toBe(true);
+    expect(text).toContain('**สถานี 1** 91.75 MHz');
+    expect(text).toContain('ที่ตั้ง: ต.ผักปัง อ.ภูเขียว จ.ชัยภูมิ');
+    expect(text).toContain('พิกัด: [16.12671, 101.897369](https://www.google.com/maps?q=16.12671,101.897369)');
+    expect(text).toContain('โทร: สมชาย 081-111-1111');
+  });
+
+  it('says ไม่มีข้อมูล for a missing phone or coordinates, dedupes, caps and skips failed calls', () => {
+    const many = Array.from({ length: MAX_DETAIL_STATIONS + 2 }, (_, i) => station(i));
+    const msg = buildAskMessage('ถาม', {
+      answer: 'ก', toolsUsed: [], truncated: false,
+      calls: [call([station(0, { lat: null, contactPhone: null })]), call(many), call([station(99)], true)],
+    });
+    const text = msg.embeds[0].description;
+    expect(text).toContain('…และอีก 2 สถานี');
+    expect(text).not.toContain('สถานี 99');
+    expect(buildAskMessage('ถาม', { answer: 'ก', toolsUsed: [], truncated: false,
+      calls: [call([station(0, { lat: null, contactPhone: null })])] }).embeds[0].description)
+      .toContain('พิกัด: ไม่มีข้อมูล\nโทร: ไม่มีข้อมูล');
+  });
+
+  it('leaves the answer alone when no station came back', () => {
+    const msg = buildAskMessage('ถาม', { answer: 'ก', toolsUsed: [], truncated: false, calls: [call([])] });
+    expect(msg.embeds[0].description).toBe('ก');
   });
 });
 

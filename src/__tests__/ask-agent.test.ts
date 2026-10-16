@@ -11,7 +11,7 @@ vi.mock('@/services/askTools', async (importOriginal) => ({
 }));
 
 import { createMessage, type ContentBlock, type MessageResponse } from '@/lib/deepseek';
-import { runTool } from '@/services/askTools';
+import { STATION_DETAILS, runTool } from '@/services/askTools';
 import { askAgent, DEADLINE_MS, FINAL_RESERVE_MS, MAX_TOOL_ROUNDS } from '@/services/askAgent';
 
 const text = (t: string): MessageResponse => ({ stop_reason: 'end_turn', content: [{ type: 'text', text: t }] });
@@ -41,6 +41,22 @@ describe('askAgent', () => {
     expect(body.system).toContain('2026-09-20');
     expect(body.tools?.length).toBeGreaterThan(0);
     expect(body.messages).toEqual([{ role: 'user', content: 'ถาม' }]);
+  });
+
+  it('keeps station details off the tool_result but on the call', async () => {
+    const detail = { name: 'ก', frequencyMHz: 91.75, subdistrict: null, district: null, province: null,
+      lat: 16.1, lng: 101.9, contactName: null, contactPhone: '081' };
+    vi.mocked(createMessage)
+      .mockResolvedValueOnce(wantsTool('find_oper_stations', { frequency: 91.75 }))
+      .mockResolvedValueOnce(text('พบ 1 สถานี'));
+    vi.mocked(runTool).mockResolvedValue({ total: 1, [STATION_DETAILS]: [detail] });
+
+    const out = await askAgent('91.75', '2026-10-16');
+
+    expect(out.calls[0].output).toBe(JSON.stringify({ total: 1 }));
+    expect(out.calls[0].stations).toEqual([detail]);
+    const sent = vi.mocked(createMessage).mock.calls[1][0].messages;
+    expect(JSON.stringify(sent)).not.toContain('101.9');
   });
 
   it('runs a tool and feeds the result back as tool_result', async () => {

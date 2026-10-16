@@ -79,12 +79,12 @@ export const TOOL_DEFINITIONS: ToolDefinition[] = [
   {
     name: 'find_oper_stations',
     description:
-      'ค้นทะเบียนสถานีวิทยุกระจายเสียงของ กสทช. (ระบบ OPER สำเนาที่บันทึกทุกคืน ค้นสดเมื่อยังไม่มีสำเนา) รวมสถานีที่ยังไม่เคยตรวจ ' +
+      'ค้นทะเบียนสถานีวิทยุกระจายเสียงของ กสทช. (ระบบ OPER สำเนาที่บันทึกทุกเดือน ค้นสดเมื่อสำเนาไม่ครอบคลุม) รวมสถานีที่ยังไม่เคยตรวจ ' +
       'และสถานีที่ไม่มีในฐานข้อมูลของสำนักงาน กรองตามจังหวัด อำเภอ ตำบล ความถี่ (ตรงตัว) ชื่อ หรือแหล่งข้อมูล ' +
       'ต้องระบุอย่างน้อยหนึ่งอย่างจาก จังหวัด อำเภอ ความถี่ ชื่อ  ' +
       'BCS BCS2 BCS3 WEB OPER ASMS เป็นชื่อแหล่งข้อมูล (source) ของทะเบียน ไม่ใช่ชื่อสถานีหรือผู้ประกอบการ ' +
       'ห้ามใส่ใน name  details=true เพิ่มเลขใบอนุญาต วันหมดอายุ ' +
-      'และผู้ประกอบการ (ช้ากว่า สูงสุด 10 สถานี) ไม่คืนพิกัด ช้ากว่า find_stations หลายวินาที',
+      'และผู้ประกอบการ (ช้ากว่า สูงสุด 10 สถานี) ไม่คืนพิกัดและเบอร์โทร (ระบบแสดงต่อท้ายคำตอบให้เอง) ช้ากว่า find_stations หลายวินาที',
     input_schema: {
       type: 'object',
       properties: {
@@ -101,7 +101,7 @@ export const TOOL_DEFINITIONS: ToolDefinition[] = [
           enum: [...OPER_SOURCES],
           description:
             'แหล่งข้อมูลของทะเบียน (SrcData) ตรงตัว: BCS คือ BCS เท่านั้น ไม่รวม BCS2/BCS3 ' +
-            'ไม่ระบุ = ทุกแหล่ง  OPER คือทะเบียนใบอนุญาต',
+            'ไม่ระบุ = BCS  OPER คือทะเบียนใบอนุญาต',
         },
         limit: { type: 'number', description: `จำนวนสูงสุดที่ส่งกลับ (สูงสุด ${MAX_STATIONS})` },
         details: { type: 'boolean', description: 'เพิ่มเลขใบอนุญาต วันหมดอายุ ผู้ประกอบการ' },
@@ -246,6 +246,49 @@ function pathLoss(input: Record<string, unknown>) {
   };
 }
 
+/**
+ * Where a station is and whom to call. Kept out of the model's view — DeepSeek
+ * is hosted offshore — and printed under the answer by utils/askMessage.ts.
+ */
+export interface StationDetail {
+  name: string | null;
+  frequencyMHz: number | null;
+  subdistrict: string | null;
+  district: string | null;
+  province: string | null;
+  lat: number | null;
+  lng: number | null;
+  contactName: string | null;
+  contactPhone: string | null;
+}
+
+/** A tool output's station details, under a symbol key: JSON.stringify, and so the model, never sees them. */
+export const STATION_DETAILS = Symbol('stationDetails');
+
+const PRIVATE_STATION_KEYS = new Set(['lat', 'lng', 'contact_name', 'contact_phone', 'contact_date']);
+
+function text(v: unknown): string | null {
+  return typeof v === 'string' && v.trim() ? v.trim() : null;
+}
+
+function degrees(v: unknown): number | null {
+  return typeof v === 'number' && Number.isFinite(v) && v !== 0 ? v : null;
+}
+
+function stationDetail(s: Record<string, unknown>): StationDetail {
+  return {
+    name: text(s.name),
+    frequencyMHz: typeof s.frequency_mhz === 'number' ? s.frequency_mhz : null,
+    subdistrict: text(s.subdistrict),
+    district: text(s.district),
+    province: text(s.province),
+    lat: degrees(s.lat),
+    lng: degrees(s.lng),
+    contactName: text(s.contact_name),
+    contactPhone: text(s.contact_phone),
+  };
+}
+
 async function findOperStations(input: Record<string, unknown>) {
   const body: Record<string, unknown> = {};
   for (const key of ['province', 'district', 'subdistrict', 'name'] as const) {
@@ -263,12 +306,21 @@ async function findOperStations(input: Record<string, unknown>) {
   if (input.details === true) body.details = true;
 
   const out = (await operRequest('/find-stations', body, OPER_NARROWING_TIP.find_oper_stations)) as Record<string, unknown>;
-  const notes = ['ทะเบียนสถานีระบบ OPER ของ กสทช. แหล่งข้อมูลหลายแหล่งอาจมีสถานีเดียวกันซ้ำ'];
+  const notes = [
+    'ทะเบียนสถานีระบบ OPER ของ กสทช. ที่ตั้ง พิกัด และเบอร์โทรของแต่ละสถานี ระบบแสดงต่อท้ายคำตอบให้แล้ว ' +
+      'ห้ามเขียนหรือเดาพิกัดและเบอร์โทรเอง',
+  ];
   if (out.as_of) notes.push('as_of = เวลาที่บันทึกทะเบียนไว้ (ระบบแสดงในท้ายคำตอบให้แล้ว)');
   if (out.complete === false) {
     notes.push(`รายการไม่ครบ (ค้นสดไม่ทันเวลา): บอกผู้ใช้ว่าแสดง ${String(out.shown)} จาก ${String(out.total)} สถานี`);
   }
-  return { ...out, note: notes.join(' ') };
+  const rows = Array.isArray(out.stations) ? (out.stations as Record<string, unknown>[]) : [];
+  return {
+    ...out,
+    stations: rows.map((s) => Object.fromEntries(Object.entries(s).filter(([k]) => !PRIVATE_STATION_KEYS.has(k)))),
+    note: notes.join(' '),
+    [STATION_DETAILS]: rows.map(stationDetail),
+  };
 }
 
 async function countOperInspections(input: Record<string, unknown>) {

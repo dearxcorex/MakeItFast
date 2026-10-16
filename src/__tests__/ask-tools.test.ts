@@ -11,7 +11,7 @@ vi.mock('@/lib/deepseek', async (importOriginal) => ({
 
 import prisma from '@/lib/prisma';
 import { searchWeb } from '@/lib/deepseek';
-import { TOOL_DEFINITIONS, runTool } from '@/services/askTools';
+import { STATION_DETAILS, TOOL_DEFINITIONS, runTool } from '@/services/askTools';
 
 // นครราชสีมา city centre-ish, used as the "near" reference below.
 const KORAT = { lat: 14.9799, long: 102.0977 };
@@ -220,6 +220,26 @@ describe('OPER tools', () => {
     expect(body).toEqual({ province: 'ชัยภูมิ', frequency: 91.75, limit: 10, details: true });
     expect(out.total).toBe(1);
     expect(out.note).toContain('OPER');
+  });
+
+  it('find_oper_stations keeps coordinates and contacts out of what the model sees', async () => {
+    respond(200, {
+      total: 1,
+      shown: 1,
+      as_of: '2026-10-16T03:00:00+00:00',
+      stations: [{
+        stn_id: 9, name: 'ทดสอบ', frequency_mhz: 91.75, subdistrict: 'ผักปัง', district: 'ภูเขียว', province: 'ชัยภูมิ',
+        lat: 16.12671, lng: 101.897369, contact_name: 'สมชาย', contact_phone: '081-111-1111', contact_date: '2026-03-01',
+      }],
+    });
+    const out = (await runTool('find_oper_stations', { frequency: 91.75 })) as Record<PropertyKey, unknown>;
+    const seen = JSON.stringify(out);
+    for (const secret of ['16.12671', '101.897369', '081-111-1111', 'สมชาย']) expect(seen).not.toContain(secret);
+    expect(seen).toContain('ผักปัง');
+    expect(out[STATION_DETAILS]).toEqual([{
+      name: 'ทดสอบ', frequencyMHz: 91.75, subdistrict: 'ผักปัง', district: 'ภูเขียว', province: 'ชัยภูมิ',
+      lat: 16.12671, lng: 101.897369, contactName: 'สมชาย', contactPhone: '081-111-1111',
+    }]);
   });
 
   it('find_oper_stations caps the limit and drops an unknown source', async () => {

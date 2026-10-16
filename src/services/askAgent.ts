@@ -12,7 +12,7 @@ import {
   type ContentBlock,
 } from '@/lib/deepseek';
 import type { AskTurn } from '@/lib/askThread';
-import { TOOL_DEFINITIONS, operToolTimeout, runTool } from '@/services/askTools';
+import { STATION_DETAILS, TOOL_DEFINITIONS, operToolTimeout, runTool, type StationDetail } from '@/services/askTools';
 import { buildSystemPrompt } from '@/utils/askPrompt';
 
 export const MAX_TOOL_ROUNDS = 5;
@@ -36,6 +36,8 @@ export interface ToolCall {
   output: string;
   isError: boolean;
   ms: number;
+  /** Station locations and contacts the tool kept from the model, for the reply to print. */
+  stations?: StationDetail[];
 }
 
 export interface AskResult {
@@ -114,18 +116,27 @@ function errorResult(use: ToolUseBlock, message: string): ToolResultBlock {
   return { type: 'tool_result', tool_use_id: use.id, content: `เครื่องมือทำงานไม่สำเร็จ: ${message}`, is_error: true };
 }
 
-async function resultBlock(use: ToolUseBlock, budgetMs: number): Promise<ToolResultBlock> {
+interface ToolRun {
+  block: ToolResultBlock;
+  stations?: StationDetail[];
+}
+
+async function resultBlock(use: ToolUseBlock, budgetMs: number): Promise<ToolRun> {
   let timer: ReturnType<typeof setTimeout> | undefined;
-  const timeout = new Promise<ToolResultBlock>((resolve) => {
-    timer = setTimeout(() => resolve(errorResult(use, operToolTimeout(use.name) ?? 'หมดเวลา')), Math.max(budgetMs, 0));
+  const timeout = new Promise<ToolRun>((resolve) => {
+    timer = setTimeout(
+      () => resolve({ block: errorResult(use, operToolTimeout(use.name) ?? 'หมดเวลา') }),
+      Math.max(budgetMs, 0),
+    );
   });
-  const run = (async (): Promise<ToolResultBlock> => {
+  const run = (async (): Promise<ToolRun> => {
     try {
       const output = await runTool(use.name, use.input ?? {});
-      return { type: 'tool_result', tool_use_id: use.id, content: JSON.stringify(output) };
+      const stations = (output as { [STATION_DETAILS]?: StationDetail[] } | null)?.[STATION_DETAILS];
+      return { block: { type: 'tool_result', tool_use_id: use.id, content: JSON.stringify(output) }, stations };
     } catch (error) {
       console.error(`/ask tool ${use.name} failed:`, error);
-      return errorResult(use, error instanceof Error ? error.message : 'unknown error');
+      return { block: errorResult(use, error instanceof Error ? error.message : 'unknown error') };
     }
   })();
   try {
@@ -193,19 +204,20 @@ export async function askAgent(question: string, today: string, options: AskOpti
     messages.push({ role: 'assistant', content: reply.content });
     const budget = toolBudget();
     const startedTools = now();
-    const results = await Promise.all(uses.map((use) => resultBlock(use, budget)));
+    const runs = await Promise.all(uses.map((use) => resultBlock(use, budget)));
     const toolsMs = now() - startedTools;
     uses.forEach((use, i) => {
       toolsUsed.push(use.name);
       calls.push({
         name: use.name,
         input: use.input ?? {},
-        output: results[i].content,
-        isError: results[i].is_error === true,
+        output: runs[i].block.content,
+        isError: runs[i].block.is_error === true,
         ms: toolsMs,
+        ...(runs[i].stations && { stations: runs[i].stations }),
       });
     });
-    messages.push({ role: 'user', content: results });
+    messages.push({ role: 'user', content: runs.map((r) => r.block) });
   }
 
   // Out of rounds or time (or the model answered with nothing at all). Ask

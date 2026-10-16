@@ -2,6 +2,7 @@
 // formats the result — including the disclaimer, which is stamped here rather
 // than asked of the model, so it cannot go missing from an answer.
 
+import type { StationDetail } from '@/services/askTools';
 import { DISCLAIMER } from '@/utils/askPrompt';
 
 // https://discord.com/developers/docs/resources/message#embed-object-embed-limits
@@ -66,6 +67,46 @@ export interface ToolCallOutput {
   name: string;
   output: string;
   isError: boolean;
+  stations?: StationDetail[];
+}
+
+/** Station details printed under an answer; more go uncounted to keep the embed readable. */
+export const MAX_DETAIL_STATIONS = 10;
+
+function stationBlock(s: StationDetail): string {
+  const place = [
+    s.subdistrict && `ต.${s.subdistrict}`,
+    s.district && `อ.${s.district}`,
+    s.province && `จ.${s.province}`,
+  ].filter(Boolean);
+  const coords =
+    s.lat !== null && s.lng !== null
+      ? `[${s.lat}, ${s.lng}](https://www.google.com/maps?q=${s.lat},${s.lng})`
+      : 'ไม่มีข้อมูล';
+  const phone = s.contactPhone ? [s.contactName, s.contactPhone].filter(Boolean).join(' ') : 'ไม่มีข้อมูล';
+  return [
+    `**${s.name ?? 'ไม่ทราบชื่อ'}**${s.frequencyMHz !== null ? ` ${s.frequencyMHz} MHz` : ''}`,
+    `ที่ตั้ง: ${place.length ? place.join(' ') : 'ไม่มีข้อมูล'}`,
+    `พิกัด: ${coords}`,
+    `โทร: ${phone}`,
+  ].join('\n');
+}
+
+/**
+ * Where each OPER station found is and whom to call, read off the tool results
+ * rather than written by the model, which never sees coordinates or phone numbers.
+ */
+export function stationDetailsText(calls: ToolCallOutput[]): string {
+  const seen = new Map<string, StationDetail>();
+  for (const call of calls) {
+    if (call.isError) continue;
+    for (const s of call.stations ?? []) seen.set(`${s.name}|${s.frequencyMHz}`, s);
+  }
+  const all = [...seen.values()];
+  if (!all.length) return '';
+  const shown = all.slice(0, MAX_DETAIL_STATIONS).map(stationBlock);
+  const more = all.length > shown.length ? [`…และอีก ${all.length - shown.length} สถานี`] : [];
+  return ['**📍 ที่ตั้งและผู้ติดต่อ (ทะเบียน OPER)**', ...shown, ...more].join('\n\n');
 }
 
 /**
@@ -111,6 +152,11 @@ export function buildAskMessage(
   options: AskMessageOptions = {},
 ): AskMessage {
   const lead = options.parentUrl ? `↪️ ต่อจาก[คำตอบก่อนหน้า](${options.parentUrl})\n\n` : '';
+  const answer = lead + result.answer;
+  const details = stationDetailsText(result.calls ?? []);
+  // The answer keeps its room; the details take what is left.
+  const room = DESCRIPTION_LIMIT - answer.length - 2;
+  const description = details && room > 0 ? `${answer}\n\n${truncate(details, room)}` : answer;
   return {
     // Neutralises any @everyone the model might emit, whatever the prompt says.
     allowed_mentions: { parse: [] },
@@ -118,7 +164,7 @@ export function buildAskMessage(
       {
         // Embed titles do not render markdown, so the question is not escaped.
         title: truncate(`🤖 ${question}`, TITLE_LIMIT),
-        description: truncate(lead + result.answer, DESCRIPTION_LIMIT),
+        description: truncate(description, DESCRIPTION_LIMIT),
         color: EMBED_COLOR,
         footer: { text: footer(result.toolsUsed, result.truncated, result.deadlineHit === true, result.calls ?? []) },
       },
