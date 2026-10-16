@@ -103,6 +103,16 @@ describe('buildSystemPrompt', () => {
     expect(prompt).toContain('ระบบใส่ให้แล้ว');
   });
 
+  it('treats OPER sources as exact-match data sources, not names', () => {
+    expect(prompt).toContain('BCS คือ BCS เท่านั้น ไม่รวม BCS2/BCS3');
+    expect(prompt).toContain('ไม่ใช่ชื่อสถานีหรือผู้ประกอบการ');
+  });
+
+  it('reports an OPER failure plainly instead of inventing procedures', () => {
+    expect(prompt).toContain('ค้นจากระบบ OPER ไม่สำเร็จ');
+    expect(prompt).toContain('ห้ามแนะนำขั้นตอนงานอื่น');
+  });
+
   it('frames the bot as a recommender, not an authority', () => {
     expect(prompt).toContain('ผู้แนะนำ');
     expect(prompt).toContain('ข้อสันนิษฐาน');

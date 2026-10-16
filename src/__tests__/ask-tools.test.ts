@@ -305,6 +305,31 @@ describe('OPER tools', () => {
     await expect(runTool('find_oper_stations', { province: 'ชัยภูมิ' })).rejects.toThrow('OPER cloudflare: challenged');
   });
 
+  it('a timeout says so, with one narrowing tip and no other advice', async () => {
+    fetchMock.mockRejectedValueOnce(new DOMException('The operation was aborted due to timeout', 'TimeoutError'));
+    await expect(runTool('find_oper_stations', { district: 'เมืองนครราชสีมา', source: 'BCS' })).rejects.toMatchObject({
+      message: 'ระบบ OPER ไม่ตอบภายในเวลาที่กำหนด (หมดเวลา) — ลองระบุตำบลหรือความถี่เพื่อให้ค้นแคบลง',
+    });
+  });
+
+  it('a count timeout tips a shorter date range', async () => {
+    fetchMock.mockRejectedValueOnce(new DOMException('aborted', 'TimeoutError'));
+    await expect(
+      runTool('count_oper_inspections', { inspectedFrom: '2026-01-01', inspectedTo: '2026-10-16' }),
+    ).rejects.toThrow('ลองใช้ช่วงวันที่ที่สั้นลง');
+  });
+
+  it('an unreachable wrapper says it could not connect', async () => {
+    fetchMock.mockRejectedValueOnce(new TypeError('fetch failed'));
+    await expect(runTool('find_oper_stations', { province: 'ชัยภูมิ' })).rejects.toThrow('ติดต่อระบบ OPER ไม่ได้: fetch failed');
+  });
+
+  it('passes BCS through as an exact source, not a name', async () => {
+    respond(200, { total: 0, stations: [] });
+    await runTool('find_oper_stations', { province: 'นครราชสีมา', district: 'เมืองนครราชสีมา', source: 'BCS' });
+    expect(sent().body).toEqual({ province: 'นครราชสีมา', district: 'เมืองนครราชสีมา', source: 'BCS', limit: 10 });
+  });
+
   it('says it is not set up when the env is missing', async () => {
     vi.stubEnv('OPER_API_URL', '');
     await expect(runTool('find_oper_stations', { province: 'ชัยภูมิ' })).rejects.toThrow('ยังไม่ได้ตั้งค่า');

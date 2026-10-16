@@ -12,7 +12,7 @@ import {
   type ContentBlock,
 } from '@/lib/deepseek';
 import type { AskTurn } from '@/lib/askThread';
-import { TOOL_DEFINITIONS, runTool } from '@/services/askTools';
+import { TOOL_DEFINITIONS, operToolTimeout, runTool } from '@/services/askTools';
 import { buildSystemPrompt } from '@/utils/askPrompt';
 
 export const MAX_TOOL_ROUNDS = 5;
@@ -117,7 +117,7 @@ function errorResult(use: ToolUseBlock, message: string): ToolResultBlock {
 async function resultBlock(use: ToolUseBlock, budgetMs: number): Promise<ToolResultBlock> {
   let timer: ReturnType<typeof setTimeout> | undefined;
   const timeout = new Promise<ToolResultBlock>((resolve) => {
-    timer = setTimeout(() => resolve(errorResult(use, 'หมดเวลา')), Math.max(budgetMs, 0));
+    timer = setTimeout(() => resolve(errorResult(use, operToolTimeout(use.name) ?? 'หมดเวลา')), Math.max(budgetMs, 0));
   });
   const run = (async (): Promise<ToolResultBlock> => {
     try {

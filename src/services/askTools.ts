@@ -9,7 +9,7 @@ import prisma from '@/lib/prisma';
 import { searchWeb, type ToolDefinition } from '@/lib/deepseek';
 import { convertToFMStation } from '@/services/stationService';
 import { haversineDistanceKm } from '@/utils/distance';
-import { operRequest } from '@/lib/operApi';
+import { operRequest, operTimeoutMessage } from '@/lib/operApi';
 import {
   assessInterferenceRisk,
   calculatePathLoss,
@@ -19,6 +19,18 @@ import {
 const MAX_STATIONS = 25;
 const MAX_PAIRS = 10;
 const OPER_SOURCES = ['ASMS', 'WEB', 'BCS', 'BCS2', 'BCS3', 'OPER'] as const;
+
+/** The one narrowing hint each OPER tool's timeout carries. */
+const OPER_NARROWING_TIP: Record<string, string> = {
+  find_oper_stations: 'ลองระบุตำบลหรือความถี่เพื่อให้ค้นแคบลง',
+  count_oper_inspections: 'ลองใช้ช่วงวันที่ที่สั้นลง',
+};
+
+/** What a timed-out OPER tool reports; undefined for every other tool. */
+export function operToolTimeout(name: string): string | undefined {
+  const tip = OPER_NARROWING_TIP[name];
+  return tip ? operTimeoutMessage(tip) : undefined;
+}
 const ISO_DATE = /^\d{4}-\d{2}-\d{2}$/;
 
 export const TOOL_DEFINITIONS: ToolDefinition[] = [
@@ -89,20 +101,27 @@ export const TOOL_DEFINITIONS: ToolDefinition[] = [
     description:
       'ค้นทะเบียนสถานีวิทยุกระจายเสียงของ กสทช. (ระบบ OPER, ข้อมูลสด) รวมสถานีที่ยังไม่เคยตรวจ ' +
       'และสถานีที่ไม่มีในฐานข้อมูลของสำนักงาน กรองตามจังหวัด อำเภอ ตำบล ความถี่ (ตรงตัว) ชื่อ หรือแหล่งข้อมูล ' +
-      'ต้องระบุอย่างน้อยหนึ่งอย่างจาก จังหวัด อำเภอ ความถี่ ชื่อ  details=true เพิ่มเลขใบอนุญาต วันหมดอายุ ' +
+      'ต้องระบุอย่างน้อยหนึ่งอย่างจาก จังหวัด อำเภอ ความถี่ ชื่อ  ' +
+      'BCS BCS2 BCS3 WEB OPER ASMS เป็นชื่อแหล่งข้อมูล (source) ของทะเบียน ไม่ใช่ชื่อสถานีหรือผู้ประกอบการ ' +
+      'ห้ามใส่ใน name  details=true เพิ่มเลขใบอนุญาต วันหมดอายุ ' +
       'และผู้ประกอบการ (ช้ากว่า สูงสุด 10 สถานี) ไม่คืนพิกัด ช้ากว่า find_stations หลายวินาที',
     input_schema: {
       type: 'object',
       properties: {
         province: { type: 'string', description: 'จังหวัด เช่น ชัยภูมิ' },
-        district: { type: 'string', description: 'อำเภอ เช่น ภูเขียว' },
+        district: {
+          type: 'string',
+          description: 'อำเภอ เช่น ภูเขียว ใส่ province ด้วยเมื่อรู้ (อ.เมืองนครราชสีมา → province นครราชสีมา)',
+        },
         subdistrict: { type: 'string', description: 'ตำบล ต้องระบุอำเภอด้วย' },
         frequency: { type: 'number', description: 'ความถี่ MHz แบบตรงตัว เช่น 91.75' },
         name: { type: 'string', description: 'ชื่อสถานี (บางส่วนได้)' },
         source: {
           type: 'string',
           enum: [...OPER_SOURCES],
-          description: 'แหล่งข้อมูล ไม่ระบุ = ทุกแหล่ง  OPER คือทะเบียนใบอนุญาต',
+          description:
+            'แหล่งข้อมูลของทะเบียน (SrcData) ตรงตัว: BCS คือ BCS เท่านั้น ไม่รวม BCS2/BCS3 ' +
+            'ไม่ระบุ = ทุกแหล่ง  OPER คือทะเบียนใบอนุญาต',
         },
         limit: { type: 'number', description: `จำนวนสูงสุดที่ส่งกลับ (สูงสุด ${MAX_STATIONS})` },
         details: { type: 'boolean', description: 'เพิ่มเลขใบอนุญาต วันหมดอายุ ผู้ประกอบการ' },
@@ -301,7 +320,7 @@ async function findOperStations(input: Record<string, unknown>) {
   if (input.details === true) body.details = true;
 
   return {
-    ...(await operRequest('/find-stations', body) as Record<string, unknown>),
+    ...(await operRequest('/find-stations', body, OPER_NARROWING_TIP.find_oper_stations) as Record<string, unknown>),
     note: 'ทะเบียนสถานีระบบ OPER ของ กสทช. (ข้อมูลสด) แหล่งข้อมูลหลายแหล่งอาจมีสถานีเดียวกันซ้ำ',
   };
 }
@@ -319,7 +338,7 @@ async function countOperInspections(input: Record<string, unknown>) {
   if (district) body.district = district;
 
   return {
-    ...(await operRequest('/count-stations', body) as Record<string, unknown>),
+    ...(await operRequest('/count-stations', body, OPER_NARROWING_TIP.count_oper_inspections) as Record<string, unknown>),
     note: 'นับจากบันทึกการตรวจในระบบ OPER ของ กสทช. inspections = จำนวนครั้ง, stations = สถานีไม่ซ้ำ',
   };
 }

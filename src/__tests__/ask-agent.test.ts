@@ -231,5 +231,23 @@ describe('askAgent', () => {
         vi.useRealTimers();
       }
     });
+
+    it('an OPER tool cut off by the budget carries one narrowing tip', async () => {
+      vi.useFakeTimers();
+      try {
+        vi.mocked(createMessage)
+          .mockResolvedValueOnce(wantsTool('find_oper_stations', { district: 'เมืองนครราชสีมา', source: 'BCS' }))
+          .mockResolvedValueOnce(text('ค้นไม่ทัน'));
+        vi.mocked(runTool).mockImplementation(() => new Promise(() => {}));
+        const pending = askAgent('ถาม', '2026-09-20', { now: () => 0 });
+        await vi.advanceTimersByTimeAsync(DEADLINE_MS);
+        const out = await pending;
+        expect(out.calls[0].output).toBe(
+          'เครื่องมือทำงานไม่สำเร็จ: ระบบ OPER ไม่ตอบภายในเวลาที่กำหนด (หมดเวลา) — ลองระบุตำบลหรือความถี่เพื่อให้ค้นแคบลง',
+        );
+      } finally {
+        vi.useRealTimers();
+      }
+    });
   });
 });

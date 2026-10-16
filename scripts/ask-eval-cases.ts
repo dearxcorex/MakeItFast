@@ -65,6 +65,19 @@ export const CASES: EvalCase[] = [
     mustNotCall: ['web_search'],
     args: [{ tool: 'find_oper_stations', key: 'frequency', equals: 91.75 }],
   },
+  {
+    id: 'oper-source-bcs',
+    question: 'หาข้อมูล BCS  อำเภอ เมืองนครราชสีมา',
+    why: 'BCS is a register data source matched exactly — it was read as an operator called บีซีเอส, then the bot invented office procedures.',
+    mustCall: ['find_oper_stations'],
+    mustNotCall: ['web_search'],
+    args: [
+      { tool: 'find_oper_stations', key: 'source', matches: /^BCS$/ },
+      { tool: 'find_oper_stations', key: 'district', matches: /เมืองนครราชสีมา/ },
+      { tool: 'find_oper_stations', key: 'province', matches: /นครราชสีมา/ },
+    ],
+    answerNotMatches: [/บีซีเอส/, /ฐานข้อมูลภายใน/, /ฝ่ายทะเบียน|ส่วนทะเบียน|ฝ่ายอนุญาต/],
+  },
 
   // --- Intermod: inside FM_RELEVANT_RANGE, must scan -----------------------
   {
