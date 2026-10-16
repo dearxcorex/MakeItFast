@@ -233,6 +233,16 @@ describe('OPER tools', () => {
     expect(fetchMock).not.toHaveBeenCalled();
   });
 
+  it('find_oper_stations tells the model when a live list is partial', async () => {
+    respond(200, { total: 129, shown: 10, truncated: true, complete: false, stations: [] });
+    const out = (await runTool('find_oper_stations', { district: 'เมืองนครราชสีมา' })) as { note: string };
+    expect(out.note).toContain('แสดง 10 จาก 129 สถานี');
+    respond(200, { total: 129, shown: 10, truncated: true, complete: true, as_of: '2026-10-16T03:00:00+00:00', stations: [] });
+    const saved = (await runTool('find_oper_stations', { district: 'เมืองนครราชสีมา' })) as { note: string; as_of: string };
+    expect(saved.as_of).toBe('2026-10-16T03:00:00+00:00');
+    expect(saved.note).not.toContain('ไม่ครบ');
+  });
+
   it('count_oper_inspections maps the dates to the wrapper fields', async () => {
     respond(200, { inspections: 40, stations: 31, complete: true, inspected_from: '2026-01-01', inspected_to: '2026-10-16' });
     const out = (await runTool('count_oper_inspections', {

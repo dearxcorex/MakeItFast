@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { buildAskMessage, askErrorMessage, truncate } from '@/utils/askMessage';
+import { buildAskMessage, askErrorMessage, operDataLines, thaiDateTime, truncate } from '@/utils/askMessage';
 import { BACKED_BAND, DISCLAIMER, FIELD_KIT, buildSystemPrompt } from '@/utils/askPrompt';
 
 const result = (over: Partial<{ answer: string; toolsUsed: string[]; truncated: boolean }> = {}) => ({
@@ -7,6 +7,43 @@ const result = (over: Partial<{ answer: string; toolsUsed: string[]; truncated: 
   toolsUsed: ['find_stations'],
   truncated: false,
   ...over,
+});
+
+describe('OPER data age and partial lists', () => {
+  const oper = (output: object, isError = false) => ({ name: 'find_oper_stations', output: JSON.stringify(output), isError });
+
+  it('writes a timestamp in Thai time and Buddhist era', () => {
+    expect(thaiDateTime('2026-10-15T20:00:00+00:00')).toBe('16 ต.ค. 2569 03:00');
+    expect(thaiDateTime('not a date')).toBeUndefined();
+  });
+
+  it('shows the saved register age in the footer', () => {
+    const msg = buildAskMessage('q', {
+      ...result({ toolsUsed: ['find_oper_stations'] }),
+      calls: [oper({ total: 129, shown: 10, complete: true, as_of: '2026-10-15T20:00:00+00:00' })],
+    });
+    expect(msg.embeds[0].footer.text).toContain('ข้อมูล OPER ณ 16 ต.ค. 2569 03:00');
+    expect(msg.embeds[0].footer.text).not.toContain('ไม่ครบ');
+  });
+
+  it('flags a partial live list with shown of total', () => {
+    expect(operDataLines([oper({ total: 129, shown: 10, complete: false })])).toEqual([
+      'รายการ OPER ไม่ครบ: แสดง 10 จาก 129 สถานี (ค้นสดไม่ทันเวลา)',
+    ]);
+  });
+
+  it('ignores failed calls, other tools, and a repeat of the same line', () => {
+    const same = oper({ total: 5, shown: 5, complete: true, as_of: '2026-10-15T20:00:00+00:00' });
+    expect(
+      operDataLines([
+        same,
+        same,
+        oper({ complete: false }, true),
+        { name: 'count_oper_inspections', output: '{"complete":false,"shown":1,"total":2}', isError: false },
+        { name: 'find_oper_stations', output: 'not json', isError: false },
+      ]),
+    ).toEqual(['ข้อมูล OPER ณ 16 ต.ค. 2569 03:00']);
+  });
 });
 
 describe('truncate', () => {

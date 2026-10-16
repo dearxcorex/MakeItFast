@@ -79,7 +79,7 @@ export const TOOL_DEFINITIONS: ToolDefinition[] = [
   {
     name: 'find_oper_stations',
     description:
-      'ค้นทะเบียนสถานีวิทยุกระจายเสียงของ กสทช. (ระบบ OPER, ข้อมูลสด) รวมสถานีที่ยังไม่เคยตรวจ ' +
+      'ค้นทะเบียนสถานีวิทยุกระจายเสียงของ กสทช. (ระบบ OPER สำเนาที่บันทึกทุกคืน ค้นสดเมื่อยังไม่มีสำเนา) รวมสถานีที่ยังไม่เคยตรวจ ' +
       'และสถานีที่ไม่มีในฐานข้อมูลของสำนักงาน กรองตามจังหวัด อำเภอ ตำบล ความถี่ (ตรงตัว) ชื่อ หรือแหล่งข้อมูล ' +
       'ต้องระบุอย่างน้อยหนึ่งอย่างจาก จังหวัด อำเภอ ความถี่ ชื่อ  ' +
       'BCS BCS2 BCS3 WEB OPER ASMS เป็นชื่อแหล่งข้อมูล (source) ของทะเบียน ไม่ใช่ชื่อสถานีหรือผู้ประกอบการ ' +
@@ -262,10 +262,13 @@ async function findOperStations(input: Record<string, unknown>) {
   body.limit = Math.min(Math.max(Math.trunc(num(input, 'limit') ?? 10), 1), MAX_STATIONS);
   if (input.details === true) body.details = true;
 
-  return {
-    ...(await operRequest('/find-stations', body, OPER_NARROWING_TIP.find_oper_stations) as Record<string, unknown>),
-    note: 'ทะเบียนสถานีระบบ OPER ของ กสทช. (ข้อมูลสด) แหล่งข้อมูลหลายแหล่งอาจมีสถานีเดียวกันซ้ำ',
-  };
+  const out = (await operRequest('/find-stations', body, OPER_NARROWING_TIP.find_oper_stations)) as Record<string, unknown>;
+  const notes = ['ทะเบียนสถานีระบบ OPER ของ กสทช. แหล่งข้อมูลหลายแหล่งอาจมีสถานีเดียวกันซ้ำ'];
+  if (out.as_of) notes.push('as_of = เวลาที่บันทึกทะเบียนไว้ (ระบบแสดงในท้ายคำตอบให้แล้ว)');
+  if (out.complete === false) {
+    notes.push(`รายการไม่ครบ (ค้นสดไม่ทันเวลา): บอกผู้ใช้ว่าแสดง ${String(out.shown)} จาก ${String(out.total)} สถานี`);
+  }
+  return { ...out, note: notes.join(' ') };
 }
 
 async function countOperInspections(input: Record<string, unknown>) {

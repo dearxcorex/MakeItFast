@@ -49,12 +49,56 @@ const TOOL_LABELS: Record<string, string> = {
   web_search: 'ค้นเว็บ',
 };
 
-function footer(toolsUsed: string[], truncated: boolean, deadlineHit: boolean): string {
+const THAI_MONTHS = ['ม.ค.', 'ก.พ.', 'มี.ค.', 'เม.ย.', 'พ.ค.', 'มิ.ย.', 'ก.ค.', 'ส.ค.', 'ก.ย.', 'ต.ค.', 'พ.ย.', 'ธ.ค.'];
+const BANGKOK_OFFSET_MS = 7 * 3_600_000;
+
+/** An ISO timestamp as Thai time, Buddhist era: "16 ต.ค. 2569 10:00". Undefined when it does not parse. */
+export function thaiDateTime(iso: string): string | undefined {
+  const ms = Date.parse(iso);
+  if (Number.isNaN(ms)) return undefined;
+  const t = new Date(ms + BANGKOK_OFFSET_MS);
+  const hh = String(t.getUTCHours()).padStart(2, '0');
+  const mm = String(t.getUTCMinutes()).padStart(2, '0');
+  return `${t.getUTCDate()} ${THAI_MONTHS[t.getUTCMonth()]} ${t.getUTCFullYear() + 543} ${hh}:${mm}`;
+}
+
+export interface ToolCallOutput {
+  name: string;
+  output: string;
+  isError: boolean;
+}
+
+/**
+ * Read off the find_oper_stations results, not asked of the model: how old the
+ * saved register is, and whether a live walk ran out of time before the list was whole.
+ */
+export function operDataLines(calls: ToolCallOutput[]): string[] {
+  const asOf = new Set<string>();
+  const partial = new Set<string>();
+  for (const call of calls) {
+    if (call.name !== 'find_oper_stations' || call.isError) continue;
+    let out: { as_of?: unknown; complete?: unknown; shown?: unknown; total?: unknown };
+    try {
+      out = JSON.parse(call.output);
+    } catch {
+      continue;
+    }
+    const when = typeof out.as_of === 'string' ? thaiDateTime(out.as_of) : undefined;
+    if (when) asOf.add(`ข้อมูล OPER ณ ${when}`);
+    if (out.complete === false && typeof out.shown === 'number' && typeof out.total === 'number') {
+      partial.add(`รายการ OPER ไม่ครบ: แสดง ${out.shown} จาก ${out.total} สถานี (ค้นสดไม่ทันเวลา)`);
+    }
+  }
+  return [...asOf, ...partial];
+}
+
+function footer(toolsUsed: string[], truncated: boolean, deadlineHit: boolean, calls: ToolCallOutput[]): string {
   const used = [...new Set(toolsUsed)].map((t) => TOOL_LABELS[t] ?? t);
   return truncate(
     [
       `⚠️ ${DISCLAIMER}`,
       used.length ? `ใช้: ${used.join(' · ')}` : 'ไม่ได้เรียกเครื่องมือ — ตอบจากความรู้ทั่วไป',
+      ...operDataLines(calls),
       ...(truncated ? [deadlineHit ? 'สรุปก่อนกำหนด: หมดเวลาค้นข้อมูล' : 'สรุปก่อนกำหนด: ค้นข้อมูลครบรอบสูงสุดแล้ว'] : []),
     ].join('\n'),
     FOOTER_LIMIT,
@@ -63,7 +107,7 @@ function footer(toolsUsed: string[], truncated: boolean, deadlineHit: boolean): 
 
 export function buildAskMessage(
   question: string,
-  result: { answer: string; toolsUsed: string[]; truncated: boolean; deadlineHit?: boolean },
+  result: { answer: string; toolsUsed: string[]; truncated: boolean; deadlineHit?: boolean; calls?: ToolCallOutput[] },
   options: AskMessageOptions = {},
 ): AskMessage {
   const lead = options.parentUrl ? `↪️ ต่อจาก[คำตอบก่อนหน้า](${options.parentUrl})\n\n` : '';
@@ -76,7 +120,7 @@ export function buildAskMessage(
         title: truncate(`🤖 ${question}`, TITLE_LIMIT),
         description: truncate(lead + result.answer, DESCRIPTION_LIMIT),
         color: EMBED_COLOR,
-        footer: { text: footer(result.toolsUsed, result.truncated, result.deadlineHit === true) },
+        footer: { text: footer(result.toolsUsed, result.truncated, result.deadlineHit === true, result.calls ?? []) },
       },
     ],
     components: options.followUp
