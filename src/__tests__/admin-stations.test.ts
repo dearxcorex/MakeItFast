@@ -12,6 +12,7 @@ vi.mock("@/lib/prisma", () => {
       update: vi.fn(),
       delete: vi.fn(),
     },
+    station_inspection: { deleteMany: vi.fn() },
     data_change: { create: vi.fn() },
     $transaction: vi.fn(),
   };
@@ -119,6 +120,7 @@ beforeEach(() => {
   vi.mocked(prisma.fm_station.update).mockReset();
   vi.mocked(prisma.fm_station.delete).mockReset();
   vi.mocked(prisma.data_change.create).mockReset();
+  vi.mocked(prisma.station_inspection.deleteMany).mockReset();
   vi.mocked(prisma.user.findUnique).mockReset();
 });
 
@@ -310,33 +312,54 @@ describe("DELETE /api/admin/stations/[id]", () => {
     expect((await DELETE(req("DELETE"), ctx("999"))).status).toBe(404);
   });
 
-  it("blocks deleting a station that has inspection history", async () => {
+  it("deletes a station with inspection history and keeps the history in the log", async () => {
     await asAdmin();
+    const inspection = {
+      id: 5,
+      station_id: 10,
+      inspected_on: new Date("2026-09-01T00:00:00Z"),
+      lead_user_id: 1,
+      notes: null,
+      source: "app",
+      discord_message_id: null,
+      created_at: new Date("2026-09-01T03:00:00Z"),
+      updated_at: new Date("2026-09-01T03:00:00Z"),
+      members: [{ inspection_id: 5, user_id: 2 }],
+    };
     vi.mocked(prisma.fm_station.findUnique).mockResolvedValue({
       ...stationRow(),
-      _count: { inspections: 2 },
+      inspections: [inspection],
     } as any);
+    vi.mocked(prisma.fm_station.delete).mockResolvedValue(stationRow() as any);
+
     const res = await DELETE(req("DELETE"), ctx("10"));
-    expect(res.status).toBe(409);
-    expect(await res.json()).toMatchObject({ error: "has_inspections", count: 2 });
-    expect(prisma.fm_station.delete).not.toHaveBeenCalled();
+    expect(res.status).toBe(200);
+    expect(vi.mocked(prisma.station_inspection.deleteMany).mock.calls[0][0]).toEqual({
+      where: { station_id: 10 },
+    });
+    expect(vi.mocked(prisma.fm_station.delete).mock.calls[0][0].where).toEqual({ id: 10 });
+    const log = vi.mocked(prisma.data_change.create).mock.calls[0][0].data as any;
+    expect(log.before).toMatchObject({ id_fm: "RFXL680004" });
+    expect(log.before.inspections).toEqual([
+      expect.objectContaining({ id: 5, inspected_on: "2026-09-01T00:00:00.000Z", members: [{ inspection_id: 5, user_id: 2 }] }),
+    ]);
   });
 
   it("deletes a station with no history and logs the full row", async () => {
     await asAdmin();
     vi.mocked(prisma.fm_station.findUnique).mockResolvedValue({
       ...stationRow(),
-      _count: { inspections: 0 },
+      inspections: [],
     } as any);
     vi.mocked(prisma.fm_station.delete).mockResolvedValue(stationRow() as any);
 
     const res = await DELETE(req("DELETE"), ctx("10"));
     expect(res.status).toBe(200);
+    expect(prisma.station_inspection.deleteMany).not.toHaveBeenCalled();
     expect(vi.mocked(prisma.fm_station.delete).mock.calls[0][0].where).toEqual({ id: 10 });
     const log = vi.mocked(prisma.data_change.create).mock.calls[0][0].data;
     expect(log).toMatchObject({ action: "delete", row_id: 10, table_name: "fm_station" });
-    expect(log.before).toMatchObject({ id_fm: "RFXL680004", name: "สถานีเดิม" });
-    expect(log.before).not.toHaveProperty("_count");
+    expect(log.before).toMatchObject({ id_fm: "RFXL680004", name: "สถานีเดิม", inspections: [] });
   });
 
   it("rejects a non-numeric id", async () => {

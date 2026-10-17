@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import type { Prisma } from "@prisma/client";
 import prisma from "@/lib/prisma";
 import { requireAdmin } from "@/lib/auth";
 import { parseStationInput } from "@/utils/stationInput";
@@ -81,22 +82,22 @@ export async function DELETE(_req: NextRequest, ctx: Ctx) {
 
     const found = await prisma.fm_station.findUnique({
       where: { id },
-      include: { _count: { select: { inspections: true } } },
+      include: { inspections: { include: { members: true } } },
     });
     if (!found) return NextResponse.json({ error: "not_found" }, { status: 404 });
 
-    // Inspection history is never deleted from here. A station that has been
-    // inspected is retired by marking it revoked instead.
-    const count = found._count.inspections;
-    if (count > 0) {
-      return NextResponse.json({ error: "has_inspections", count }, { status: 409 });
-    }
-
-    const { _count: _unused, ...before } = found;
-    void _unused;
+    // Inspection history goes with the station (the form warns with the
+    // count first). The log keeps a copy of it so a mistaken delete can be
+    // rebuilt by hand from data_change.
+    const { inspections, ...before } = found;
+    const history = JSON.parse(JSON.stringify(inspections)) as Prisma.InputJsonValue;
     await prisma.$transaction(async (tx) => {
+      if (inspections.length > 0) {
+        // Members cascade from station_inspection.
+        await tx.station_inspection.deleteMany({ where: { station_id: id } });
+      }
       await tx.fm_station.delete({ where: { id } });
-      await logChange(tx, "delete", me.id, id, before, null);
+      await logChange(tx, "delete", me.id, id, before, null, { inspections: history });
     });
     return NextResponse.json({ ok: true });
   } catch (err) {

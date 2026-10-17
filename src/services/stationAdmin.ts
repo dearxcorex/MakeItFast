@@ -61,7 +61,10 @@ export function logChange(
   userId: number,
   rowId: number,
   before: fm_station | null,
-  after: fm_station | null
+  after: fm_station | null,
+  // Extra keys stored beside the row in `before`, e.g. the inspection history
+  // a delete removed along with the station.
+  beforeExtra?: Record<string, Prisma.InputJsonValue>
 ) {
   return tx.data_change.create({
     data: {
@@ -69,7 +72,7 @@ export function logChange(
       row_id: rowId,
       action,
       user_id: userId,
-      ...(before ? { before: snapshot(before) } : {}),
+      ...(before ? { before: { ...(snapshot(before) as object), ...beforeExtra } } : {}),
       ...(after ? { after: snapshot(after) } : {}),
     },
   });

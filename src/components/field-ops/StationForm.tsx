@@ -4,6 +4,7 @@ import { useState } from "react";
 import type { AdminStation } from "@/types/station";
 import { TARGET_PROVINCES } from "@/utils/offairAudit";
 import { parseLatLngInput } from "@/utils/parseLatLng";
+import { DeleteStationDialog } from "./DeleteStationDialog";
 import { parseStationInput, STATION_TYPES, type StationInputField } from "@/utils/stationInput";
 
 type Match = { id: number; idFm: string | null; name: string | null; freq: number | null; district: string | null };
@@ -64,6 +65,7 @@ export function StationForm({
   const [banner, setBanner] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [paste, setPaste] = useState("");
+  const [confirmDelete, setConfirmDelete] = useState(false);
 
   const isNew = station === null;
   // Register sync overwrites these on any station it matches by StationID.
@@ -117,10 +119,6 @@ export function StationForm({
 
   async function remove() {
     if (!station) return;
-    const ok = window.confirm(
-      `ลบสถานีนี้?\n\n${station.name}\n${station.freq ?? "—"} MHz · ${station.district}, ${station.province}`
-    );
-    if (!ok) return;
     setBusy(true);
     setBanner(null);
     try {
@@ -129,16 +127,12 @@ export function StationForm({
         onSaved();
         return;
       }
-      const json = await res.json().catch(() => ({}));
-      setBanner(
-        json.error === "has_inspections"
-          ? `ลบไม่ได้: มีประวัติการตรวจ ${json.count} ครั้ง — ใช้ "เพิกถอน" แทน`
-          : `ลบไม่สำเร็จ (HTTP ${res.status})`
-      );
+      setBanner(`ลบไม่สำเร็จ (HTTP ${res.status})`);
     } catch {
       setBanner("ลบไม่สำเร็จ — เชื่อมต่อเซิร์ฟเวอร์ไม่ได้");
     } finally {
       setBusy(false);
+      setConfirmDelete(false);
     }
   }
 
@@ -266,13 +260,8 @@ export function StationForm({
         {!isNew && (
           <button
             type="button"
-            disabled={busy || station.inspectionCount > 0}
-            onClick={() => void remove()}
-            title={
-              station.inspectionCount > 0
-                ? `มีประวัติการตรวจ ${station.inspectionCount} ครั้ง — ใช้ "เพิกถอน" แทน`
-                : undefined
-            }
+            disabled={busy}
+            onClick={() => setConfirmDelete(true)}
             style={{ ...ghostButton, color: "var(--fo-crit)", borderColor: "var(--fo-crit)" }}
           >
             ลบ
@@ -281,8 +270,16 @@ export function StationForm({
       </div>
       {!isNew && station.inspectionCount > 0 && (
         <div style={{ fontSize: 11, color: "var(--fo-band-mute)" }}>
-          ลบไม่ได้: มีประวัติการตรวจ {station.inspectionCount} ครั้ง — ใช้ “เพิกถอน” แทน
+          มีประวัติการตรวจ {station.inspectionCount} ครั้ง — ลบสถานีจะลบประวัติไปด้วย
         </div>
+      )}
+      {confirmDelete && station && (
+        <DeleteStationDialog
+          station={station}
+          busy={busy}
+          onCancel={() => setConfirmDelete(false)}
+          onConfirm={() => void remove()}
+        />
       )}
     </form>
   );

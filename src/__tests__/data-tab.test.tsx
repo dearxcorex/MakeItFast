@@ -134,26 +134,46 @@ describe("StationForm", () => {
     expect(fresh.container.textContent).not.toContain("register sync จะเขียนทับ");
   });
 
-  it("disables delete for a station with inspection history", () => {
-    const { getByText, container } = render(
-      <StationForm station={station({ inspectionCount: 2 })} onSaved={vi.fn()} onClose={vi.fn()} />
-    );
-    expect((getByText("ลบ") as HTMLButtonElement).disabled).toBe(true);
-    expect(container.textContent).toContain("มีประวัติการตรวจ 2 ครั้ง");
-  });
-
-  it("deletes after confirm, and does nothing if cancelled", async () => {
-    const confirm = vi.spyOn(window, "confirm").mockReturnValueOnce(false).mockReturnValueOnce(true);
+  it("allows deleting a station with inspection history and warns the history goes too", async () => {
     fetchMock.mockReturnValue(jsonResponse(200, { ok: true }));
     const onSaved = vi.fn();
-    const { getByText } = render(<StationForm station={station()} onSaved={onSaved} onClose={vi.fn()} />);
+    const { getByText, getByRole, container } = render(
+      <StationForm station={station({ inspectionCount: 2 })} onSaved={onSaved} onClose={vi.fn()} />
+    );
+    expect((getByText("ลบ") as HTMLButtonElement).disabled).toBe(false);
+    expect(container.textContent).toContain("มีประวัติการตรวจ 2 ครั้ง");
 
     fireEvent.click(getByText("ลบ"));
+    const dialog = getByRole("alertdialog");
+    expect(dialog.textContent).toContain("2 ครั้ง");
+    expect(dialog.textContent).toContain("จะถูกลบไปด้วย");
+    fireEvent.click(getByText("ลบสถานี"));
+    await waitFor(() => expect(onSaved).toHaveBeenCalled());
+  });
+
+  it("deletes after confirming in the dialog, and does nothing if cancelled", async () => {
+    fetchMock.mockReturnValue(jsonResponse(200, { ok: true }));
+    const onSaved = vi.fn();
+    const { getByText, getByRole, queryByRole } = render(
+      <StationForm station={station()} onSaved={onSaved} onClose={vi.fn()} />
+    );
+
+    fireEvent.click(getByText("ลบ"));
+    const dialog = getByRole("alertdialog");
+    expect(dialog.textContent).toContain("สถานีเดิม");
+    expect(dialog.textContent).not.toContain("จะถูกลบไปด้วย");
+    expect(document.activeElement?.textContent).toBe("ยกเลิก");
+    fireEvent.click(getByText("ยกเลิก", { selector: "[role=alertdialog] button" }));
+    expect(queryByRole("alertdialog")).toBeNull();
     expect(fetchMock).not.toHaveBeenCalled();
 
     fireEvent.click(getByText("ลบ"));
+    fireEvent.keyDown(window, { key: "Escape" });
+    expect(queryByRole("alertdialog")).toBeNull();
+
+    fireEvent.click(getByText("ลบ"));
+    fireEvent.click(getByText("ลบสถานี"));
     await waitFor(() => expect(onSaved).toHaveBeenCalled());
-    expect(confirm.mock.calls[1][0]).toContain("สถานีเดิม");
     expect(fetchMock.mock.calls[0]).toEqual(["/api/admin/stations/10", { method: "DELETE" }]);
   });
 });
