@@ -178,9 +178,10 @@ describe('buildSystemPrompt', () => {
     expect(prompt).toContain('ระบบใส่ให้แล้ว');
   });
 
-  it('answers a count with inspections first, split by result, stations in brackets', () => {
-    expect(prompt).toContain('ตัวเลขหลักคือจำนวนครั้งที่ตรวจ (inspections) สถานีไม่ซ้ำใส่ในวงเล็บ');
-    expect(prompt).toContain('ตรงตามมาตรฐาน 118 / ไม่ตรงตามมาตรฐาน 8 (122 สถานีไม่ซ้ำ)');
+  it('answers a count with inspections only, split by result, no station counts', () => {
+    expect(prompt).toContain('ตอบเป็นจำนวนครั้งที่ตรวจ (inspections) เท่านั้น ห้ามใส่จำนวนสถานี (stations)');
+    expect(prompt).toContain('ตรวจ 126 ครั้ง: ตรงตามมาตรฐาน 118 ครั้ง / ไม่ตรงตามมาตรฐาน 8 ครั้ง');
+    expect(prompt).not.toContain('สถานีไม่ซ้ำใส่ในวงเล็บ');
     expect(prompt).toContain('ไม่ผ่าน/ไม่ตรงมาตรฐาน → ไม่ตรงตามมาตรฐาน');
   });
 

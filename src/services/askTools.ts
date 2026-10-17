@@ -341,7 +341,7 @@ async function countOperInspections(input: Record<string, unknown>) {
     ...(await operRequest('/count-stations', body, OPER_NARROWING_TIP.count_oper_inspections) as Record<string, unknown>),
     note:
       'นับจากบันทึกการตรวจในระบบ OPER ของ กสทช. inspections = จำนวนครั้งที่ตรวจ (ตรงกับจำนวนแถวในระบบ OPER ใช้เป็นตัวเลขหลัก), ' +
-      'stations = สถานีไม่ซ้ำ (ใส่ในวงเล็บ), by_result = แยกตามผลตรวจ',
+      'by_result = แยกตามผลตรวจ, stations = สถานีไม่ซ้ำ (ไม่ต้องใส่ในคำตอบ เว้นแต่ถูกถามว่ากี่สถานี)',
   };
 }
 
