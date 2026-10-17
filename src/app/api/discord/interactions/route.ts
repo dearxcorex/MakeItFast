@@ -5,10 +5,12 @@ import {
   InteractionResponseType,
   InteractionType,
   channelAllowed,
+  deleteOriginalResponse,
   editOriginalResponse,
   interactionUserId,
   messageUrl,
   modalTextValue,
+  sendFollowUpMessage,
   stringOption,
   verifyDiscordSignature,
   type Interaction,
@@ -112,50 +114,71 @@ function ephemeral(content: string) {
   });
 }
 
+/** The check that needs no network, answered at once and privately. Null means go ahead. */
+function configRefusal() {
+  if (isDeepSeekConfigured()) return null;
+  console.error('DEEPSEEK_API_KEY is not set; cannot answer /ask');
+  return ephemeral('ยังไม่ได้ตั้งค่า DEEPSEEK_API_KEY บอทจึงตอบไม่ได้');
+}
+
 /**
- * The checks every question passes before it costs anything, /ask and
- * follow-up alike. Refused before deferring, so the user sees the reason
- * privately and the channel stays clean. Null means go ahead.
+ * Count the question against the asker's day. Runs after deferring: a cold
+ * start plus a Redis round trip can pass Discord's 3 s. Null means go ahead;
+ * otherwise the reason to show privately.
  */
-async function askRefusal(interaction: Interaction) {
-  if (!isDeepSeekConfigured()) {
-    console.error('DEEPSEEK_API_KEY is not set; cannot answer /ask');
-    return ephemeral('ยังไม่ได้ตั้งค่า DEEPSEEK_API_KEY บอทจึงตอบไม่ได้');
+async function quotaRefusal(interaction: Interaction): Promise<string | null> {
+  try {
+    // Anonymous callers share one bucket rather than none. A follow-up counts
+    // against whoever pressed the button, not whoever asked first.
+    const quota = await consumeAskQuota(interactionUserId(interaction) ?? 'unknown', bangkokToday());
+    if (quota.allowed) return null;
+    return `ใช้ครบโควตาวันนี้แล้ว (${quota.limit} ครั้ง/วัน) พรุ่งนี้เริ่มนับใหม่`;
+  } catch (error) {
+    // The cap is the spend limit, so an unreadable counter refuses.
+    console.error('/ask quota check failed:', error);
+    return 'ตรวจโควตาไม่สำเร็จ ลองใหม่อีกครั้ง';
   }
-  // Anonymous callers share one bucket rather than none. A follow-up counts
-  // against whoever pressed the button, not whoever asked first.
-  const quota = await consumeAskQuota(interactionUserId(interaction) ?? 'unknown', bangkokToday());
-  if (!quota.allowed) {
-    return ephemeral(`ใช้ครบโควตาวันนี้แล้ว (${quota.limit} ครั้ง/วัน) พรุ่งนี้เริ่มนับใหม่`);
+}
+
+/**
+ * Swap the public "thinking…" reply for a message only the asker sees, so a
+ * refusal after deferring still keeps the channel clean.
+ */
+async function refusePrivately(applicationId: string, token: string, content: string): Promise<void> {
+  try {
+    await deleteOriginalResponse(applicationId, token);
+    await sendFollowUpMessage(applicationId, token, { content, flags: EPHEMERAL, allowed_mentions: { parse: [] } });
+  } catch (error) {
+    console.error('/ask refusal failed:', error);
   }
-  return null;
 }
 
 async function startAsk(applicationId: string, interaction: Interaction) {
   const question = stringOption(interaction, 'question');
   if (!question) return ephemeral('พิมพ์คำถามต่อท้ายคำสั่งด้วย');
 
-  const refusal = await askRefusal(interaction);
+  const refusal = configRefusal();
   if (refusal) return refusal;
 
-  after(() => answerAsk(applicationId, interaction.token, question, []));
+  after(async () => {
+    const quota = await quotaRefusal(interaction);
+    if (quota) return refusePrivately(applicationId, interaction.token, quota);
+    await answerAsk(applicationId, interaction.token, question, []);
+  });
   return deferred();
 }
 
-/**
- * The turns behind an answer, or the ephemeral reply to send instead. Redis
- * failing must still get an answer inside Discord's 3 s, not a 500.
- */
-async function threadOrRefusal(messageId: string): Promise<{ turns: AskTurn[] } | { refusal: NextResponse }> {
+/** The turns behind an answer, or the reason to refuse. Redis failing is a refusal, not a 500. */
+async function threadOrRefusal(messageId: string): Promise<{ turns: AskTurn[] } | { refusal: string }> {
   let turns: AskTurn[] | null;
   try {
     turns = await loadThread(messageId);
   } catch (error) {
     console.error('/ask thread load failed:', error);
-    return { refusal: ephemeral(THREAD_UNREACHABLE) };
+    return { refusal: THREAD_UNREACHABLE };
   }
-  if (!turns) return { refusal: ephemeral(THREAD_EXPIRED) };
-  if (turns.length > MAX_FOLLOW_UPS) return { refusal: ephemeral(THREAD_FULL) };
+  if (!turns) return { refusal: THREAD_EXPIRED };
+  if (turns.length > MAX_FOLLOW_UPS) return { refusal: THREAD_FULL };
   return { turns };
 }
 
@@ -164,8 +187,9 @@ async function openFollowUp(interaction: Interaction) {
   const messageId = interaction.message?.id;
   if (interaction.data?.custom_id !== FOLLOW_UP_BUTTON_ID || !messageId) return ephemeral('ไม่รู้จักปุ่มนี้');
 
+  // A modal cannot be deferred, so this one Redis read stays inside the 3 s.
   const thread = await threadOrRefusal(messageId);
-  if ('refusal' in thread) return thread.refusal;
+  if ('refusal' in thread) return ephemeral(thread.refusal);
 
   return NextResponse.json({
     type: InteractionResponseType.MODAL,
@@ -200,16 +224,18 @@ async function startFollowUp(applicationId: string, guildId: string, interaction
   const question = modalTextValue(interaction, FOLLOW_UP_INPUT_ID);
   if (!question) return ephemeral('พิมพ์คำถามด้วย');
 
-  // Expiry is checked before the quota, so a dead thread costs nothing.
-  const thread = await threadOrRefusal(parentId);
-  if ('refusal' in thread) return thread.refusal;
-  const history = thread.turns;
-
-  const refusal = await askRefusal(interaction);
+  const refusal = configRefusal();
   if (refusal) return refusal;
 
   const parentUrl = interaction.channel_id ? messageUrl(guildId, interaction.channel_id, parentId) : undefined;
-  after(() => answerAsk(applicationId, interaction.token, question, history, parentUrl));
+  after(async () => {
+    // Expiry is checked before the quota, so a dead thread costs nothing.
+    const thread = await threadOrRefusal(parentId);
+    if ('refusal' in thread) return refusePrivately(applicationId, interaction.token, thread.refusal);
+    const quota = await quotaRefusal(interaction);
+    if (quota) return refusePrivately(applicationId, interaction.token, quota);
+    await answerAsk(applicationId, interaction.token, question, thread.turns, parentUrl);
+  });
   return deferred();
 }
 

@@ -153,3 +153,25 @@ export async function deleteWebhookMessage(webhookUrl: string, messageId: string
     throw new Error(`Discord webhook delete returned ${res.status}: ${await res.text()}`);
   }
 }
+
+/** Remove the deferred reply, e.g. to answer privately instead. Already gone (404) counts as done. */
+export async function deleteOriginalResponse(applicationId: string, interactionToken: string): Promise<void> {
+  const res = await fetch(`${DISCORD_API}/webhooks/${applicationId}/${interactionToken}/messages/@original`, {
+    method: 'DELETE',
+  });
+  if (!res.ok && res.status !== 404) {
+    throw new Error(`Discord delete returned ${res.status}: ${await res.text()}`);
+  }
+}
+
+/** Send a further message on an interaction that was already answered or deferred. */
+export async function sendFollowUpMessage(applicationId: string, interactionToken: string, body: object): Promise<void> {
+  const res = await fetch(`${DISCORD_API}/webhooks/${applicationId}/${interactionToken}`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(body),
+  });
+  if (!res.ok) {
+    throw new Error(`Discord follow-up returned ${res.status}: ${await res.text()}`);
+  }
+}

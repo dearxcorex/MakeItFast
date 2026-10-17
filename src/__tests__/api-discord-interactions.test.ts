@@ -37,6 +37,7 @@ import { NextRequest } from 'next/server';
 import prisma from '@/lib/prisma';
 import { askAgent } from '@/services/askAgent';
 import { canFollowUp, loadThread, saveThread, MAX_FOLLOW_UPS, type AskTurn } from '@/lib/askThread';
+import * as askQuota from '@/lib/askQuota';
 import { __resetAskQuotaForTests } from '@/lib/askQuota';
 import { POST } from '@/app/api/discord/interactions/route';
 
@@ -309,22 +310,56 @@ describe('POST /api/discord/interactions — /ask', () => {
     expect(pending).toHaveLength(0);
   });
 
+  it('defers before checking the quota, so a slow counter cannot miss Discord\'s 3 s', async () => {
+    const quota = vi.spyOn(askQuota, 'consumeAskQuota');
+    expect(await (await POST(signedReq(askCommand))).json()).toEqual({ type: 5 });
+    expect(quota).not.toHaveBeenCalled();
+    await runAfter();
+    expect(quota).toHaveBeenCalledTimes(1);
+    quota.mockRestore();
+  });
+
   it('refuses privately once the user is over the daily quota', async () => {
     process.env.ASK_DAILY_LIMIT = '1';
-    expect(await (await POST(signedReq(askCommand))).json()).toEqual({ type: 5 });
+    await POST(signedReq(askCommand));
+    await runAfter();
+    fetchMock.mockClear();
+    vi.mocked(askAgent).mockClear();
 
-    const res = await POST(signedReq(askCommand));
-    const json = await res.json();
-    expect(json.data.flags).toBe(64);
-    expect(json.data.content).toContain('โควตา');
-    expect(pending).toHaveLength(1); // only the first call queued work
+    expect(await (await POST(signedReq(askCommand))).json()).toEqual({ type: 5 });
+    await runAfter();
+
+    expect(askAgent).not.toHaveBeenCalled();
+    const [[delUrl, del], [postUrl, post]] = fetchMock.mock.calls;
+    expect(del.method).toBe('DELETE');
+    expect(delUrl).toContain(`/webhooks/${APP}/interaction-token/messages/@original`);
+    expect(post.method).toBe('POST');
+    expect(postUrl).toMatch(new RegExp(`/webhooks/${APP}/interaction-token$`));
+    const body = JSON.parse(post.body);
+    expect(body.flags).toBe(64);
+    expect(body.content).toContain('โควตา');
+  });
+
+  it('refuses privately, not with an answer, when the quota counter fails', async () => {
+    const quota = vi.spyOn(askQuota, 'consumeAskQuota').mockRejectedValue(new Error('ECONNRESET'));
+    expect(await (await POST(signedReq(askCommand))).json()).toEqual({ type: 5 });
+    await runAfter();
+    expect(askAgent).not.toHaveBeenCalled();
+    const body = JSON.parse(fetchMock.mock.calls[1][1].body);
+    expect(body.flags).toBe(64);
+    expect(body.content).toContain('โควตา');
+    quota.mockRestore();
   });
 
   it('counts quota per user, not per server', async () => {
     process.env.ASK_DAILY_LIMIT = '1';
     await POST(signedReq(askCommand));
+    await runAfter();
+    vi.mocked(askAgent).mockClear();
     const other = { ...askCommand, member: { user: { id: 'user-2' } } };
-    expect(await (await POST(signedReq(other))).json()).toEqual({ type: 5 });
+    await POST(signedReq(other));
+    await runAfter();
+    expect(askAgent).toHaveBeenCalledTimes(1);
   });
 
   it('edits in an error message when the agent throws', async () => {
@@ -463,15 +498,31 @@ describe('POST /api/discord/interactions — ถามต่อ follow-ups', () 
     ]);
   });
 
+  it('defers a follow-up before reading the thread, then refuses privately when it expired', async () => {
+    vi.mocked(loadThread).mockResolvedValue(null);
+    expect(await (await POST(signedReq(submit('ต่อ')))).json()).toEqual({ type: 5 });
+    expect(loadThread).not.toHaveBeenCalled();
+
+    await runAfter();
+    expect(askAgent).not.toHaveBeenCalled();
+    const [[, del], [, post]] = fetchMock.mock.calls;
+    expect(del.method).toBe('DELETE');
+    const body = JSON.parse(post.body);
+    expect(body.flags).toBe(64);
+    expect(body.content).toContain('หมดอายุ');
+  });
+
   it('checks expiry before spending quota on a follow-up', async () => {
     vi.mocked(loadThread).mockResolvedValue(null);
     process.env.ASK_DAILY_LIMIT = '1';
     try {
-      const expired = await (await POST(signedReq(submit('ต่อ')))).json();
-      expect(expired.data.content).toContain('หมดอายุ');
+      await POST(signedReq(submit('ต่อ')));
+      await runAfter();
 
       vi.mocked(loadThread).mockResolvedValue([turn]);
-      expect(await (await POST(signedReq(submit('ต่อ')))).json()).toEqual({ type: 5 });
+      await POST(signedReq(submit('ต่อ')));
+      await runAfter();
+      expect(askAgent).toHaveBeenCalledTimes(1);
     } finally {
       delete process.env.ASK_DAILY_LIMIT;
     }
