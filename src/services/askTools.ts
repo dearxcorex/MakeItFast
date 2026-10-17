@@ -119,7 +119,12 @@ export const TOOL_DEFINITIONS: ToolDefinition[] = [
       properties: {
         inspectedFrom: { type: 'string', description: 'วันแรก YYYY-MM-DD (ค.ศ.)' },
         inspectedTo: { type: 'string', description: 'วันสุดท้าย YYYY-MM-DD (ค.ศ.)' },
-        province: { type: 'string', description: 'จังหวัด' },
+        province: {
+          type: 'string',
+          description:
+            'จังหวัด ใส่เฉพาะเมื่อผู้ใช้ระบุจังหวัด ไม่ระบุ = ทุกจังหวัดในระบบ (รวมบุรีรัมย์และจังหวัดอื่นที่สำนักงานไปตรวจ) ' +
+            'ห้ามแยกเรียกทีละจังหวัดแล้วรวมเอง',
+        },
         district: { type: 'string', description: 'อำเภอ' },
         result: {
           type: 'string',

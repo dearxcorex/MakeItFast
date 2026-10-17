@@ -183,6 +183,7 @@ describe('buildSystemPrompt', () => {
     expect(prompt).toContain('ตรวจ 126 ครั้ง: ตรงตามมาตรฐาน 118 ครั้ง / ไม่ตรงตามมาตรฐาน 8 ครั้ง');
     expect(prompt).not.toContain('สถานีไม่ซ้ำใส่ในวงเล็บ');
     expect(prompt).toContain('ไม่ผ่าน/ไม่ตรงมาตรฐาน → ไม่ตรงตามมาตรฐาน');
+    expect(prompt).toContain('เรียก count_oper_inspections ครั้งเดียวโดยไม่ใส่ province เพื่อนับทุกจังหวัด');
   });
 
   it('treats OPER sources as exact-match data sources, not names', () => {
