@@ -288,10 +288,10 @@ describe('POST /api/discord/interactions — /ask', () => {
     log.mockRestore();
   });
 
-  it('always stamps the recommendation disclaimer on the reply', async () => {
+  it('sends no disclaimer footer on the reply', async () => {
     await POST(signedReq(askCommand));
     await runAfter();
-    expect(editedBody().embeds[0].footer.text).toContain('สันนิษฐาน/คำแนะนำ');
+    expect(editedBody().embeds[0].footer).toBeUndefined();
   });
 
   it('says so privately when DEEPSEEK_API_KEY is missing', async () => {

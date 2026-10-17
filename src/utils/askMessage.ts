@@ -1,9 +1,7 @@
 // Builds the Discord reply for /ask. Pure: the route runs the agent, this only
-// formats the result — including the disclaimer, which is stamped here rather
-// than asked of the model, so it cannot go missing from an answer.
+// formats the result.
 
 import type { StationDetail } from '@/services/askTools';
-import { DISCLAIMER } from '@/utils/askPrompt';
 
 // https://discord.com/developers/docs/resources/message#embed-object-embed-limits
 const TITLE_LIMIT = 256;
@@ -22,7 +20,8 @@ export interface AskMessage {
     title: string;
     description: string;
     color: number;
-    footer: { text: string };
+    /** Only when there is something to warn about: data age, a partial list, a cut-short answer. */
+    footer?: { text: string };
   }>;
   /** Always sent, empty when there is no button, so an edit also clears an old one. */
   components: Array<{
@@ -41,14 +40,6 @@ export interface AskMessageOptions {
 export function truncate(s: string, limit: number): string {
   return s.length <= limit ? s : `${s.slice(0, limit - 1)}…`;
 }
-
-const TOOL_LABELS: Record<string, string> = {
-  find_stations: 'ฐานข้อมูลสถานี',
-  find_oper_stations: 'ทะเบียน OPER',
-  count_oper_inspections: 'นับการตรวจ OPER',
-  path_loss: 'คำนวณ FSPL',
-  web_search: 'ค้นเว็บ',
-};
 
 const THAI_MONTHS = ['ม.ค.', 'ก.พ.', 'มี.ค.', 'เม.ย.', 'พ.ค.', 'มิ.ย.', 'ก.ค.', 'ส.ค.', 'ก.ย.', 'ต.ค.', 'พ.ย.', 'ธ.ค.'];
 const BANGKOK_OFFSET_MS = 7 * 3_600_000;
@@ -133,17 +124,13 @@ export function operDataLines(calls: ToolCallOutput[]): string[] {
   return [...asOf, ...partial];
 }
 
-function footer(toolsUsed: string[], truncated: boolean, deadlineHit: boolean, calls: ToolCallOutput[]): string {
-  const used = [...new Set(toolsUsed)].map((t) => TOOL_LABELS[t] ?? t);
-  return truncate(
-    [
-      `⚠️ ${DISCLAIMER}`,
-      used.length ? `ใช้: ${used.join(' · ')}` : 'ไม่ได้เรียกเครื่องมือ — ตอบจากความรู้ทั่วไป',
-      ...operDataLines(calls),
-      ...(truncated ? [deadlineHit ? 'สรุปก่อนกำหนด: หมดเวลาค้นข้อมูล' : 'สรุปก่อนกำหนด: ค้นข้อมูลครบรอบสูงสุดแล้ว'] : []),
-    ].join('\n'),
-    FOOTER_LIMIT,
-  );
+/** The footer, or undefined when there is nothing to warn about. */
+function footer(truncated: boolean, deadlineHit: boolean, calls: ToolCallOutput[]): { text: string } | undefined {
+  const lines = [
+    ...operDataLines(calls),
+    ...(truncated ? [deadlineHit ? 'สรุปก่อนกำหนด: หมดเวลาค้นข้อมูล' : 'สรุปก่อนกำหนด: ค้นข้อมูลครบรอบสูงสุดแล้ว'] : []),
+  ];
+  return lines.length ? { text: truncate(lines.join('\n'), FOOTER_LIMIT) } : undefined;
 }
 
 export function buildAskMessage(
@@ -157,6 +144,7 @@ export function buildAskMessage(
   // The answer keeps its room; the details take what is left.
   const room = DESCRIPTION_LIMIT - answer.length - 2;
   const description = details && room > 0 ? `${answer}\n\n${truncate(details, room)}` : answer;
+  const foot = footer(result.truncated, result.deadlineHit === true, result.calls ?? []);
   return {
     // Neutralises any @everyone the model might emit, whatever the prompt says.
     allowed_mentions: { parse: [] },
@@ -166,7 +154,7 @@ export function buildAskMessage(
         title: truncate(`🤖 ${question}`, TITLE_LIMIT),
         description: truncate(description, DESCRIPTION_LIMIT),
         color: EMBED_COLOR,
-        footer: { text: footer(result.toolsUsed, result.truncated, result.deadlineHit === true, result.calls ?? []) },
+        ...(foot ? { footer: foot } : {}),
       },
     ],
     components: options.followUp

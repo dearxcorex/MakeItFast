@@ -101,7 +101,7 @@ describe('buildAskMessage follow-up parts', () => {
 
   it('says a deadline cut, not the round cap, ended the search', () => {
     const msg = buildAskMessage('q', { ...result, truncated: true, deadlineHit: true });
-    expect(msg.embeds[0].footer.text).toContain('หมดเวลา');
+    expect(msg.embeds[0].footer?.text).toContain('หมดเวลา');
   });
 });
 

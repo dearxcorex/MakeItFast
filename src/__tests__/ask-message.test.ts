@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { MAX_DETAIL_STATIONS, buildAskMessage, askErrorMessage, operDataLines, thaiDateTime, truncate } from '@/utils/askMessage';
-import { BACKED_BAND, DISCLAIMER, FIELD_KIT, buildSystemPrompt } from '@/utils/askPrompt';
+import { BACKED_BAND, FIELD_KIT, buildSystemPrompt } from '@/utils/askPrompt';
 
 const result = (over: Partial<{ answer: string; toolsUsed: string[]; truncated: boolean }> = {}) => ({
   answer: 'ลองดูที่ย่าน 122 MHz ก่อน',
@@ -22,8 +22,8 @@ describe('OPER data age and partial lists', () => {
       ...result({ toolsUsed: ['find_oper_stations'] }),
       calls: [oper({ total: 129, shown: 10, complete: true, as_of: '2026-10-15T20:00:00+00:00' })],
     });
-    expect(msg.embeds[0].footer.text).toContain('ข้อมูล OPER ณ 16 ต.ค. 2569 03:00');
-    expect(msg.embeds[0].footer.text).not.toContain('ไม่ครบ');
+    expect(msg.embeds[0].footer?.text).toContain('ข้อมูล OPER ณ 16 ต.ค. 2569 03:00');
+    expect(msg.embeds[0].footer?.text).not.toContain('ไม่ครบ');
   });
 
   it('flags a partial live list with shown of total', () => {
@@ -102,24 +102,16 @@ describe('buildAskMessage', () => {
     expect(msg.embeds[0].description).toBe('ลองดูที่ย่าน 122 MHz ก่อน');
   });
 
-  it('always stamps the disclaimer, whatever the model wrote', () => {
-    const msg = buildAskMessage('ถาม', result({ answer: 'ยืนยันแล้วว่าเป็นเครื่องนี้' }));
-    expect(msg.embeds[0].footer.text).toContain(DISCLAIMER);
-  });
-
-  it('names the tools it used in Thai', () => {
-    const msg = buildAskMessage('ถาม', result({ toolsUsed: ['find_oper_stations', 'find_oper_stations', 'web_search'] }));
-    expect(msg.embeds[0].footer.text).toContain('ใช้: ทะเบียน OPER · ค้นเว็บ');
-  });
-
-  it('says so when no tool was called, so an ungrounded answer is visible', () => {
-    const msg = buildAskMessage('ถาม', result({ toolsUsed: [] }));
-    expect(msg.embeds[0].footer.text).toContain('ไม่ได้เรียกเครื่องมือ');
+  it('adds no disclaimer or tools line, and no footer when there is nothing to warn about', () => {
+    const msg = buildAskMessage('ถาม', result({ toolsUsed: ['count_oper_inspections', 'web_search'] }));
+    expect(msg.embeds[0].footer).toBeUndefined();
+    expect(JSON.stringify(msg)).not.toContain('สันนิษฐาน');
+    expect(JSON.stringify(msg)).not.toContain('ใช้:');
   });
 
   it('flags an answer that ran out of tool rounds', () => {
     const msg = buildAskMessage('ถาม', result({ truncated: true }));
-    expect(msg.embeds[0].footer.text).toContain('สรุปก่อนกำหนด');
+    expect(msg.embeds[0].footer?.text).toContain('สรุปก่อนกำหนด');
   });
 
   it('keeps title and description inside Discord limits', () => {
@@ -174,8 +166,8 @@ describe('buildSystemPrompt', () => {
     expect(prompt).toContain('ไม่เกิน 1 ครั้งต่อคำถาม');
   });
 
-  it('leaves the disclaimer to the embed builder instead of the model', () => {
-    expect(prompt).toContain('ระบบใส่ให้แล้ว');
+  it('tells the model not to add a disclaimer or a tools line itself', () => {
+    expect(prompt).toContain('หมายเหตุหรือคำเตือนว่าเป็นข้อสันนิษฐาน, บรรทัดบอกว่าใช้เครื่องมือ/แหล่งข้อมูลอะไร');
   });
 
   it('answers a count with inspections only, split by result, no station counts', () => {
