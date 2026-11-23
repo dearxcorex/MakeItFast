@@ -6,7 +6,8 @@ vi.mock("@/lib/prisma", () => {
     groupBy: vi.fn(),
   };
   const interference_site = { findMany: vi.fn() };
-  return { default: { fm_station, interference_site } };
+  const camera_source = { findMany: vi.fn() };
+  return { default: { fm_station, interference_site, camera_source } };
 });
 
 vi.mock("@/lib/session", () => ({
@@ -30,16 +31,21 @@ const mockedFm = prisma.fm_station as unknown as {
 const mockedInt = prisma.interference_site as unknown as {
   findMany: ReturnType<typeof vi.fn>;
 };
+const mockedCamera = prisma.camera_source as unknown as {
+  findMany: ReturnType<typeof vi.fn>;
+};
 
 describe("FieldOpsFetcher", () => {
   beforeEach(() => {
     mockedFm.findMany.mockReset();
     mockedFm.groupBy.mockReset();
     mockedInt.findMany.mockReset();
+    mockedCamera.findMany.mockReset();
   });
 
-  it("issues exactly three Prisma calls and merges province sources", async () => {
+  it("issues exactly four Prisma calls and merges province sources", async () => {
     mockedFm.findMany.mockResolvedValueOnce([]); // stations
+    mockedCamera.findMany.mockResolvedValueOnce([]);
     mockedInt.findMany.mockResolvedValueOnce([
       { changwat: "Bangkok" },
       { changwat: "Chiang Mai" },
@@ -58,6 +64,7 @@ describe("FieldOpsFetcher", () => {
     expect(mockedFm.findMany).toHaveBeenCalledTimes(1);
     expect(mockedFm.groupBy).toHaveBeenCalledTimes(1);
     expect(mockedInt.findMany).toHaveBeenCalledTimes(1);
+    expect(mockedCamera.findMany).toHaveBeenCalledTimes(1);
 
     expect(props.initialCities).toEqual(["Khlong Toei", "Mueang"]);
     expect(props.initialProvinces).toEqual(

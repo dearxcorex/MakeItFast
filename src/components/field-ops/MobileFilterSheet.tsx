@@ -8,7 +8,7 @@ import {
   type TypeFilter,
 } from "./FieldOpsFilters";
 
-const TYPES: TypeFilter[] = ["ALL", "FM", "INT"];
+const TYPES: TypeFilter[] = ["ALL", "FM", "INT", "CAMERA"];
 
 interface Props {
   open: boolean;
@@ -95,8 +95,8 @@ export function MobileFilterSheet({
 
   const handleType = (v: TypeFilter) => {
     const next: FieldFilters = { ...filters, type: v };
-    if (v === "FM") next.lawSent = false;
-    if (v === "INT") {
+    if (v === "FM" || v === "CAMERA") next.lawSent = false;
+    if (v === "INT" || v === "CAMERA") {
       next.offAir = false;
       next.revoked = false;
     }
@@ -106,8 +106,8 @@ export function MobileFilterSheet({
   const anyFilterActive =
     filters.type !== "ALL" || filters.status !== "ALL" || activeChips.length > 0;
 
-  const showFMFilters = filters.type !== "INT";
-  const showINTFilters = filters.type !== "FM";
+  const showFMFilters = filters.type === "ALL" || filters.type === "FM";
+  const showINTFilters = filters.type === "ALL" || filters.type === "INT";
 
   return (
     <>

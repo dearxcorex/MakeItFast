@@ -1,6 +1,6 @@
 "use client";
 
-export type TypeFilter = "ALL" | "FM" | "INT";
+export type TypeFilter = "ALL" | "FM" | "INT" | "CAMERA";
 export type StatusFilter = "ALL" | "PENDING" | "INSPECTED";
 export type SeverityFilter = "ALL" | "Critical" | "Major" | "Minor";
 
@@ -23,6 +23,7 @@ export const TYPE_LABEL: Record<TypeFilter, string> = {
   ALL: "ทั้งหมด",
   FM: "FM",
   INT: "รบกวน",
+  CAMERA: "กล้อง",
 };
 
 export const STATUS_LABEL: Record<StatusFilter, string> = {
@@ -54,19 +55,19 @@ export function FieldOpsFilters({
   visibleCount: number;
 }) {
   const provinceOptions = ["All", ...provinces];
-  const types: TypeFilter[] = ["ALL", "FM", "INT"];
+  const types: TypeFilter[] = ["ALL", "FM", "INT", "CAMERA"];
   const statuses: StatusFilter[] = ["ALL", "PENDING", "INSPECTED"];
 
-  const showOffAir = filters.type !== "INT";
-  const showLawSent = filters.type !== "FM";
+  const showOffAir = filters.type === "ALL" || filters.type === "FM";
+  const showLawSent = filters.type === "ALL" || filters.type === "INT";
 
   const handleTypeChange = (v: TypeFilter) => {
     const next: FieldFilters = { ...filters, type: v };
-    if (v === "FM") {
+    if (v === "FM" || v === "CAMERA") {
       next.severity = "ALL";
       next.lawSent = false;
     }
-    if (v === "INT") {
+    if (v === "INT" || v === "CAMERA") {
       next.offAir = false;
       next.revoked = false;
     }

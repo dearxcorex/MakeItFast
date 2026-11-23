@@ -3,6 +3,7 @@
 import Link from "next/link";
 import type { FMStation } from "@/types/station";
 import type { InterferenceSite } from "@/types/interference";
+import type { CameraSource } from "@/types/camera";
 import type { TypeFilter } from "./FieldOpsFilters";
 import type { GeolocationStatus } from "@/hooks/useGeolocation";
 import { computeKpis } from "@/utils/fieldOpsKpi";
@@ -12,6 +13,7 @@ import { BrandMark, BrandWordmark } from "./BrandMark";
 export function FieldOpsHeader({
   stations,
   interference,
+  cameras,
   type,
   theme,
   onToggleTheme,
@@ -22,6 +24,7 @@ export function FieldOpsHeader({
 }: {
   stations: FMStation[];
   interference: InterferenceSite[];
+  cameras?: CameraSource[];
   type: TypeFilter;
   theme: "dark" | "light";
   onToggleTheme: () => void;
@@ -30,7 +33,7 @@ export function FieldOpsHeader({
   locationStatus?: GeolocationStatus;
   onRetryLocation?: () => void;
 }) {
-  const kpis = computeKpis(stations, interference, type);
+  const kpis = computeKpis(stations, interference, type, cameras);
 
   const isLight = theme === "light";
   const headerBg = isLight ? "#ffffff" : "var(--fo-ink)";
@@ -40,7 +43,13 @@ export function FieldOpsHeader({
   const accentText = isLight ? "#00684a" : "var(--fo-accent)";
 
   const scopeLabel =
-    type === "FM" ? "เฉพาะ FM" : type === "INT" ? "เฉพาะการรบกวน" : "ทั้งหมด";
+    type === "FM"
+      ? "เฉพาะ FM"
+      : type === "INT"
+        ? "เฉพาะการรบกวน"
+        : type === "CAMERA"
+          ? "เฉพาะกล้อง"
+          : "ทั้งหมด";
 
   if (isMobile) {
     return <MobileHeader

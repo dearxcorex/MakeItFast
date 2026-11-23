@@ -91,8 +91,37 @@ model user {
   int_inspections_led    interference_inspection[]        @relation("int_inspection_lead")
   int_inspection_members interference_inspection_member[] @relation("int_inspection_member")
   data_changes           data_change[]
+  cameras_inspected      camera_source[]
 
   @@index([username])
+}
+
+// A camera that is a source of interference on a cell site. Loaded by
+// scripts/import-camera-sources.ts, which never writes the inspection columns.
+model camera_source {
+  id                  Int       @id @default(autoincrement())
+  code                String    @unique
+  lat                 Float
+  long                Float
+  found_on            DateTime  @db.Date
+  district            String
+  province            String
+  landmark            String?
+  cell_site_code      String?
+  cell_site_name      String?
+  cell_site_lat       Float?
+  cell_site_long      Float?
+  cell_site_operators String?
+  status              String    @default("ยังไม่ตรวจ")
+  inspected_at        DateTime?
+  inspected_by        Int?
+  created_at          DateTime  @default(now())
+  updated_at          DateTime  @updatedAt
+
+  inspector user? @relation(fields: [inspected_by], references: [id], onDelete: SetNull)
+
+  @@index([province])
+  @@index([status])
 }
 
 model station_inspection {

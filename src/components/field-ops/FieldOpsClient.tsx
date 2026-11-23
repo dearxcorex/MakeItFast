@@ -6,6 +6,9 @@ import { useRouter } from "next/navigation";
 import type { FMStation } from "@/types/station";
 import type { InspectionMember } from '@/types/inspection';
 import type { InterferenceSite } from "@/types/interference";
+import type { CameraSource } from "@/types/camera";
+import { CAMERA_INSPECTED, CAMERA_PENDING, cameraMatchesFilter, isCameraInspected } from "@/utils/cameraSources";
+import { FieldOpsCameraDetail } from "./FieldOpsCameraDetail";
 import { FieldOpsNav, type FieldOpsTab } from "./FieldOpsNav";
 import { FieldOpsHeader } from "./FieldOpsHeader";
 import { FieldOpsFilters, DEFAULT_FILTERS, type FieldFilters } from "./FieldOpsFilters";
@@ -36,6 +39,7 @@ const IntermodCalculator = dynamic(() => import("@/components/IntermodCalculator
 interface Props {
   initialStations: FMStation[];
   initialInterference: InterferenceSite[];
+  initialCameras?: CameraSource[];
   initialCities: string[];
   initialProvinces: string[];
   currentUser?: { id: number; displayName: string };
@@ -67,9 +71,13 @@ export function fmStationMatchesFilter(s: FMStation, filters: FieldFilters): boo
 // in the part of the map that stays visible above it.
 const MOBILE_SHEET_PEEK = 230;
 
+// Stable default: a fresh [] each render would re-fire the sync effect forever.
+const NO_CAMERAS: CameraSource[] = [];
+
 export default function FieldOpsClient({
   initialStations,
   initialInterference,
+  initialCameras = NO_CAMERAS,
   initialProvinces,
   currentUser,
   isAdmin = false,
@@ -83,6 +91,10 @@ export default function FieldOpsClient({
     setStations(initialStations);
   }, [initialStations]);
   const [interference, setInterference] = useState<InterferenceSite[]>(initialInterference);
+  const [cameras, setCameras] = useState<CameraSource[]>(initialCameras);
+  useEffect(() => {
+    setCameras(initialCameras);
+  }, [initialCameras]);
   const [filters, setFilters] = useState<FieldFilters>(DEFAULT_FILTERS);
   const [selection, setSelection] = useState<FieldSelection>(null);
   const [pending, setPending] = useState(false);
@@ -140,7 +152,7 @@ export default function FieldOpsClient({
   }, [tab, selection, markingSourceForId]);
 
   const filteredStations = useMemo(() => {
-    if (filters.type === "INT") return [];
+    if (filters.type === "INT" || filters.type === "CAMERA") return [];
     return stations.filter((s) => fmStationMatchesFilter(s, filters));
   }, [stations, filters]);
 
@@ -154,7 +166,7 @@ export default function FieldOpsClient({
   );
 
   const filteredInterference = useMemo(() => {
-    if (filters.type === "FM") return [];
+    if (filters.type === "FM" || filters.type === "CAMERA") return [];
     return dedupedInterference.filter((s) => {
       if (filters.province !== "All" && s.changwat !== filters.province) return false;
       if (filters.status === "PENDING" && s.status === "ตรวจแล้ว") return false;
@@ -170,12 +182,19 @@ export default function FieldOpsClient({
     });
   }, [dedupedInterference, filters]);
 
-  const visibleCount = filteredStations.length + filteredInterference.length;
+  const filteredCameras = useMemo(
+    () => cameras.filter((c) => cameraMatchesFilter(c, filters)),
+    [cameras, filters]
+  );
+
+  const visibleCount = filteredStations.length + filteredInterference.length + filteredCameras.length;
 
   const selectedStation =
     selection?.kind === "fm" ? stations.find((s) => s.id === selection.id) ?? null : null;
   const selectedSite =
     selection?.kind === "int" ? interference.find((s) => s.id === selection.id) ?? null : null;
+  const selectedCamera =
+    selection?.kind === "camera" ? cameras.find((c) => c.id === selection.id) ?? null : null;
 
   const selectedTargetKey = selection ? `${selection.kind}-${selection.id}` : null;
   useEffect(() => {
@@ -237,6 +256,11 @@ export default function FieldOpsClient({
         setFlyTarget(null);
         if (markingSourceForId !== null) setMarkingSourceForId(null);
       }
+    } else if (selection.kind === "camera") {
+      if (!filteredCameras.some((c) => c.id === selection.id)) {
+        setSelection(null);
+        setFlyTarget(null);
+      }
     } else {
       if (!filteredInterference.some((s) => s.id === selection.id)) {
         setSelection(null);
@@ -244,7 +268,7 @@ export default function FieldOpsClient({
         if (markingSourceForId !== null) setMarkingSourceForId(null);
       }
     }
-  }, [selection, stations, filteredStations, filteredInterference, markingSourceForId]);
+  }, [selection, stations, filteredStations, filteredInterference, filteredCameras, markingSourceForId]);
 
   const coLocatedStations = useMemo(() => {
     if (!selectedStation) return [] as FMStation[];
@@ -273,6 +297,9 @@ export default function FieldOpsClient({
     if (sel.kind === "fm") {
       const s = stations.find((x) => x.id === sel.id);
       if (s) setFlyTarget([s.latitude, s.longitude]);
+    } else if (sel.kind === "camera") {
+      const c = cameras.find((x) => x.id === sel.id);
+      if (c) setFlyTarget([c.lat, c.lng]);
     } else {
       const s = interference.find((x) => x.id === sel.id);
       if (s && s.lat !== null && s.long !== null) setFlyTarget([s.lat, s.long]);
@@ -343,6 +370,42 @@ export default function FieldOpsClient({
     } catch (err) {
       console.error(err);
       window.location.reload();
+    } finally {
+      setPending(false);
+    }
+  };
+
+  const handleToggleCamera = async () => {
+    if (!selectedCamera) return;
+    const before = selectedCamera;
+    const next = isCameraInspected(before) ? CAMERA_PENDING : CAMERA_INSPECTED;
+    const restore = () => setCameras((all) => all.map((c) => (c.id === before.id ? before : c)));
+    setCameras((all) =>
+      all.map((c) =>
+        c.id === before.id
+          ? {
+              ...c,
+              status: next,
+              inspectedAt: next === CAMERA_INSPECTED ? new Date().toISOString() : null,
+              inspectedByName: next === CAMERA_INSPECTED ? currentUser?.displayName ?? null : null,
+            }
+          : c
+      )
+    );
+    setPending(true);
+    try {
+      const res = await fetch(`/api/camera-sources/${before.id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ status: next }),
+      });
+      if (!res.ok) throw new Error("Camera update failed");
+      const { camera } = (await res.json()) as { camera: CameraSource };
+      setCameras((all) => all.map((c) => (c.id === camera.id ? camera : c)));
+    } catch (err) {
+      console.error(err);
+      restore();
+      alert("บันทึกการตรวจกล้องไม่สำเร็จ");
     } finally {
       setPending(false);
     }
@@ -498,6 +561,7 @@ export default function FieldOpsClient({
       <FieldOpsHeader
         stations={filteredStations}
         interference={filteredInterference}
+        cameras={filteredCameras}
         type={filters.type}
         theme={theme}
         onToggleTheme={() => setTheme((t) => (t === "dark" ? "light" : "dark"))}
@@ -539,6 +603,7 @@ export default function FieldOpsClient({
                     stations={filteredStations}
                     allStations={stations}
                     interference={filteredInterference}
+                    cameras={filteredCameras}
                     selection={selection}
                     onSelect={handleSelect}
                     flyTarget={flyTarget}
@@ -613,13 +678,20 @@ export default function FieldOpsClient({
                         lastInspection={lastInspection}
                       />
                     )}
+                    {selection?.kind === "camera" && selectedCamera && (
+                      <FieldOpsCameraDetail
+                        camera={selectedCamera}
+                        pending={pending}
+                        onToggleInspection={handleToggleCamera}
+                      />
+                    )}
                     {!selection && (
                       <div style={{ padding: 20, flex: 1 }}>
                         <div className="fo-serif" style={{ fontSize: 18, color: "var(--fo-rail-text)", marginBottom: 6 }}>
                           แตะหมุดบนแผนที่
                         </div>
                         <div className="fo-mono" style={{ color: "var(--fo-rail-mute)" }}>
-                          บนแผนที่ {filteredStations.length} FM · {filteredInterference.length} รบกวน
+                          บนแผนที่ {filteredStations.length} FM · {filteredInterference.length} รบกวน · {filteredCameras.length} กล้อง
                         </div>
                       </div>
                     )}
@@ -641,6 +713,15 @@ export default function FieldOpsClient({
                       pointerEvents: "none",
                     }}
                   >
+                    {selection?.kind === "camera" && selectedCamera && (
+                      <FieldOpsCameraDetail
+                        mobile
+                        camera={selectedCamera}
+                        pending={pending}
+                        onToggleInspection={handleToggleCamera}
+                        onClose={() => setSelection(null)}
+                      />
+                    )}
                     <FieldOpsBottomSheet
                       selection={selection}
                       station={selectedStation}
@@ -708,7 +789,7 @@ export default function FieldOpsClient({
           open={drawerOpen}
           activeTab={tab}
           theme={theme}
-          kpis={computeKpis(filteredStations, filteredInterference, filters.type)}
+          kpis={computeKpis(filteredStations, filteredInterference, filters.type, filteredCameras)}
           onChangeTab={setTab}
           onToggleTheme={() => setTheme((t) => (t === "dark" ? "light" : "dark"))}
           onClose={() => setDrawerOpen(false)}

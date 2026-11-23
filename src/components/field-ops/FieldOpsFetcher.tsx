@@ -1,15 +1,17 @@
 import prisma from "@/lib/prisma";
 import { convertToFMStation } from "@/services/stationService";
 import { convertToInterferenceSite } from "@/services/interferenceService";
+import { CAMERA_INCLUDE, convertToCameraSource } from "@/services/cameraSourceService";
 import { getSession } from "@/lib/session";
 import FieldOpsClient from "./FieldOpsClient";
 
 export default async function FieldOpsFetcher() {
   try {
     const session = await getSession();
-    const [stations, interferenceRows, fmGeoGroups] = await Promise.all([
+    const [stations, interferenceRows, cameraRows, fmGeoGroups] = await Promise.all([
       prisma.fm_station.findMany({ orderBy: { name: "asc" } }),
       prisma.interference_site.findMany({ orderBy: { site_name: "asc" } }),
+      prisma.camera_source.findMany({ orderBy: { code: "asc" }, include: CAMERA_INCLUDE }),
       // One groupBy replaces the two distinct findManys we used to issue —
       // half the Prisma round trips, same shape coming out.
       prisma.fm_station.groupBy({
@@ -50,6 +52,7 @@ export default async function FieldOpsFetcher() {
       <FieldOpsClient
         initialStations={transformedStations}
         initialInterference={transformedInterference}
+        initialCameras={cameraRows.map(convertToCameraSource)}
         initialCities={fmCities}
         initialProvinces={provinces}
         currentUser={currentUser}

@@ -1,6 +1,8 @@
 import type { FMStation } from "@/types/station";
 import type { InterferenceSite } from "@/types/interference";
+import type { CameraSource } from "@/types/camera";
 import type { TypeFilter } from "@/components/field-ops/FieldOpsFilters";
+import { isCameraInspected } from "@/utils/cameraSources";
 
 export interface FieldOpsKpis {
   total: number;
@@ -20,8 +22,18 @@ export interface FieldOpsKpis {
 export function computeKpis(
   stations: FMStation[],
   interference: InterferenceSite[],
-  type: TypeFilter
+  type: TypeFilter,
+  cameras: CameraSource[] = []
 ): FieldOpsKpis {
+  // Cameras get their own tally under the กล้อง chip and stay out of the
+  // FM + interference progress everywhere else.
+  if (type === "CAMERA") {
+    const total = cameras.length;
+    const inspected = cameras.filter(isCameraInspected).length;
+    const pct = total > 0 ? Math.round((inspected / total) * 100) : 0;
+    return { total, inspected, pending: total - inspected, critical: null, target: total, pct };
+  }
+
   const total = stations.length + interference.length;
 
   const fmInspected = stations.filter(

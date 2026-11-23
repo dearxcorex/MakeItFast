@@ -9,6 +9,9 @@ import "leaflet.markercluster/dist/MarkerCluster.css";
 import "leaflet.markercluster/dist/MarkerCluster.Default.css";
 import type { FMStation, UserLocation } from "@/types/station";
 import type { InterferenceSite } from "@/types/interference";
+import type { CameraSource } from "@/types/camera";
+import { cameraPin } from "@/utils/cameraPin";
+import { isCameraInspected } from "@/utils/cameraSources";
 import { makeClusterIcon } from "@/utils/clusterIcon";
 import type { CornerBadge, InspectedBadgeGates, PinBucket } from "@/utils/pinBucket";
 import {
@@ -36,6 +39,7 @@ import NavigationPill from "@/components/interference/NavigationPill";
 export type FieldSelection =
   | { kind: "fm"; id: string | number }
   | { kind: "int"; id: number }
+  | { kind: "camera"; id: number }
   | null;
 
 const THAILAND_CENTER: [number, number] = [13.7563, 100.5018];
@@ -311,6 +315,28 @@ function makeSourceIcon(): L.DivIcon {
 
 const SOURCE_ICON = makeSourceIcon();
 
+function cameraIcon(inspected: boolean, selected: boolean): L.DivIcon {
+  const pin = cameraPin(inspected, selected);
+  return L.divIcon({
+    className: pin.className,
+    html: pin.html,
+    iconSize: [pin.width, pin.height],
+    iconAnchor: [pin.width / 2, pin.height - 3],
+  });
+}
+
+/** Marks the far end of the dashed line from a selected camera to its cell site. */
+function makeCellSiteEndIcon(): L.DivIcon {
+  return L.divIcon({
+    className: "fo-camera-cell-end",
+    html: `<div style="width:12px;height:12px;border-radius:50%;box-sizing:border-box;background:${PIN_INK};border:3px solid ${PIN_COLORS.critical};box-shadow:0 0 0 1.5px ${PIN_STROKE};"></div>`,
+    iconSize: [12, 12],
+    iconAnchor: [6, 6],
+  });
+}
+
+const CELL_SITE_END_ICON = makeCellSiteEndIcon();
+
 function ClickToMark({
   active,
   onPick,
@@ -391,10 +417,13 @@ export function RecenterButton({ location }: { location: UserLocation }) {
   );
 }
 
+const NO_CAMERAS: CameraSource[] = [];
+
 export function FieldOpsMap({
   stations,
   allStations = stations,
   interference,
+  cameras = NO_CAMERAS,
   selection,
   onSelect,
   flyTarget,
@@ -413,6 +442,8 @@ export function FieldOpsMap({
    */
   allStations?: FMStation[];
   interference: InterferenceSite[];
+  /** Interference cameras. Drawn outside the cluster group so alerts never hide. */
+  cameras?: CameraSource[];
   selection: FieldSelection;
   onSelect: (sel: FieldSelection) => void;
   flyTarget: [number, number] | null;
@@ -531,6 +562,7 @@ export function FieldOpsMap({
 
   const fmIconCache = useRef<Map<string, L.DivIcon>>(new Map());
   const intIconCache = useRef<Map<string, L.DivIcon>>(new Map());
+  const cameraIconCache = useRef<Map<string, L.DivIcon>>(new Map());
 
   // One keyless tile source for both themes. CARTO's raster basemaps now
   // require an API key: unauthenticated tiles still return 200 with a valid
@@ -544,6 +576,10 @@ export function FieldOpsMap({
   const selectedSite =
     selection?.kind === "int"
       ? interference.find((s) => s.id === selection.id) ?? null
+      : null;
+  const selectedCamera =
+    selection?.kind === "camera"
+      ? cameras.find((c) => c.id === selection.id) ?? null
       : null;
   const showPill =
     selectedSite !== null &&
@@ -704,6 +740,50 @@ export function FieldOpsMap({
           }}
         />
       ))}
+
+      {selectedCamera?.cellSite && (
+        <>
+          <Polyline
+            key={`camera-line-${selectedCamera.id}`}
+            positions={[
+              [selectedCamera.lat, selectedCamera.lng],
+              [selectedCamera.cellSite.lat, selectedCamera.cellSite.lng],
+            ]}
+            pathOptions={{ color: PIN_COLORS.critical, weight: 2.5, opacity: 0.9, dashArray: "7 7" }}
+          />
+          <Marker
+            key={`camera-cell-${selectedCamera.id}`}
+            position={[selectedCamera.cellSite.lat, selectedCamera.cellSite.lng]}
+            icon={CELL_SITE_END_ICON}
+            interactive={false}
+          />
+        </>
+      )}
+
+      {cameras
+        .filter((c) => Number.isFinite(c.lat) && Number.isFinite(c.lng))
+        .map((c) => {
+          const inspected = isCameraInspected(c);
+          const isSelected = selection?.kind === "camera" && selection.id === c.id;
+          const cacheKey = `${inspected}-${isSelected}`;
+          if (!cameraIconCache.current.has(cacheKey)) {
+            cameraIconCache.current.set(cacheKey, cameraIcon(inspected, isSelected));
+          }
+          return (
+            <Marker
+              key={`camera-${c.id}`}
+              position={[c.lat, c.lng]}
+              icon={cameraIconCache.current.get(cacheKey)!}
+              zIndexOffset={inspected ? 500 : 1000}
+              eventHandlers={{
+                click: () => {
+                  if (isMarking) return;
+                  onSelect({ kind: "camera", id: c.id });
+                },
+              }}
+            />
+          );
+        })}
 
       {onMarkSource && (
         <ClickToMark
