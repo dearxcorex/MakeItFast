@@ -145,6 +145,16 @@ export function planCameraImport(cameras: ParsedCamera[], existingCodes: string[
   };
 }
 
+/** Fields for updating a row: a blank จุดเด่น in the sheet keeps the saved one. */
+export function cameraUpdateData<T extends { landmark: string | null }>(
+  data: T
+): T | Omit<T, "landmark"> {
+  if (data.landmark !== null) return data;
+  const rest: Partial<T> = { ...data };
+  delete rest.landmark;
+  return rest as Omit<T, "landmark">;
+}
+
 export const isCameraInspected = (c: Pick<CameraSource, "status">): boolean =>
   c.status === CAMERA_INSPECTED;
 

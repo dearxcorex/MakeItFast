@@ -4,6 +4,7 @@ import type { CellSite } from "@/utils/cellSites";
 import {
   cameraDate,
   cameraMatchesFilter,
+  cameraUpdateData,
   findCameraCellSite,
   parseCameraRows,
   planCameraImport,
@@ -105,6 +106,21 @@ describe("planCameraImport", () => {
     expect(plan.toAdd.map((c) => c.code)).toEqual(["A_1"]);
     expect(plan.toUpdate.map((c) => c.code)).toEqual(["B_1"]);
     expect(plan.missingFromFile).toEqual(["GONE_1"]);
+  });
+});
+
+describe("cameraUpdateData", () => {
+  it("leaves the saved landmark alone when the sheet cell is blank", () => {
+    const update = cameraUpdateData({ district: "ปากช่อง", landmark: null });
+    expect(update).toEqual({ district: "ปากช่อง" });
+    expect(update).not.toHaveProperty("landmark");
+  });
+
+  it("writes a landmark the sheet provides", () => {
+    expect(cameraUpdateData({ district: "ปากช่อง", landmark: "มทส" })).toEqual({
+      district: "ปากช่อง",
+      landmark: "มทส",
+    });
   });
 });
 

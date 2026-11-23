@@ -7,8 +7,9 @@
  *   npx tsx scripts/import-camera-sources.ts <path-to.xlsx> --apply   # write
  *
  * Re-runnable, keyed on Code: adds new rows and updates changed ones. It never
- * touches inspected status, and rows missing from a newer file are reported,
- * not deleted. The dry-run reads the database only when DATABASE_URL is set.
+ * touches inspected status, a blank จุดเด่น keeps the saved one, and rows missing
+ * from a newer file are reported, not deleted. The dry-run reads the database
+ * only when DATABASE_URL is set.
  */
 import { readFileSync } from 'node:fs';
 import path from 'node:path';
@@ -16,6 +17,7 @@ import * as XLSX from 'xlsx';
 import { PrismaClient } from '@prisma/client';
 import { parseCellSitesCsv } from '../src/utils/cellSites';
 import {
+  cameraUpdateData,
   findCameraCellSite,
   parseCameraRows,
   planCameraImport,
@@ -98,7 +100,7 @@ async function main() {
         return prisma.camera_source.upsert({
           where: { code: c.code },
           create: { code: c.code, ...data },
-          update: data,
+          update: cameraUpdateData(data),
         });
       })
     );
